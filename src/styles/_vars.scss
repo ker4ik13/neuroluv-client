@@ -1,0 +1,46 @@
+$color-white: #ffffff;
+$color-ink: #0d1a26;
+$color-ink-soft: #192d3d;
+$color-ink-muted: #5c6b7a;
+$color-cyan: #0db8d1;
+$color-cyan-bright: #06b6d4;
+$color-blue: #2f80ed;
+$color-blue-hover: #2e80eb;
+$color-surface: #f1f4f6;
+$color-surface-strong: #e0e5eb;
+$color-border: #e4e9ed;
+
+$font-heading: 'Raleway', Arial, 'Helvetica Neue', Helvetica, sans-serif;
+$font-body: 'Gilroy', Arial, 'Helvetica Neue', Helvetica, sans-serif;
+
+$font-size-base: 16;
+
+$container: 1240;
+$page-gutter: 24;
+$page-gutter-mobile: 16;
+$page-gutter-desktop: 100;
+$section-gap: 96;
+$section-gap-mobile: 64;
+
+$radius-xs: 8;
+$radius-sm: 12;
+$radius-button-lg: 14;
+$radius-header: 16;
+$radius-md: 24;
+$radius-lg: 28;
+
+$breakpoint-mobile: 480;
+$breakpoint-tablet: 768;
+$breakpoint-laptop: 1024;
+$breakpoint-desktop: 1440;
+
+$breakpoints: (
+	mobile: $breakpoint-mobile,
+	tablet: $breakpoint-tablet,
+	laptop: $breakpoint-laptop,
+	desktop: $breakpoint-desktop,
+);
+
+$z-index-header: 100;
+$z-index-overlay: 500;
+$z-index-modal: 600;

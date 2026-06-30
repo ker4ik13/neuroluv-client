@@ -1,0 +1,13 @@
+@use "../../../styles/functions" as *;
+@use "../../../styles/vars" as *;
+
+.container {
+  width: 100%;
+  max-width: rem($container);
+  margin: 0 auto;
+  padding: 0 rem($page-gutter);
+
+  @media (max-width: em($breakpoint-tablet - 0.02)) {
+    padding: 0 rem($page-gutter-mobile);
+  }
+}

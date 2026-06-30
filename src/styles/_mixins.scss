@@ -1,0 +1,19 @@
+@use "functions" as *;
+@use "vars" as *;
+
+@mixin heading-font($weight: 700) {
+  font-family: $font-heading;
+  font-weight: $weight;
+  letter-spacing: 0;
+}
+
+@mixin body-font($weight: 400) {
+  font-family: $font-body;
+  font-weight: $weight;
+  letter-spacing: 0;
+}
+
+@mixin focus-ring($color: $color-cyan) {
+  outline: rem(2) solid $color;
+  outline-offset: rem(3);
+}
