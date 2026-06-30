@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 
+import { getSiteSeo } from "@/shared/api/directus/seo";
+import { buildSiteMetadata } from "@/shared/lib/seo/metadata";
 import { Header } from "@/widgets/header";
 
 import "./globals.scss";
 
-export const metadata: Metadata = {
-  title: "Нейролюб",
-  description: "Галерея и студия AI-контента",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await getSiteSeo();
+
+  return buildSiteMetadata(seo);
+}
 
 export default function RootLayout({
   children,
