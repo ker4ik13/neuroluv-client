@@ -3,6 +3,7 @@ import type { IconType } from "react-icons";
 import type { NavigationIcon } from "@/entities/navigation";
 import {
   AiOutlineBulb,
+  AiOutlineCheckCircle,
   AiOutlineCodepen,
   AiOutlineEdit,
   AiOutlineEye,
@@ -13,6 +14,9 @@ import {
   AiOutlineTeam,
   AiOutlineVideoCamera,
 } from "react-icons/ai";
+import { FiZap } from "react-icons/fi";
+import { FaTelegram } from "react-icons/fa6";
+import { PiCpu } from "react-icons/pi";
 import { RiBriefcaseLine, RiRobot2Line } from "react-icons/ri";
 
 type AppIconProps = {
@@ -24,7 +28,10 @@ const ICONS: Record<string, IconType> = {
   bot: RiRobot2Line,
   "book-open": AiOutlineRead,
   briefcase: RiBriefcaseLine,
+  check: AiOutlineCheckCircle,
+  "check-circle": AiOutlineCheckCircle,
   codepen: AiOutlineCodepen,
+  cpu: PiCpu,
   edit: AiOutlineEdit,
   eye: AiOutlineEye,
   "file-text": AiOutlineFileText,
@@ -35,8 +42,10 @@ const ICONS: Record<string, IconType> = {
   picture: AiOutlinePicture,
   read: AiOutlineRead,
   team: AiOutlineTeam,
+  telegram: FaTelegram,
   users: AiOutlineTeam,
   video: AiOutlineVideoCamera,
+  zap: FiZap,
 };
 
 export function AppIcon({ icon, className }: AppIconProps) {

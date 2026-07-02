@@ -62,15 +62,24 @@
 .cards {
 	display: flex;
 	width: 100%;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	align-items: stretch;
 	gap: rem(20);
+
+	@media (max-width: em($breakpoint-laptop)) {
+		flex-direction: column;
+	}
 }
 
 .cardsTwo {
 	.card {
 		width: calc((100% - rem(20)) / 2);
 		flex-basis: calc((100% - rem(20)) / 2);
+
+		@media (max-width: em($breakpoint-laptop)) {
+			width: 100%;
+			flex-basis: auto;
+		}
 	}
 }
 
@@ -78,6 +87,11 @@
 	.card {
 		width: calc((100% - rem(40)) / 3);
 		flex-basis: calc((100% - rem(40)) / 3);
+
+		@media (max-width: em($breakpoint-laptop)) {
+			width: 100%;
+			flex-basis: auto;
+		}
 	}
 }
 
@@ -96,14 +110,12 @@
 	box-shadow: 0 rem(14) rem(17) rgba(0, 0, 0, 0.08);
 
 	@media (max-width: em($breakpoint-laptop)) {
-		width: calc((100% - rem(20)) / 2);
-		flex-basis: calc((100% - rem(20)) / 2);
+		width: 100%;
+		flex-basis: auto;
 	}
 
 	@media (max-width: em($breakpoint-tablet)) {
-		width: 100%;
 		min-height: rem(340);
-		flex-basis: 100%;
 		border-radius: rem(20);
 	}
 }
@@ -212,7 +224,7 @@
 
 .featureText {
 	min-width: 0;
-	font-size: rem(13);
+	font-size: rem(14);
 	line-height: 1.2;
 }
 

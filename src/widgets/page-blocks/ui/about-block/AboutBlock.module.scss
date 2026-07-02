@@ -136,9 +136,7 @@
 	align-content: flex-start;
 	align-items: stretch;
 	gap: rem(24);
-
-	@media (max-width: em($breakpoint-laptop)) {
-	}
+	height: 100%;
 
 	@media (max-width: em($breakpoint-tablet)) {
 		flex-direction: column;
@@ -146,8 +144,10 @@
 }
 
 .card {
-	width: rem(318);
+	max-width: rem(316);
+	width: 100%;
 	padding: rem(24);
+	height: 100%;
 	color: $color-white;
 	background: $color-ink;
 	border-radius: rem(12);
