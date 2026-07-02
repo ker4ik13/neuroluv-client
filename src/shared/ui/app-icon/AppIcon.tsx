@@ -7,8 +7,11 @@ import {
   AiOutlineEdit,
   AiOutlineEye,
   AiOutlineFileText,
+  AiOutlinePicture,
   AiOutlineInstagram,
   AiOutlineRead,
+  AiOutlineTeam,
+  AiOutlineVideoCamera,
 } from "react-icons/ai";
 import { RiBriefcaseLine, RiRobot2Line } from "react-icons/ri";
 
@@ -25,10 +28,15 @@ const ICONS: Record<string, IconType> = {
   edit: AiOutlineEdit,
   eye: AiOutlineEye,
   "file-text": AiOutlineFileText,
+  image: AiOutlinePicture,
   instagram: AiOutlineInstagram,
   lightbulb: AiOutlineBulb,
   pen: AiOutlineEdit,
+  picture: AiOutlinePicture,
   read: AiOutlineRead,
+  team: AiOutlineTeam,
+  users: AiOutlineTeam,
+  video: AiOutlineVideoCamera,
 };
 
 export function AppIcon({ icon, className }: AppIconProps) {

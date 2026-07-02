@@ -48,7 +48,47 @@ export type PageAboutBlock = {
   cards: PageAboutCard[];
 };
 
-export type PageBlock = PageHeroBlock | PageAboutBlock;
+export type PageTaskExamplesCard = {
+  id: number;
+  title: string;
+  description: string;
+  href: string | null;
+  isSelected: boolean;
+  icon: NavigationIcon | null;
+};
+
+export type PageTaskExamplesBlock = {
+  id: number;
+  type: "taskExamples";
+  title: string;
+  description: string;
+  cards: PageTaskExamplesCard[];
+};
+
+export type PageServiceCard = {
+  id: number;
+  title: string;
+  description: string;
+  href: string;
+  isPopular: boolean;
+  icon: NavigationIcon | null;
+  advantages: string[];
+};
+
+export type PageServicesBlock = {
+  id: number;
+  type: "services";
+  title: string;
+  description: string;
+  allServicesHref: string | null;
+  services: PageServiceCard[];
+};
+
+export type PageBlock =
+  | PageHeroBlock
+  | PageAboutBlock
+  | PageTaskExamplesBlock
+  | PageServicesBlock;
 
 export type Page = {
   id: number;
