@@ -1,7 +1,7 @@
 import type { IconType } from "react-icons";
 
 import type { NavigationIcon } from "@/entities/navigation";
-import { AiOutlineCodepen, AiOutlineRead } from "react-icons/ai";
+import { AiOutlineCodepen, AiOutlineFileText, AiOutlineRead } from "react-icons/ai";
 import { RiRobot2Line } from "react-icons/ri";
 
 type AppIconProps = {
@@ -13,6 +13,7 @@ const ICONS: Record<string, IconType> = {
   bot: RiRobot2Line,
   "book-open": AiOutlineRead,
   codepen: AiOutlineCodepen,
+  "file-text": AiOutlineFileText,
   read: AiOutlineRead,
 };
 
@@ -29,5 +30,4 @@ export function AppIcon({ icon, className }: AppIconProps) {
 
   return <Icon aria-hidden="true" className={className} />;
 }
-
 

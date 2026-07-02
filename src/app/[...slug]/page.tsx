@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoBySlug } from "@/shared/api/directus/seo";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import { PageBlocks } from "@/widgets/page-blocks";
 
 type DynamicPageProps = {
   params: Promise<{
@@ -21,13 +23,13 @@ export async function generateMetadata({
 
 export default async function DynamicPage({ params }: DynamicPageProps) {
   const pageSlug = await getPageSlug(params);
-  const seo = await getPageSeoBySlug(pageSlug);
+  const page = await getPageBySlug(pageSlug);
 
-  if (!seo) {
+  if (!page) {
     notFound();
   }
 
-  return null;
+  return <PageBlocks blocks={page.blocks} />;
 }
 
 async function getPageSlug(params: DynamicPageProps["params"]): Promise<string> {

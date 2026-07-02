@@ -1,0 +1,213 @@
+@use '../../../../styles/functions' as *;
+@use '../../../../styles/mixins' as *;
+@use '../../../../styles/vars' as *;
+
+.hero {
+	padding: rem(40) rem(20);
+	max-width: rem(1400);
+	margin: 0 auto;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		padding: rem(18) rem(16) rem(56);
+	}
+}
+
+.inner {
+	position: relative;
+	display: flex;
+	min-height: rem(580);
+	overflow: hidden;
+	color: $color-white;
+	background: $color-ink;
+	border: rem(1) solid rgba($color-white, 0.1);
+	border-radius: rem(24);
+
+	@media (max-width: em($breakpoint-laptop)) {
+		min-height: 0;
+		flex-direction: column;
+	}
+}
+
+.content {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	padding: rem(60);
+
+	@media (max-width: em($breakpoint-laptop)) {
+		width: 100%;
+		min-height: rem(460);
+		padding: rem(40);
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		min-height: rem(420);
+		padding: rem(28);
+		gap: rem(20);
+	}
+}
+
+.eyebrow {
+	@include body-font(500);
+
+	max-width: rem(560);
+	color: rgba($color-white, 0.72);
+	font-size: rem(16);
+	line-height: 1.4;
+}
+
+.title {
+	@include heading-font(700);
+
+	max-width: rem(600);
+	margin-bottom: auto;
+	color: $color-white;
+	font-size: rem(60);
+	line-height: 1;
+	text-transform: uppercase;
+
+	@media (max-width: em($breakpoint-laptop)) {
+		font-size: rem(54);
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		font-size: rem(30);
+		text-align: center;
+	}
+}
+
+.bottom {
+	display: flex;
+	max-width: rem(631);
+	flex-direction: column;
+	gap: rem(20);
+}
+
+.description {
+	@include body-font(500);
+
+	color: $color-white;
+	font-size: rem(24);
+	line-height: 1.2;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		font-size: rem(18);
+	}
+}
+
+.telegram {
+	@include body-font(500);
+
+	display: inline-flex;
+	width: fit-content;
+	align-items: center;
+	gap: rem(10);
+	color: $color-white;
+	font-size: rem(20);
+	line-height: 1.2;
+	transition: color 0.1s ease;
+
+	&:hover {
+		color: $color-cyan;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.telegramIcon {
+	width: rem(20);
+	height: rem(20);
+	flex: 0 0 rem(20);
+}
+
+.actions {
+	display: flex;
+	gap: rem(20);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		flex-direction: column;
+		gap: rem(12);
+	}
+}
+
+.button {
+	@include body-font(600);
+
+	display: inline-flex;
+	min-height: rem(52);
+	width: rem(300);
+	align-items: center;
+	justify-content: center;
+	gap: rem(8);
+	padding: rem(14) rem(28);
+	color: $color-white;
+	font-size: rem(18);
+	line-height: 1.1;
+	border: rem(1) solid transparent;
+	border-radius: rem(14);
+	transition:
+		color 160ms ease,
+		background-color 160ms ease,
+		border-color 160ms ease;
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		width: 100%;
+	}
+}
+
+.buttonPrimary {
+	background: $color-blue;
+
+	&:hover {
+		background: $color-blue-hover;
+	}
+}
+
+.buttonSecondary {
+	background: rgba($color-white, 0.08);
+	border-color: rgba($color-white, 0.22);
+
+	&:hover {
+		background: rgba($color-white, 0.14);
+	}
+}
+
+.buttonIcon {
+	width: rem(22);
+	height: rem(22);
+	flex: 0 0 rem(22);
+}
+
+.imageWrap {
+	position: absolute;
+	right: rem(-20);
+	bottom: 0;
+	width: min(50%, rem(625));
+	height: 100%;
+
+	@media (max-width: em($breakpoint-laptop)) {
+		position: relative;
+		right: auto;
+		max-width: rem(300);
+		height: auto;
+		margin: 0 auto;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+	}
+}
+
+.image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+}
