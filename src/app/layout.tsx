@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { getSiteSeo } from "@/shared/api/directus/seo";
 import { buildSiteMetadata } from "@/shared/lib/seo/metadata";
+import { Footer } from "@/widgets/footer";
 import { Header } from "@/widgets/header";
 
 import "./globals.scss";
@@ -22,6 +23,7 @@ export default function RootLayout({
       <body>
         <Header />
         <main>{children}</main>
+        <Footer />
       </body>
     </html>
   );
