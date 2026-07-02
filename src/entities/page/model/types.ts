@@ -30,7 +30,25 @@ export type PageHeroBlock = {
   buttons: PageHeroButton[];
 };
 
-export type PageBlock = PageHeroBlock;
+export type PageAboutCard = {
+  id: number;
+  title: string;
+  description: string;
+  icon: NavigationIcon | null;
+};
+
+export type PageAboutBlock = {
+  id: number;
+  type: "about";
+  title: string;
+  description: string;
+  advantageTitle: string | null;
+  advantageDescription: string | null;
+  advantageImage: PageImage | null;
+  cards: PageAboutCard[];
+};
+
+export type PageBlock = PageHeroBlock | PageAboutBlock;
 
 export type Page = {
   id: number;

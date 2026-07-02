@@ -1,1 +1,9 @@
-export type { Page, PageBlock, PageHeroBlock, PageHeroButton, PageImage } from "./model";
+export type {
+  Page,
+  PageAboutBlock,
+  PageAboutCard,
+  PageBlock,
+  PageHeroBlock,
+  PageHeroButton,
+  PageImage,
+} from "./model";

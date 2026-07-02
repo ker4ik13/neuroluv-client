@@ -1,6 +1,8 @@
 import type { NavigationIcon } from "@/entities/navigation";
 import type {
   Page,
+  PageAboutBlock,
+  PageAboutCard,
   PageBlock,
   PageHeroBlock,
   PageHeroButton,
@@ -51,11 +53,31 @@ type DirectusHeroBlock = {
   buttons?: DirectusHeroButtonJunction[];
 };
 
+type DirectusAboutCard = {
+  id: number;
+  sort: number | null;
+  title: string | null;
+  description: string | null;
+  icon: DirectusIcon | null;
+  is_active: boolean | null;
+};
+
+type DirectusAboutBlock = {
+  id: number;
+  title: string | null;
+  description: string | null;
+  advantage_title: string | null;
+  advantage_description: string | null;
+  advantage_image: DirectusFile | string | null;
+  is_active: boolean | null;
+  cards?: DirectusAboutCard[];
+};
+
 type DirectusPageBlock = {
   id: number;
   sort: number | null;
   collection: string | null;
-  item: DirectusHeroBlock | number | string | null;
+  item: DirectusHeroBlock | DirectusAboutBlock | number | string | null;
 };
 
 type DirectusPage = {
@@ -78,6 +100,11 @@ const PAGE_FIELDS = [
   "blocks.item.image.type",
   "blocks.item.image.width",
   "blocks.item.image.height",
+  "blocks.item.advantage_image.id",
+  "blocks.item.advantage_image.title",
+  "blocks.item.advantage_image.type",
+  "blocks.item.advantage_image.width",
+  "blocks.item.advantage_image.height",
   "blocks.item.buttons.sort",
   "blocks.item.buttons.hero_buttons_id.id",
   "blocks.item.buttons.hero_buttons_id.label",
@@ -89,6 +116,15 @@ const PAGE_FIELDS = [
   "blocks.item.buttons.hero_buttons_id.icon.code",
   "blocks.item.buttons.hero_buttons_id.icon.library",
   "blocks.item.buttons.hero_buttons_id.icon.is_active",
+  "blocks.item.cards.id",
+  "blocks.item.cards.sort",
+  "blocks.item.cards.title",
+  "blocks.item.cards.description",
+  "blocks.item.cards.is_active",
+  "blocks.item.cards.icon.title",
+  "blocks.item.cards.icon.code",
+  "blocks.item.cards.icon.library",
+  "blocks.item.cards.icon.is_active",
 ].join(",");
 
 export async function getPageBySlug(slug: string): Promise<Page | null> {
@@ -150,14 +186,18 @@ function normalizeBlocks(blocks: DirectusPageBlock[]): PageBlock[] {
 
 function normalizeBlock(block: DirectusPageBlock): PageBlock | null {
   if (block.collection === "block_hero") {
-    return normalizeHeroBlock(block.item);
+    return normalizeHeroBlock(block.item as DirectusHeroBlock | number | string | null);
+  }
+
+  if (block.collection === "block_about") {
+    return normalizeAboutBlock(block.item as DirectusAboutBlock | number | string | null);
   }
 
   return null;
 }
 
 function normalizeHeroBlock(
-  item: DirectusPageBlock["item"],
+  item: DirectusHeroBlock | number | string | null,
 ): PageHeroBlock | null {
   if (!item || typeof item !== "object" || item.is_active === false || !item.title) {
     return null;
@@ -198,6 +238,37 @@ function isDirectusHeroButton(
   button: DirectusHeroButton | number | null,
 ): button is DirectusHeroButton {
   return typeof button === "object" && button !== null && button.is_active !== false;
+}
+
+function normalizeAboutBlock(
+  item: DirectusAboutBlock | number | string | null,
+): PageAboutBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false || !item.title) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    type: "about",
+    title: item.title,
+    description: item.description || "",
+    advantageTitle: item.advantage_title || null,
+    advantageDescription: item.advantage_description || null,
+    advantageImage: normalizeImage(item.advantage_image, "Преимущество"),
+    cards: normalizeAboutCards(item.cards || []),
+  };
+}
+
+function normalizeAboutCards(cards: DirectusAboutCard[]): PageAboutCard[] {
+  return cards
+    .filter((card) => card.is_active !== false && card.title)
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map((card) => ({
+      id: card.id,
+      title: card.title || "",
+      description: card.description || "",
+      icon: normalizeIcon(card.icon),
+    }));
 }
 
 function normalizeImage(

@@ -1,4 +1,5 @@
 import type { PageBlock } from "@/entities/page";
+import { AboutBlock } from "@/widgets/page-blocks/ui/about-block/AboutBlock";
 import { HeroBlock } from "@/widgets/page-blocks/ui/hero-block/HeroBlock";
 
 type PageBlocksProps = {
@@ -11,6 +12,10 @@ export function PageBlocks({ blocks }: PageBlocksProps) {
       {blocks.map((block) => {
         if (block.type === "hero") {
           return <HeroBlock block={block} key={`${block.type}-${block.id}`} />;
+        }
+
+        if (block.type === "about") {
+          return <AboutBlock block={block} key={`${block.type}-${block.id}`} />;
         }
 
         return null;
