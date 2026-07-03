@@ -281,49 +281,66 @@ $sticky-sidebar-top: 112;
 }
 
 .featuredCard {
+	@include floating-particles(1, 0.26);
+
 	min-height: rem(430);
-	flex-direction: column;
-	justify-content: flex-end;
+	align-items: stretch;
+	gap: rem(28);
+	padding: rem(28);
 	color: $color-white;
+	background: $color-ink-soft;
 
 	@media (max-width: em($breakpoint-tablet)) {
+		flex-direction: column;
+		gap: rem(20);
 		min-height: rem(360);
+		padding: rem(22);
 	}
 }
 
 .featuredImage {
-	position: absolute;
-	inset: 0;
+	position: relative;
+	z-index: 2;
 	display: block;
+	width: min(42%, rem(360));
+	flex: 0 0 min(42%, rem(360));
+	overflow: hidden;
+	background: $color-ink;
+	border-radius: rem(16);
 
 	img {
 		object-fit: cover;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		width: 100%;
+		flex-basis: auto;
+		aspect-ratio: 16 / 9;
+		order: -1;
 	}
 }
 
 .featuredOverlay {
 	position: absolute;
 	inset: 0;
+	z-index: 0;
 	background: linear-gradient(
-		180deg,
-		rgba($color-ink, 0.08),
-		rgba($color-ink, 0.84)
+		90deg,
+		rgba($color-ink-soft, 0.96),
+		rgba($color-ink-soft, 0.72)
 	);
 }
 
 .featuredContent {
 	position: relative;
-	z-index: 1;
+	z-index: 2;
 	display: flex;
 	width: 100%;
+	flex: 1 1 auto;
 	flex-direction: column;
 	align-items: flex-start;
 	gap: rem(14);
-	padding: rem(28);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(22);
-	}
+	justify-content: flex-end;
 }
 
 .featuredTitle {

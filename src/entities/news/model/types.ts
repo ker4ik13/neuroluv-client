@@ -31,6 +31,7 @@ export type NewsItem = {
   publishedAt: string | null;
   publishedAtLabel: string;
   readTime: number | null;
+  viewsCount: number | null;
   author: NewsAuthor | null;
   topic: NewsTaxonomy | null;
   tags: NewsTaxonomy[];

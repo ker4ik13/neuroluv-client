@@ -10,8 +10,11 @@ import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 import styles from "./ContentDetailPage.module.scss";
 
 type ContentDetailPageProps = {
+  basePath?: string;
+  contentLabel?: string;
   item: NewsDetail;
   related: NewsItem[];
+  relatedTitle?: string;
 };
 
 type ArticleHeading = {
@@ -21,13 +24,19 @@ type ArticleHeading = {
   localIndex: number;
 };
 
-export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
-  const shareHref = buildTelegramShareHref(item);
+export function ContentDetailPage({
+  basePath = "/news",
+  contentLabel = "Новость",
+  item,
+  related,
+  relatedTitle = "Читайте также",
+}: ContentDetailPageProps) {
+  const shareHref = buildTelegramShareHref(item, basePath);
   const headings = buildArticleHeadings(item.contentBlocks);
 
   return (
     <main className={styles.page}>
-      <DetailHero item={item} shareHref={shareHref} />
+      <DetailHero contentLabel={contentLabel} item={item} shareHref={shareHref} />
 
       <div className={styles.layout}>
         <article className={styles.article}>
@@ -48,6 +57,8 @@ export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
         </article>
 
         <SmartStickySidebar className={styles.sidebar}>
+          <AuthorSidebarCard contentLabel={contentLabel} item={item} />
+
           <SidebarPanel title="В этой статье">
             <div className={styles.tocList}>
               {headings.map((heading) => (
@@ -116,10 +127,14 @@ export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
 
       {related.length > 0 && (
         <section className={styles.related}>
-          <h2 className={styles.relatedTitle}>Читайте также</h2>
+          <h2 className={styles.relatedTitle}>{relatedTitle}</h2>
           <div className={styles.relatedGrid}>
             {related.map((news, index) => (
-              <RelatedCard item={news} key={`related-${news.id}-${index}`} />
+              <RelatedCard
+                contentLabel={contentLabel}
+                item={news}
+                key={`related-${news.id}-${index}`}
+              />
             ))}
           </div>
         </section>
@@ -128,13 +143,47 @@ export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
   );
 }
 
-function DetailHero({ item, shareHref }: { item: NewsDetail; shareHref: string }) {
+function AuthorSidebarCard({
+  contentLabel,
+  item,
+}: {
+  contentLabel: string;
+  item: NewsDetail;
+}) {
+  return (
+    <section className={styles.authorCard}>
+      <span className={styles.authorCardEyebrow}>Автор</span>
+      <div className={styles.authorCardMain}>
+        <AuthorAvatar item={item} />
+        <span className={styles.authorCardText}>
+          <strong>{item.author?.name || "Редакция Нейролюба"}</strong>
+          <span>{item.author ? `${contentLabel} подготовил автор` : "Команда Нейролюба"}</span>
+        </span>
+      </div>
+      <div className={styles.authorCardMeta}>
+        {item.publishedAtLabel && <span>{item.publishedAtLabel}</span>}
+        {item.readTime && <span>{item.readTime} мин</span>}
+        {item.viewsCount !== null && <span>{item.viewsCount} просмотров</span>}
+      </div>
+    </section>
+  );
+}
+
+function DetailHero({
+  contentLabel,
+  item,
+  shareHref,
+}: {
+  contentLabel: string;
+  item: NewsDetail;
+  shareHref: string;
+}) {
   return (
     <section className={styles.hero}>
       <div className={styles.heroPattern} />
       <div className={styles.heroContent}>
         <div className={styles.badges}>
-          <span className={styles.badgePrimary}>Новость</span>
+          <span className={styles.badgePrimary}>{contentLabel}</span>
           {item.topic && <span className={styles.badgeMuted}>{item.topic.title}</span>}
           {item.tags.slice(0, 2).map((tag, index) => (
             <span className={styles.badgeMuted} key={`tag-${tag.id}-${index}`}>
@@ -145,10 +194,15 @@ function DetailHero({ item, shareHref }: { item: NewsDetail; shareHref: string }
 
         <h1 className={styles.heroTitle}>{item.title}</h1>
         <p className={styles.heroDescription}>{item.description}</p>
+        <span className={styles.heroAuthor}>
+          <AuthorAvatar item={item} />
+          <span>{item.author?.name || "Редакция Нейролюба"}</span>
+        </span>
         <p className={styles.heroMeta}>
           {[
             item.publishedAtLabel,
             item.readTime ? `${item.readTime} минут чтения` : null,
+            item.viewsCount !== null ? `${item.viewsCount} просмотров` : null,
             item.topic?.title,
           ]
             .filter(Boolean)
@@ -366,7 +420,13 @@ function SidebarPanel({
   );
 }
 
-function RelatedCard({ item }: { item: NewsItem }) {
+function RelatedCard({
+  contentLabel,
+  item,
+}: {
+  contentLabel: string;
+  item: NewsItem;
+}) {
   return (
     <Link className={styles.relatedCard} href={item.href}>
       <span className={styles.relatedImage}>
@@ -383,7 +443,7 @@ function RelatedCard({ item }: { item: NewsItem }) {
       </span>
       <span className={styles.relatedBody}>
         <span className={styles.relatedBadge}>
-          {item.topic?.title || item.tags[0]?.title || "Новости"}
+          {item.topic?.title || item.tags[0]?.title || contentLabel}
         </span>
         <span className={styles.relatedCardTitle}>{item.title}</span>
         <span className={styles.relatedText}>{item.miniDescription}</span>
@@ -391,7 +451,9 @@ function RelatedCard({ item }: { item: NewsItem }) {
       <span className={styles.relatedMeta}>
         <span>{item.author?.name || "Нейролюб"}</span>
         <span>
-          {item.publishedAtLabel}
+          {item.viewsCount !== null
+            ? `${item.viewsCount} просмотров`
+            : item.publishedAtLabel}
           <BsEye aria-hidden="true" />
         </span>
       </span>
@@ -399,8 +461,22 @@ function RelatedCard({ item }: { item: NewsItem }) {
   );
 }
 
-function buildTelegramShareHref(item: NewsDetail): string {
-  const path = `/news/${item.slug}`;
+function AuthorAvatar({ item }: { item: NewsItem }) {
+  const avatar = item.author?.avatar;
+
+  if (avatar) {
+    return (
+      <span className={styles.heroAuthorAvatar}>
+        <Image alt="" fill sizes="34px" src={avatar.url} />
+      </span>
+    );
+  }
+
+  return <span className={styles.heroAuthorFallback}>Н</span>;
+}
+
+function buildTelegramShareHref(item: NewsDetail, basePath: string): string {
+  const path = `${basePath}/${item.slug}`;
   const text = encodeURIComponent(item.title);
 
   return `https://t.me/share/url?url=${encodeURIComponent(path)}&text=${text}`;

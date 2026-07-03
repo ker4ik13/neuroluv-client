@@ -20,8 +20,19 @@ import styles from "./NewsPage.module.scss";
 type NewsPageProps = {
   activeTag: string | null;
   activeTopic: string | null;
+  config?: ContentListPageConfig;
   data: NewsPageData;
   sort: NewsSortOrder;
+};
+
+type ContentListPageConfig = {
+  basePath: string;
+  heroDescription: string;
+  heroEyebrow: string;
+  heroImageSrc: string;
+  heroTitle: string;
+  itemLabel: string;
+  latestTitle: string;
 };
 
 type FilterOption = {
@@ -34,7 +45,24 @@ type FilterOption = {
 const INITIAL_VISIBLE_COUNT = 7;
 const LOAD_STEP = 6;
 
-export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) {
+const DEFAULT_CONFIG: ContentListPageConfig = {
+  basePath: "/news",
+  heroDescription:
+    "Коротко и по делу рассказываем о новых моделях, инструментах, обновлениях и трендах, которые важны креаторам, маркетологам и бизнесу.",
+  heroEyebrow: "Новости",
+  heroImageSrc: "/images/news-hero-person.png",
+  heroTitle: "Следим за тем, что меняется в AI-сфере",
+  itemLabel: "Новости",
+  latestTitle: "Последние новости",
+};
+
+export function NewsPage({
+  activeTag,
+  activeTopic,
+  config = DEFAULT_CONFIG,
+  data,
+  sort,
+}: NewsPageProps) {
   const [visibleState, setVisibleState] = useState({
     key: "all:fresh",
     count: INITIAL_VISIBLE_COUNT,
@@ -113,19 +141,13 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
             alt=""
             fill
             sizes="(max-width: 1024px) 100vw, 620px"
-            src="/images/news-hero-person.png"
+            src={config.heroImageSrc}
           />
         </div>
         <div className={styles.heroContent}>
-          <p className={styles.eyebrow}>Новости</p>
-          <h1 className={styles.heroTitle}>
-            Следим за тем, что меняется в AI-сфере
-          </h1>
-          <p className={styles.heroDescription}>
-            Коротко и по делу рассказываем о новых моделях, инструментах,
-            обновлениях и трендах, которые важны креаторам, маркетологам и
-            бизнесу.
-          </p>
+          <p className={styles.eyebrow}>{config.heroEyebrow}</p>
+          <h1 className={styles.heroTitle}>{config.heroTitle}</h1>
+          <p className={styles.heroDescription}>{config.heroDescription}</p>
         </div>
       </section>
 
@@ -135,18 +157,23 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
             activeFilterKey={activeFilterKey}
             activeTag={activeTag}
             activeTopic={activeTopic}
+            basePath={config.basePath}
             filters={filters}
             sort={sort}
           />
 
           {featuredNews ? (
             <>
-              <FeaturedNewsCard item={featuredNews} />
+              <FeaturedNewsCard item={featuredNews} label={config.itemLabel} />
 
               {gridNews.length > 0 && (
                 <div className={styles.grid}>
                   {gridNews.map((item, index) => (
-                    <NewsCard item={item} key={`news-card-${item.id}-${index}`} />
+                    <NewsCard
+                      item={item}
+                      key={`news-card-${item.id}-${index}`}
+                      label={config.itemLabel}
+                    />
                   ))}
                 </div>
               )}
@@ -178,7 +205,9 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
 
         <NewsSidebar
           activeFilterKey={activeFilterKey}
+          basePath={config.basePath}
           filters={filters.filter((filter) => filter.kind !== "all")}
+          latestTitle={config.latestTitle}
           news={data.sidebarNews}
           sort={sort}
         />
@@ -193,12 +222,14 @@ function FilterBar({
   activeFilterKey,
   activeTag,
   activeTopic,
+  basePath,
   filters,
   sort,
 }: {
   activeFilterKey: string;
   activeTag: string | null;
   activeTopic: string | null;
+  basePath: string;
   filters: FilterOption[];
   sort: NewsSortOrder;
 }) {
@@ -213,6 +244,7 @@ function FilterBar({
               activeFilterKey === getFilterKey(filter) ? styles.filterButtonActive : ""
             }`}
             href={buildNewsHref({
+              basePath,
               filter,
               sort,
             })}
@@ -226,6 +258,7 @@ function FilterBar({
       <Link
         className={styles.sortButton}
         href={buildNewsHref({
+          basePath,
           sort: nextSort,
           tag: activeTag,
           topic: activeTopic,
@@ -241,13 +274,19 @@ function FilterBar({
   );
 }
 
-function FeaturedNewsCard({ item }: { item: NewsItem }) {
+function FeaturedNewsCard({
+  item,
+  label,
+}: {
+  item: NewsItem;
+  label: string;
+}) {
   return (
     <Link className={styles.featuredCard} href={item.href}>
       <NewsImage className={styles.featuredImage} image={item.image} priority />
       <span className={styles.featuredOverlay} />
       <span className={styles.featuredContent}>
-        <TopicBadge item={item} />
+        <TopicBadge item={item} label={label} />
         <span className={styles.featuredTitle}>{item.title}</span>
         {item.miniDescription && (
           <span className={styles.featuredDescription}>
@@ -260,12 +299,12 @@ function FeaturedNewsCard({ item }: { item: NewsItem }) {
   );
 }
 
-function NewsCard({ item }: { item: NewsItem }) {
+function NewsCard({ item, label }: { item: NewsItem; label: string }) {
   return (
     <Link className={styles.card} href={item.href}>
       <NewsImage className={styles.cardImage} image={item.image} />
       <span className={styles.cardBody}>
-        <TopicBadge item={item} />
+        <TopicBadge item={item} label={label} />
         <span className={styles.cardTitle}>{item.title}</span>
         {item.miniDescription && (
           <span className={styles.cardDescription}>{item.miniDescription}</span>
@@ -302,10 +341,10 @@ function NewsImage({
   );
 }
 
-function TopicBadge({ item }: { item: NewsItem }) {
-  const label = item.topic?.title || item.tags[0]?.title || "Новости";
+function TopicBadge({ item, label }: { item: NewsItem; label: string }) {
+  const badgeLabel = item.topic?.title || item.tags[0]?.title || label;
 
-  return <span className={styles.badge}>{label}</span>;
+  return <span className={styles.badge}>{badgeLabel}</span>;
 }
 
 function NewsMeta({ item, isDark }: { item: NewsItem; isDark?: boolean }) {
@@ -318,6 +357,7 @@ function NewsMeta({ item, isDark }: { item: NewsItem; isDark?: boolean }) {
       <span className={styles.metaDetails}>
         {item.publishedAtLabel && <span>{item.publishedAtLabel}</span>}
         {item.readTime && <span>{item.readTime} мин</span>}
+        {item.viewsCount !== null && <span>{item.viewsCount} просмотров</span>}
       </span>
     </span>
   );
@@ -339,12 +379,16 @@ function AuthorAvatar({ item }: { item: NewsItem }) {
 
 function NewsSidebar({
   activeFilterKey,
+  basePath,
   filters,
+  latestTitle,
   news,
   sort,
 }: {
   activeFilterKey: string;
+  basePath: string;
   filters: FilterOption[];
+  latestTitle: string;
   news: NewsItem[];
   sort: NewsSortOrder;
 }) {
@@ -382,8 +426,8 @@ function NewsSidebar({
                 }`}
                 href={
                   isActive
-                    ? buildNewsHref({ sort })
-                    : buildNewsHref({ filter, sort })
+                    ? buildNewsHref({ basePath, sort })
+                    : buildNewsHref({ basePath, filter, sort })
                 }
                 key={`topic-${filter.id}-${index}`}
               >
@@ -413,7 +457,7 @@ function NewsSidebar({
       </div>
 
       {latestNews.length > 0 && (
-        <SidebarPanel title="Последние новости">
+        <SidebarPanel title={latestTitle}>
           <div className={styles.latestList}>
             {latestNews.map((item, index) => (
               <Link
@@ -554,11 +598,13 @@ function getActiveFilterKey(topic: string | null, tag: string | null): string {
 }
 
 function buildNewsHref({
+  basePath,
   filter,
   sort,
   tag,
   topic,
 }: {
+  basePath: string;
   filter?: FilterOption;
   sort: NewsSortOrder;
   tag?: string | null;
@@ -590,5 +636,5 @@ function buildNewsHref({
 
   const query = params.toString();
 
-  return query ? `/news?${query}` : "/news";
+  return query ? `${basePath}?${query}` : basePath;
 }

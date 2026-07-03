@@ -431,6 +431,7 @@ function normalizeNewsItem(item: DirectusNewsItem): NewsItem | null {
     publishedAt: item.published_at,
     publishedAtLabel: formatDate(item.published_at),
     readTime: item.readtime,
+    viewsCount: null,
     author: normalizeAuthor(item.author),
     topic: normalizeTaxonomy(item.topic),
     tags: normalizeTags(item.tags || []),

@@ -142,6 +142,37 @@ $sticky-sidebar-top: 112;
 	line-height: rem(20);
 }
 
+.heroAuthor {
+	@include body-font(600);
+
+	display: inline-flex;
+	align-items: center;
+	gap: rem(10);
+	color: $color-white;
+	font-size: rem(16);
+	line-height: rem(20);
+}
+
+.heroAuthorAvatar,
+.heroAuthorFallback {
+	position: relative;
+	display: inline-flex;
+	width: rem(34);
+	height: rem(34);
+	flex: 0 0 rem(34);
+	overflow: hidden;
+	align-items: center;
+	justify-content: center;
+	color: $color-white;
+	font-size: rem(14);
+	background: #1b3449;
+	border-radius: 50%;
+
+	img {
+		object-fit: cover;
+	}
+}
+
 .heroShare {
 	@include body-font(600);
 
@@ -563,6 +594,7 @@ $sticky-sidebar-top: 112;
 }
 
 .sidebarPanel,
+.authorCard,
 .sideCta {
 	display: flex;
 	flex-direction: column;
@@ -574,6 +606,77 @@ $sticky-sidebar-top: 112;
 
 	@media (max-width: em($breakpoint-laptop)) {
 		flex: 1 1 rem(280);
+	}
+}
+
+.authorCard {
+	gap: rem(16);
+	color: $color-ink;
+}
+
+.authorCardEyebrow {
+	@include heading-font(800);
+
+	color: $color-ink;
+	font-size: rem(18);
+	line-height: 1.1;
+	text-transform: uppercase;
+}
+
+.authorCardMain {
+	display: flex;
+	align-items: center;
+	gap: rem(12);
+
+	.heroAuthorAvatar,
+	.heroAuthorFallback {
+		width: rem(44);
+		height: rem(44);
+		flex-basis: rem(44);
+		color: $color-white;
+		background: $color-ink-soft;
+	}
+}
+
+.authorCardText {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: rem(4);
+
+	strong {
+		@include body-font(700);
+
+		color: $color-ink;
+		font-size: rem(17);
+		line-height: 1.15;
+	}
+
+	span {
+		@include body-font(400);
+
+		color: $color-ink-muted;
+		font-size: rem(14);
+		line-height: 1.25;
+	}
+}
+
+.authorCardMeta {
+	@include body-font(500);
+
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(8);
+	color: $color-ink-muted;
+	font-size: rem(13);
+	line-height: 1.2;
+
+	span {
+		display: inline-flex;
+		align-items: center;
+		padding: rem(6) rem(9);
+		background: $color-surface;
+		border-radius: rem(999);
 	}
 }
 
