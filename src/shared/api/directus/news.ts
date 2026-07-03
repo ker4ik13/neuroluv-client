@@ -1,0 +1,801 @@
+import type {
+  NewsContentBlock,
+  NewsContentButton,
+  NewsContentCard,
+  NewsContentListItem,
+  NewsContentStep,
+  NewsAuthor,
+  NewsDetail,
+  NewsDetailPageData,
+  NewsImage,
+  NewsItem,
+  NewsPageData,
+  NewsSortOrder,
+  NewsTaxonomy,
+} from "@/entities/news";
+import { directusRequest } from "@/shared/api/directus/client";
+import { DIRECTUS_URL } from "@/shared/config/directus";
+
+type DirectusFile = {
+  id: string;
+  title: string | null;
+  type: string | null;
+  width: number | null;
+  height: number | null;
+};
+
+type DirectusTaxonomy = {
+  id: number;
+  sort: number | null;
+  title: string | null;
+  slug: string | null;
+  description: string | null;
+  is_active: boolean | null;
+};
+
+type DirectusAuthor = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: DirectusFile | string | null;
+};
+
+type DirectusNewsTagJunction = {
+  sort: number | null;
+  news_tags_id: DirectusTaxonomy | number | null;
+};
+
+type DirectusContentListItem = {
+  id: number;
+  sort: number | null;
+  title: string | null;
+  description: string | null;
+};
+
+type DirectusContentCard = {
+  id: number;
+  sort: number | null;
+  title: string | null;
+  description: string | null;
+  link: string | null;
+  image: DirectusFile | string | null;
+};
+
+type DirectusContentStep = {
+  id: number;
+  sort: number | null;
+  is_active: boolean | null;
+  title: string | null;
+  description: string | null;
+};
+
+type DirectusContentButton = {
+  id: number;
+  label: string | null;
+  url: string | null;
+  target: "_self" | "_blank" | null;
+  variant: "primary" | "secondary" | "outline" | null;
+  is_active: boolean | null;
+};
+
+type DirectusContentButtonJunction = {
+  sort: number | null;
+  hero_buttons_id: DirectusContentButton | number | null;
+};
+
+type DirectusContentHtml = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  content: string | null;
+};
+
+type DirectusContentQuote = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  text: string | null;
+  author: string | null;
+};
+
+type DirectusContentList = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  items?: DirectusContentListItem[];
+};
+
+type DirectusContentImage = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  caption: string | null;
+  image: DirectusFile | string | null;
+};
+
+type DirectusContentCta = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  description: string | null;
+  buttons?: DirectusContentButtonJunction[];
+};
+
+type DirectusContentCards = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  cards?: DirectusContentCard[];
+};
+
+type DirectusContentSteps = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  steps?: DirectusContentStep[];
+};
+
+type DirectusContentBlock = {
+  id: number;
+  sort: number | null;
+  collection: string | null;
+  item:
+    | DirectusContentHtml
+    | DirectusContentQuote
+    | DirectusContentList
+    | DirectusContentImage
+    | DirectusContentCta
+    | DirectusContentCards
+    | DirectusContentSteps
+    | number
+    | string
+    | null;
+};
+
+type DirectusNewsItem = {
+  id: number;
+  sort: number | null;
+  status: "published" | "draft" | "archived" | string | null;
+  title: string | null;
+  slug: string | null;
+  description: string | null;
+  mini_description: string | null;
+  image: DirectusFile | string | null;
+  published_at: string | null;
+  readtime: number | null;
+  author: DirectusAuthor | string | null;
+  topic: DirectusTaxonomy | number | null;
+  tags?: DirectusNewsTagJunction[];
+  content_blocks?: DirectusContentBlock[];
+};
+
+const NEWS_FIELDS = [
+  "id",
+  "sort",
+  "status",
+  "title",
+  "slug",
+  "description",
+  "mini_description",
+  "published_at",
+  "readtime",
+  "image.id",
+  "image.title",
+  "image.type",
+  "image.width",
+  "image.height",
+  "topic.id",
+  "topic.sort",
+  "topic.title",
+  "topic.slug",
+  "topic.description",
+  "topic.is_active",
+  "author.id",
+  "author.first_name",
+  "author.last_name",
+  "author.avatar.id",
+  "author.avatar.title",
+  "author.avatar.type",
+  "author.avatar.width",
+  "author.avatar.height",
+  "tags.sort",
+  "tags.news_tags_id.id",
+  "tags.news_tags_id.sort",
+  "tags.news_tags_id.title",
+  "tags.news_tags_id.slug",
+  "tags.news_tags_id.description",
+  "tags.news_tags_id.is_active",
+].join(",");
+
+const TAXONOMY_FIELDS = ["id", "sort", "title", "slug", "description", "is_active"].join(
+  ",",
+);
+
+const NEWS_DETAIL_FIELDS = [
+  NEWS_FIELDS,
+  "content_blocks.id",
+  "content_blocks.sort",
+  "content_blocks.collection",
+  "content_blocks.item:content_html.id",
+  "content_blocks.item:content_html.is_active",
+  "content_blocks.item:content_html.title",
+  "content_blocks.item:content_html.content",
+  "content_blocks.item:content_quote.id",
+  "content_blocks.item:content_quote.is_active",
+  "content_blocks.item:content_quote.title",
+  "content_blocks.item:content_quote.text",
+  "content_blocks.item:content_quote.author",
+  "content_blocks.item:content_list.id",
+  "content_blocks.item:content_list.is_active",
+  "content_blocks.item:content_list.title",
+  "content_blocks.item:content_list.items.id",
+  "content_blocks.item:content_list.items.sort",
+  "content_blocks.item:content_list.items.title",
+  "content_blocks.item:content_list.items.description",
+  "content_blocks.item:content_image.id",
+  "content_blocks.item:content_image.is_active",
+  "content_blocks.item:content_image.title",
+  "content_blocks.item:content_image.caption",
+  "content_blocks.item:content_image.image.id",
+  "content_blocks.item:content_image.image.title",
+  "content_blocks.item:content_image.image.type",
+  "content_blocks.item:content_image.image.width",
+  "content_blocks.item:content_image.image.height",
+  "content_blocks.item:content_cta.id",
+  "content_blocks.item:content_cta.is_active",
+  "content_blocks.item:content_cta.title",
+  "content_blocks.item:content_cta.description",
+  "content_blocks.item:content_cta.buttons.sort",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.id",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.label",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.url",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.target",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.variant",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.is_active",
+  "content_blocks.item:content_cards.id",
+  "content_blocks.item:content_cards.is_active",
+  "content_blocks.item:content_cards.title",
+  "content_blocks.item:content_cards.cards.id",
+  "content_blocks.item:content_cards.cards.sort",
+  "content_blocks.item:content_cards.cards.title",
+  "content_blocks.item:content_cards.cards.description",
+  "content_blocks.item:content_cards.cards.link",
+  "content_blocks.item:content_cards.cards.image.id",
+  "content_blocks.item:content_cards.cards.image.title",
+  "content_blocks.item:content_cards.cards.image.type",
+  "content_blocks.item:content_cards.cards.image.width",
+  "content_blocks.item:content_cards.cards.image.height",
+  "content_blocks.item:content_steps.id",
+  "content_blocks.item:content_steps.is_active",
+  "content_blocks.item:content_steps.title",
+  "content_blocks.item:content_steps.steps.id",
+  "content_blocks.item:content_steps.steps.sort",
+  "content_blocks.item:content_steps.steps.is_active",
+  "content_blocks.item:content_steps.steps.title",
+  "content_blocks.item:content_steps.steps.description",
+].join(",");
+
+const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+export type GetNewsPageDataParams = {
+  sort?: NewsSortOrder;
+  tag?: string | null;
+  topic?: string | null;
+};
+
+export async function getNewsPageData({
+  sort = "fresh",
+  tag,
+  topic,
+}: GetNewsPageDataParams = {}): Promise<NewsPageData> {
+  const newsParams = new URLSearchParams({
+    fields: NEWS_FIELDS,
+    limit: "100",
+    sort: sort === "old" ? "published_at,id" : "-published_at,-id",
+  });
+
+  newsParams.set("filter[status][_eq]", "published");
+
+  if (topic) {
+    newsParams.set("filter[topic][slug][_eq]", topic);
+  }
+
+  if (tag) {
+    newsParams.set("filter[tags][news_tags_id][slug][_eq]", tag);
+  }
+
+  const [news, topics, tags] = await Promise.all([
+    directusRequest<DirectusNewsItem[]>(
+      `/items/news?${newsParams.toString()}`,
+      { next: { revalidate: 60 } },
+    ),
+    directusRequest<DirectusTaxonomy[]>(
+      `/items/news_topics?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+      { next: { revalidate: 60 } },
+    ),
+    directusRequest<DirectusTaxonomy[]>(
+      `/items/news_tags?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+      { next: { revalidate: 60 } },
+    ),
+  ]);
+
+  return {
+    news: news.map(normalizeNewsItem).filter(isNewsItem),
+    topics: topics.map(normalizeTaxonomy).filter(isTaxonomy),
+    tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
+  };
+}
+
+export async function getNewsBySlug(slug: string): Promise<NewsDetail | null> {
+  const params = new URLSearchParams({
+    fields: NEWS_DETAIL_FIELDS,
+    limit: "1",
+  });
+
+  params.set("filter[status][_eq]", "published");
+  params.set("filter[slug][_eq]", slug);
+
+  const news = await directusRequest<DirectusNewsItem[]>(
+    `/items/news?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return normalizeNewsDetail(news[0] || null);
+}
+
+export async function getRelatedNews(
+  currentId: number,
+  limit = 9,
+): Promise<NewsItem[]> {
+  const params = new URLSearchParams({
+    fields: NEWS_FIELDS,
+    limit: String(limit),
+    sort: "-published_at,-id",
+  });
+
+  params.set("filter[status][_eq]", "published");
+  params.set("filter[id][_neq]", String(currentId));
+
+  const news = await directusRequest<DirectusNewsItem[]>(
+    `/items/news?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return news.map(normalizeNewsItem).filter(isNewsItem);
+}
+
+export async function getNewsDetailPageData(
+  slug: string,
+): Promise<NewsDetailPageData | null> {
+  const item = await getNewsBySlug(slug);
+
+  if (!item) {
+    return null;
+  }
+
+  const related = await getRelatedNews(item.id);
+
+  return {
+    item,
+    related,
+  };
+}
+
+export async function getNewsSlugs(): Promise<string[]> {
+  const params = new URLSearchParams({
+    fields: "slug",
+    limit: "-1",
+    sort: "sort,id",
+  });
+
+  params.set("filter[status][_eq]", "published");
+
+  const news = await directusRequest<Pick<DirectusNewsItem, "slug">[]>(
+    `/items/news?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return news.map((item) => item.slug).filter((slug): slug is string => Boolean(slug));
+}
+
+function normalizeNewsItem(item: DirectusNewsItem): NewsItem | null {
+  if (!item.title || !item.slug || item.status !== "published") {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    href: `/news/${item.slug}`,
+    description: item.description || "",
+    miniDescription: item.mini_description || item.description || "",
+    image: normalizeImage(item.image, "Новость"),
+    publishedAt: item.published_at,
+    publishedAtLabel: formatDate(item.published_at),
+    readTime: item.readtime,
+    author: normalizeAuthor(item.author),
+    topic: normalizeTaxonomy(item.topic),
+    tags: normalizeTags(item.tags || []),
+  };
+}
+
+function normalizeNewsDetail(item: DirectusNewsItem | null): NewsDetail | null {
+  if (!item) {
+    return null;
+  }
+
+  const newsItem = normalizeNewsItem(item);
+
+  if (!newsItem) {
+    return null;
+  }
+
+  return {
+    ...newsItem,
+    contentBlocks: normalizeContentBlocks(item.content_blocks || []),
+  };
+}
+
+function isNewsItem(item: NewsItem | null): item is NewsItem {
+  return item !== null;
+}
+
+function normalizeContentBlocks(blocks: DirectusContentBlock[]): NewsContentBlock[] {
+  return blocks
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map(normalizeContentBlock)
+    .filter((block): block is NewsContentBlock => block !== null);
+}
+
+function normalizeContentBlock(block: DirectusContentBlock): NewsContentBlock | null {
+  if (block.collection === "content_html") {
+    return normalizeHtmlBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_quote") {
+    return normalizeQuoteBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_list") {
+    return normalizeListBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_image") {
+    return normalizeImageBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_cta") {
+    return normalizeCtaBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_cards") {
+    return normalizeCardsBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_steps") {
+    return normalizeStepsContentBlock(block.id, block.item);
+  }
+
+  return null;
+}
+
+function normalizeHtmlBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const html = item as DirectusContentHtml;
+
+  if (!html.content) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "html",
+    title: html.title,
+    content: html.content,
+  };
+}
+
+function normalizeQuoteBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const quote = item as DirectusContentQuote;
+
+  if (!quote.text) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "quote",
+    title: quote.title,
+    text: quote.text,
+    author: quote.author,
+  };
+}
+
+function normalizeListBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const list = item as DirectusContentList;
+  const items = (list.items || [])
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map(normalizeContentListItem)
+    .filter(
+      (listItem): listItem is NewsContentListItem => listItem !== null,
+    );
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "list",
+    title: list.title,
+    items,
+  };
+}
+
+function normalizeImageBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const imageBlock = item as DirectusContentImage;
+  const image = normalizeImage(imageBlock.image, imageBlock.title || "Изображение");
+
+  if (!image) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "image",
+    title: imageBlock.title,
+    caption: imageBlock.caption,
+    image,
+  };
+}
+
+function normalizeCtaBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const cta = item as DirectusContentCta;
+
+  if (!cta.title || !cta.description) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "cta",
+    title: cta.title,
+    description: cta.description,
+    buttons: normalizeContentButtons(cta.buttons || []),
+  };
+}
+
+function normalizeCardsBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const cardsBlock = item as DirectusContentCards;
+  const cards = (cardsBlock.cards || [])
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map(normalizeContentCard)
+    .filter((card): card is NewsContentCard => card !== null);
+
+  if (cards.length === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "cards",
+    title: cardsBlock.title,
+    cards,
+  };
+}
+
+function normalizeStepsContentBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const stepsBlock = item as DirectusContentSteps;
+  const steps = (stepsBlock.steps || [])
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map(normalizeContentStep)
+    .filter((step): step is NewsContentStep => step !== null);
+
+  if (steps.length === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "steps",
+    title: stepsBlock.title,
+    steps,
+  };
+}
+
+function normalizeContentListItem(
+  item: DirectusContentListItem,
+): NewsContentListItem | null {
+  if (!item.title && !item.description) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title || "",
+    description: item.description || "",
+  };
+}
+
+function normalizeContentCard(item: DirectusContentCard): NewsContentCard | null {
+  if (!item.title && !item.description) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title || "",
+    description: item.description || "",
+    href: item.link,
+    image: normalizeImage(item.image, item.title || "Карточка"),
+  };
+}
+
+function normalizeContentStep(item: DirectusContentStep): NewsContentStep | null {
+  if (item.is_active === false || (!item.title && !item.description)) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title || "",
+    description: item.description || "",
+  };
+}
+
+function normalizeContentButtons(
+  buttons: DirectusContentButtonJunction[],
+): NewsContentButton[] {
+  return buttons
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map((junction) => junction.hero_buttons_id)
+    .filter(
+      (button): button is DirectusContentButton =>
+        Boolean(button) && typeof button === "object",
+    )
+    .filter((button) => button.is_active !== false && Boolean(button.label && button.url))
+    .map((button) => ({
+      id: button.id,
+      label: button.label || "",
+      href: button.url || "#",
+      target: button.target || "_self",
+      variant: button.variant || "primary",
+    }));
+}
+
+function normalizeTags(tags: DirectusNewsTagJunction[]): NewsTaxonomy[] {
+  return tags
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map((tag) => tag.news_tags_id)
+    .map(normalizeTaxonomy)
+    .filter(isTaxonomy);
+}
+
+function normalizeTaxonomy(item: DirectusTaxonomy | number | null): NewsTaxonomy | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  if (!item.title || !item.slug) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    description: item.description || "",
+  };
+}
+
+function isTaxonomy(item: NewsTaxonomy | null): item is NewsTaxonomy {
+  return item !== null;
+}
+
+function normalizeAuthor(author: DirectusAuthor | string | null): NewsAuthor | null {
+  if (!author || typeof author !== "object") {
+    return null;
+  }
+
+  const name = [author.first_name, author.last_name].filter(Boolean).join(" ");
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    id: author.id,
+    name,
+    avatar: normalizeImage(author.avatar, name),
+  };
+}
+
+function normalizeImage(
+  image: DirectusFile | string | null,
+  fallbackTitle: string,
+): NewsImage | null {
+  if (!image) {
+    return null;
+  }
+
+  const file =
+    typeof image === "string"
+      ? {
+          id: image,
+          title: fallbackTitle,
+          type: null,
+          width: null,
+          height: null,
+        }
+      : image;
+
+  return {
+    id: file.id,
+    title: file.title || fallbackTitle,
+    url: `${DIRECTUS_URL}/assets/${file.id}`,
+    type: file.type,
+    width: file.width,
+    height: file.height,
+  };
+}
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "";
+  }
+
+  return dateFormatter.format(new Date(value));
+}

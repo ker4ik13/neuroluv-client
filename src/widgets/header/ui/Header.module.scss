@@ -9,11 +9,16 @@ $header-burger-breakpoint: 900;
 	top: 0;
 	z-index: $z-index-header;
 	width: 100%;
+	margin: 0 auto;
 	padding-top: rem(30);
 
 	@media (max-width: em($breakpoint-mobile)) {
 		padding-top: rem(16);
 	}
+}
+
+.container {
+	max-width: rem(1284);
 }
 
 .inner {

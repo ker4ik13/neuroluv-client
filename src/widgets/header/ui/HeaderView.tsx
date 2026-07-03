@@ -76,7 +76,7 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 
   return (
     <header className={styles.header}>
-      <Container>
+      <Container className={styles.container}>
         <div className={styles.inner} ref={headerRef}>
           <Link
             aria-label="На главную"
