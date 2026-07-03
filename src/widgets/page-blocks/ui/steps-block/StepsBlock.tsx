@@ -23,7 +23,7 @@ export function StepsBlock({ block }: StepsBlockProps) {
 
         <div className={styles.steps}>
           {block.steps.map((step, index) => (
-            <StepCard index={index} key={step.id} step={step} />
+            <StepCard index={index} key={`step-${step.id}-${index}`} step={step} />
           ))}
         </div>
       </div>

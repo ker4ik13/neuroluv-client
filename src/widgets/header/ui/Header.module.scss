@@ -7,22 +7,54 @@ $header-burger-breakpoint: 900;
 .header {
 	position: sticky;
 	top: 0;
+	isolation: isolate;
 	z-index: $z-index-header;
 	width: 100%;
 	margin: 0 auto;
 	padding-top: rem(30);
 
+	&::before {
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: 0;
+		width: 100%;
+		height: rem(110);
+		pointer-events: none;
+		backdrop-filter: blur(rem(4));
+		background: linear-gradient(
+			180deg,
+			rgba($color-surface, 0.8) 0%,
+			rgba($color-surface, 0.7) 48%,
+			rgba($color-surface, 0) 100%
+		);
+		content: '';
+		mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 100%);
+	}
+
+	@media (max-width: em($header-burger-breakpoint)) {
+		min-height: rem(108);
+	}
+
 	@media (max-width: em($breakpoint-mobile)) {
+		min-height: rem(94);
 		padding-top: rem(16);
+
+		&::before {
+			height: rem(100);
+		}
 	}
 }
 
 .container {
+	position: relative;
+	z-index: 1;
 	max-width: rem(1284);
 }
 
 .inner {
 	position: relative;
+	z-index: 2;
 	display: flex;
 	min-height: rem(66);
 	align-items: center;
@@ -36,7 +68,19 @@ $header-burger-breakpoint: 900;
 	box-shadow: 0 rem(10) rem(30) rgba($color-ink, 0.08);
 
 	@media (max-width: em($header-burger-breakpoint)) {
+		position: fixed;
+		top: rem(30);
+		left: rem($page-gutter);
+		right: rem($page-gutter);
+		z-index: $z-index-header + 2;
+		width: auto;
 		padding: rem(10) rem(14);
+	}
+
+	@media (max-width: em($breakpoint-mobile)) {
+		top: rem(16);
+		left: rem($page-gutter-mobile);
+		right: rem($page-gutter-mobile);
 	}
 }
 
@@ -140,16 +184,19 @@ $header-burger-breakpoint: 900;
 	height: auto;
 
 	@media (max-width: em($header-burger-breakpoint)) {
-		position: absolute;
-		top: calc(100% + rem(12));
-		left: 0;
-		right: 0;
-		width: 100%;
+		position: fixed;
+		top: rem(108);
+		left: rem($page-gutter);
+		right: rem($page-gutter);
+		z-index: $z-index-header + 1;
+		width: auto;
 		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
 		gap: rem(16);
+		max-height: calc(100dvh - rem(128));
+		overflow-y: auto;
 		padding: rem(14);
 		visibility: hidden;
 		background: $color-white;
@@ -162,6 +209,13 @@ $header-burger-breakpoint: 900;
 			opacity 180ms ease,
 			transform 180ms ease,
 			visibility 180ms ease;
+	}
+
+	@media (max-width: em($breakpoint-mobile)) {
+		top: rem(94);
+		left: rem($page-gutter-mobile);
+		right: rem($page-gutter-mobile);
+		max-height: calc(100dvh - rem(110));
 	}
 }
 

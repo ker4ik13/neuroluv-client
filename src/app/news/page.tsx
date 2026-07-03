@@ -11,6 +11,7 @@ import { PageBlocks } from "@/widgets/page-blocks";
 
 const EMPTY_NEWS_DATA: NewsPageData = {
   news: [],
+  sidebarNews: [],
   topics: [],
   tags: [],
 };

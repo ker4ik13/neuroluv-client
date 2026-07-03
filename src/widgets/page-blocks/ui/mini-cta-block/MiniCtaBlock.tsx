@@ -22,8 +22,11 @@ export function MiniCtaBlock({ block }: MiniCtaBlockProps) {
 
           {block.buttons.length > 0 && (
             <div className={styles.actions}>
-              {block.buttons.map((button) => (
-                <MiniButton button={button} key={button.id} />
+              {block.buttons.map((button, index) => (
+                <MiniButton
+                  button={button}
+                  key={`mini-cta-button-${button.id}-${index}`}
+                />
               ))}
             </div>
           )}

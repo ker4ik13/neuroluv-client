@@ -25,8 +25,11 @@ export function UseCasesBlock({ block }: UseCasesBlockProps) {
             )}
             {block.buttons.length > 0 && (
               <div className={styles.actions}>
-                {block.buttons.map((button) => (
-                  <UseCaseButton button={button} key={button.id} />
+                {block.buttons.map((button, index) => (
+                  <UseCaseButton
+                    button={button}
+                    key={`use-case-button-${button.id}-${index}`}
+                  />
                 ))}
               </div>
             )}
@@ -46,8 +49,8 @@ export function UseCasesBlock({ block }: UseCasesBlockProps) {
 
         {block.useCases.length > 0 && (
           <div className={styles.cards}>
-            {block.useCases.map((card) => (
-              <UseCaseCard card={card} key={card.id} />
+            {block.useCases.map((card, index) => (
+              <UseCaseCard card={card} key={`use-case-${card.id}-${index}`} />
             ))}
           </div>
         )}
@@ -80,8 +83,8 @@ function UseCaseCard({ card }: { card: PageUseCaseCard }) {
       <h3 className={styles.cardTitle}>{card.title}</h3>
       {card.tasks.length > 0 && (
         <ul className={styles.tasks}>
-          {card.tasks.map((task) => (
-            <li className={styles.task} key={task}>
+          {card.tasks.map((task, index) => (
+            <li className={styles.task} key={`task-${task}-${index}`}>
               <AiOutlineCheckCircle aria-hidden="true" className={styles.taskIcon} />
               <span>{task}</span>
             </li>

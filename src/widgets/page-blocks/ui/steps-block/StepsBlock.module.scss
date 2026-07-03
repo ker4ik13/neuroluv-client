@@ -59,19 +59,17 @@
 
 .steps {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: stretch;
 	gap: rem(20);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex-direction: column;
-	}
 }
 
 .step {
 	position: relative;
 	display: flex;
+	min-width: rem(210);
 	min-height: rem(190);
-	flex: 1 1 0;
+	flex: 1 1 rem(210);
 	flex-direction: column;
 	justify-content: space-between;
 	gap: rem(26);
@@ -82,7 +80,9 @@
 	box-shadow: 0 rem(14) rem(18) rgba(0, 0, 0, 0.08);
 
 	@media (max-width: em($breakpoint-tablet)) {
+		min-width: 0;
 		min-height: 0;
+		flex-basis: 100%;
 		padding: rem(22);
 		border-radius: rem(20);
 	}

@@ -35,8 +35,8 @@ export function HeroBlock({ block }: HeroBlockProps) {
 
             {block.buttons.length > 0 && (
               <div className={styles.actions}>
-                {block.buttons.map((button) => (
-                  <HeroButton button={button} key={button.id} />
+                {block.buttons.map((button, index) => (
+                  <HeroButton button={button} key={`hero-button-${button.id}-${index}`} />
                 ))}
               </div>
             )}

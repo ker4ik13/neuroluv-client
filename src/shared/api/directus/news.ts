@@ -308,9 +308,21 @@ export async function getNewsPageData({
     newsParams.set("filter[tags][news_tags_id][slug][_eq]", tag);
   }
 
-  const [news, topics, tags] = await Promise.all([
+  const sidebarNewsParams = new URLSearchParams({
+    fields: NEWS_FIELDS,
+    limit: "12",
+    sort: "-published_at,-id",
+  });
+
+  sidebarNewsParams.set("filter[status][_eq]", "published");
+
+  const [news, sidebarNews, topics, tags] = await Promise.all([
     directusRequest<DirectusNewsItem[]>(
       `/items/news?${newsParams.toString()}`,
+      { next: { revalidate: 60 } },
+    ),
+    directusRequest<DirectusNewsItem[]>(
+      `/items/news?${sidebarNewsParams.toString()}`,
       { next: { revalidate: 60 } },
     ),
     directusRequest<DirectusTaxonomy[]>(
@@ -325,6 +337,7 @@ export async function getNewsPageData({
 
   return {
     news: news.map(normalizeNewsItem).filter(isNewsItem),
+    sidebarNews: sidebarNews.map(normalizeNewsItem).filter(isNewsItem),
     topics: topics.map(normalizeTaxonomy).filter(isTaxonomy),
     tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
   };

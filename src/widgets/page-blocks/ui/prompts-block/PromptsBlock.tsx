@@ -39,8 +39,8 @@ export function PromptsBlock({ block }: PromptsBlockProps) {
         </div>
 
         <div className={styles.cards}>
-          {block.prompts.map((prompt) => (
-            <PromptCard key={prompt.id} prompt={prompt} />
+          {block.prompts.map((prompt, index) => (
+            <PromptCard key={`prompt-${prompt.id}-${index}`} prompt={prompt} />
           ))}
         </div>
       </div>

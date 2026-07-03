@@ -120,7 +120,6 @@
 .cardDescription {
 	@include body-font(400);
 
-	max-width: rem(320);
 	margin-top: auto;
 	color: rgba($color-white, 0.72);
 	font-size: rem(18);

@@ -114,10 +114,10 @@ export function HeaderView({ navigation }: HeaderViewProps) {
             id="site-navigation"
           >
             <nav aria-label="Основная навигация" className={styles.nav}>
-              {navigation.items.map((item) => (
+              {navigation.items.map((item, index) => (
                 <NavigationEntry
                   item={item}
-                  key={item.id}
+                  key={`nav-${item.id}-${index}`}
                   isMenuOpen={isMenuOpen}
                   isOpen={openDropdownId === item.id}
                   onClose={() =>
@@ -266,11 +266,11 @@ function NavigationEntry({
         </div>
 
         <div className={styles.dropdownPanel}>
-          {item.children.map((child) => (
+          {item.children.map((child, index) => (
             <Link
               className={styles.dropdownLink}
               href={child.href}
-              key={child.id}
+              key={`dropdown-${item.id}-${child.id}-${index}`}
               rel={child.target === "_blank" ? "noreferrer" : undefined}
               target={child.target}
               onClick={onNavigate}

@@ -13,7 +13,10 @@
 }
 
 .panel {
+	@include floating-particles(1, 0.36);
+
 	position: relative;
+	isolation: isolate;
 	display: flex;
 	min-height: rem(320);
 	overflow: hidden;
@@ -39,7 +42,7 @@
 
 .content {
 	position: relative;
-	z-index: 2;
+	z-index: 3;
 	display: flex;
 	max-width: rem(610);
 	flex-direction: column;
@@ -155,7 +158,7 @@
 	position: absolute;
 	right: rem(32);
 	bottom: rem(-18);
-	z-index: 1;
+	z-index: 2;
 	width: min(42%, rem(500));
 	height: rem(335);
 	pointer-events: none;

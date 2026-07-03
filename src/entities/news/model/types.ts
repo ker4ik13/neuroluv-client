@@ -119,6 +119,7 @@ export type NewsDetail = NewsItem & {
 
 export type NewsPageData = {
   news: NewsItem[];
+  sidebarNews: NewsItem[];
   topics: NewsTaxonomy[];
   tags: NewsTaxonomy[];
 };

@@ -5,6 +5,7 @@ import { BsArrowRight, BsEye, BsShareFill } from "react-icons/bs";
 import { FaTelegram } from "react-icons/fa6";
 
 import type { NewsContentBlock, NewsDetail, NewsItem } from "@/entities/news";
+import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./ContentDetailPage.module.scss";
 
@@ -31,11 +32,11 @@ export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
       <div className={styles.layout}>
         <article className={styles.article}>
           {item.contentBlocks.length > 0 ? (
-            item.contentBlocks.map((block) => (
+            item.contentBlocks.map((block, index) => (
               <ContentBlockView
                 block={block}
                 headings={headings}
-                key={`${block.type}-${block.id}`}
+                key={`content-block-${block.type}-${block.id}-${index}`}
               />
             ))
           ) : (
@@ -46,7 +47,7 @@ export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
           )}
         </article>
 
-        <aside className={styles.sidebar}>
+        <SmartStickySidebar className={styles.sidebar}>
           <SidebarPanel title="В этой статье">
             <div className={styles.tocList}>
               {headings.map((heading) => (
@@ -92,7 +93,7 @@ export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
               <BsArrowRight aria-hidden="true" />
             </a>
           </div>
-        </aside>
+        </SmartStickySidebar>
       </div>
 
       <section className={styles.digest}>
@@ -117,8 +118,8 @@ export function ContentDetailPage({ item, related }: ContentDetailPageProps) {
         <section className={styles.related}>
           <h2 className={styles.relatedTitle}>Читайте также</h2>
           <div className={styles.relatedGrid}>
-            {related.map((news) => (
-              <RelatedCard item={news} key={news.id} />
+            {related.map((news, index) => (
+              <RelatedCard item={news} key={`related-${news.id}-${index}`} />
             ))}
           </div>
         </section>
@@ -135,8 +136,8 @@ function DetailHero({ item, shareHref }: { item: NewsDetail; shareHref: string }
         <div className={styles.badges}>
           <span className={styles.badgePrimary}>Новость</span>
           {item.topic && <span className={styles.badgeMuted}>{item.topic.title}</span>}
-          {item.tags.slice(0, 2).map((tag) => (
-            <span className={styles.badgeMuted} key={tag.id}>
+          {item.tags.slice(0, 2).map((tag, index) => (
+            <span className={styles.badgeMuted} key={`tag-${tag.id}-${index}`}>
               {tag.title}
             </span>
           ))}
@@ -216,8 +217,8 @@ function ContentBlockView({
       <section className={styles.listBlock}>
         {block.title && <h2 id={headingId}>{block.title}</h2>}
         <div className={styles.listItems}>
-          {block.items.map((item) => (
-            <div className={styles.listItem} key={item.id}>
+          {block.items.map((item, index) => (
+            <div className={styles.listItem} key={`list-item-${item.id}-${index}`}>
               <p className={styles.listItemTitle}>{item.title}</p>
               <p className={styles.listItemText}>{item.description}</p>
             </div>
@@ -254,13 +255,13 @@ function ContentBlockView({
         </div>
         {block.buttons.length > 0 && (
           <div className={styles.ctaButtons}>
-            {block.buttons.map((button) => (
+            {block.buttons.map((button, index) => (
               <a
                 className={`${styles.ctaButton} ${
                   button.variant === "outline" ? styles.ctaButtonOutline : ""
                 }`}
                 href={button.href}
-                key={button.id}
+                key={`cta-button-${button.id}-${index}`}
                 rel={button.target === "_blank" ? "noreferrer" : undefined}
                 target={button.target}
               >
@@ -280,7 +281,7 @@ function ContentBlockView({
       <section className={styles.cardsBlock}>
         {block.title && <h2 id={headingId}>{block.title}</h2>}
         <div className={styles.contentCards}>
-          {block.cards.map((card) => {
+          {block.cards.map((card, index) => {
             const content = (
               <>
                 {card.image && (
@@ -302,14 +303,21 @@ function ContentBlockView({
 
             if (card.href) {
               return (
-                <Link className={styles.contentCard} href={card.href} key={card.id}>
+                <Link
+                  className={styles.contentCard}
+                  href={card.href}
+                  key={`content-card-${card.id}-${index}`}
+                >
                   {content}
                 </Link>
               );
             }
 
             return (
-              <div className={styles.contentCard} key={card.id}>
+              <div
+                className={styles.contentCard}
+                key={`content-card-${card.id}-${index}`}
+              >
                 {content}
               </div>
             );
@@ -327,7 +335,7 @@ function ContentBlockView({
         {block.title && <h2 id={headingId}>{block.title}</h2>}
         <div className={styles.stepsList}>
           {block.steps.map((step, index) => (
-            <div className={styles.stepItem} key={step.id}>
+            <div className={styles.stepItem} key={`step-${step.id}-${index}`}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               <div>
                 <p>{step.title}</p>

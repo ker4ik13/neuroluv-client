@@ -36,6 +36,7 @@ $sticky-sidebar-top: 112;
 	color: $color-white;
 	background: #132838;
 	border-radius: rem(28);
+	@include floating-particles(1, 0.38);
 
 	@media (max-width: em($breakpoint-laptop)) {
 		flex-direction: column;
@@ -45,24 +46,6 @@ $sticky-sidebar-top: 112;
 		padding: rem(24);
 		border-radius: rem(22);
 	}
-}
-
-.heroPattern {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	background-image:
-		radial-gradient(
-			circle at 50% 50%,
-			rgba($color-white, 0.11) 0 rem(2),
-			transparent rem(3)
-		),
-		linear-gradient(90deg, rgba(#132838, 0.98), rgba(#132838, 0.7));
-	background-size:
-		rem(24) rem(24),
-		auto;
-	opacity: 0.7;
-	transform: rotate(90deg) scale(1.2);
 }
 
 .heroContent {
@@ -562,25 +545,20 @@ $sticky-sidebar-top: 112;
 
 .sidebar {
 	position: sticky;
-	top: rem($sticky-sidebar-top);
+	top: var(--smart-sticky-top, rem($sticky-sidebar-top));
 	display: flex;
-	max-height: calc(100vh - rem($sticky-sidebar-top + 20));
 	width: rem(310);
 	flex: 0 0 rem(310);
 	flex-direction: column;
 	gap: rem(16);
 	align-self: flex-start;
-	overflow-y: auto;
-	scrollbar-width: thin;
 
 	@media (max-width: em($breakpoint-laptop)) {
 		position: static;
 		order: -1;
-		max-height: none;
 		width: 100%;
 		flex-basis: auto;
 		flex-flow: row wrap;
-		overflow: visible;
 	}
 }
 
@@ -697,23 +675,12 @@ $sticky-sidebar-top: 112;
 	background: $color-ink-soft;
 	border-radius: rem(24);
 
+	@include floating-particles(1, 0.38);
+
 	@media (max-width: em($breakpoint-tablet)) {
 		align-items: flex-start;
 		flex-direction: column;
 	}
-}
-
-.digest::before {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	background-image: radial-gradient(
-		circle at 50% 50%,
-		rgba($color-white, 0.12) 0 rem(2),
-		transparent rem(3)
-	);
-	background-size: rem(24) rem(24);
-	content: "";
 }
 
 .digestText,

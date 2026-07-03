@@ -43,8 +43,8 @@ export function AboutBlock({ block }: AboutBlockProps) {
 
         {block.cards.length > 0 && (
           <div className={styles.cards}>
-            {block.cards.map((card) => (
-              <AboutCard card={card} key={card.id} />
+            {block.cards.map((card, index) => (
+              <AboutCard card={card} key={`about-card-${card.id}-${index}`} />
             ))}
           </div>
         )}

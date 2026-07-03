@@ -33,8 +33,11 @@ export function TaskExamplesBlock({ block }: TaskExamplesBlockProps) {
 
         {block.cards.length > 0 && (
           <div className={styles.cards}>
-            {block.cards.map((card) => (
-              <TaskExamplesCard card={card} key={card.id} />
+            {block.cards.map((card, index) => (
+              <TaskExamplesCard
+                card={card}
+                key={`task-example-${card.id}-${index}`}
+              />
             ))}
           </div>
         )}

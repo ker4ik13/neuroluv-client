@@ -39,7 +39,7 @@ export function FaqBlock({ block }: FaqBlockProps) {
           {block.questions.map((question, index) => (
             <FaqItem
               isDefaultOpen={index === 0}
-              key={question.id}
+              key={`faq-${question.id}-${index}`}
               question={question}
             />
           ))}

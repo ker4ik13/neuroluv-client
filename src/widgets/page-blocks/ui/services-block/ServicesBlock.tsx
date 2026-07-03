@@ -36,8 +36,8 @@ export function ServicesBlock({ block }: ServicesBlockProps) {
         </div>
 
         <div className={cardsClassName}>
-          {block.services.map((service) => (
-            <ServiceCard key={service.id} service={service} />
+          {block.services.map((service, index) => (
+            <ServiceCard key={`service-${service.id}-${index}`} service={service} />
           ))}
         </div>
       </div>
@@ -79,8 +79,8 @@ function ServiceCard({ service }: { service: PageServiceCard }) {
         {service.advantages.length > 0 && (
           <>
             <ul className={styles.features}>
-              {service.advantages.map((advantage) => (
-                <li className={styles.feature} key={advantage}>
+              {service.advantages.map((advantage, index) => (
+                <li className={styles.feature} key={`advantage-${advantage}-${index}`}>
                   <span className={styles.featureDot}>•</span>
                   <span className={styles.featureText}>{advantage}</span>
                 </li>

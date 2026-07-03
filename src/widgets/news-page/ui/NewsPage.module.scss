@@ -31,6 +31,7 @@ $sticky-sidebar-top: 112;
 	color: $color-white;
 	background: $color-ink-soft;
 	border-radius: rem(24);
+	@include floating-particles(1, 0.38);
 
 	@media (max-width: em($breakpoint-laptop)) {
 		min-height: 0;
@@ -44,27 +45,6 @@ $sticky-sidebar-top: 112;
 		padding: rem(26) rem(22);
 		border-radius: rem(22);
 	}
-}
-
-.heroPattern,
-.digestPattern {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	background-image:
-		radial-gradient(
-			circle at 50% 50%,
-			rgba($color-white, 0.12) 0 rem(2),
-			transparent rem(3)
-		),
-		linear-gradient(
-			90deg,
-			rgba($color-ink-soft, 0.98),
-			rgba($color-ink-soft, 0.62)
-		);
-	background-size:
-		rem(24) rem(24),
-		auto;
 }
 
 .heroImage {
@@ -375,7 +355,7 @@ $sticky-sidebar-top: 112;
 
 .card {
 	min-width: 0;
-	flex: 1 1 calc((100% - rem(20)) / 2);
+	flex: 0 1 calc((100% - rem(20)) / 2);
 	flex-direction: column;
 	gap: rem(12);
 	padding: rem(20);
@@ -520,24 +500,19 @@ $sticky-sidebar-top: 112;
 
 .sidebar {
 	position: sticky;
-	top: rem($sticky-sidebar-top);
+	top: var(--smart-sticky-top, rem($sticky-sidebar-top));
 	display: flex;
-	max-height: calc(100vh - rem($sticky-sidebar-top + 20));
 	width: rem(320);
 	flex: 0 0 rem(320);
 	flex-direction: column;
 	gap: rem(16);
 	align-self: flex-start;
-	overflow-y: auto;
-	scrollbar-width: thin;
 
 	@media (max-width: em($breakpoint-laptop)) {
 		position: static;
-		max-height: none;
 		width: 100%;
 		flex-basis: auto;
 		flex-flow: row wrap;
-		overflow: visible;
 	}
 }
 
@@ -745,8 +720,16 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	gap: 0;
+	height: rem(1);
+	padding: 0;
+	overflow: hidden;
+}
+
+.loaderVisible {
+	height: auto;
 	gap: rem(16);
-	padding: rem(40) 0;
+	padding: rem(32) 0;
 }
 
 .loaderLine {
@@ -758,26 +741,47 @@ $sticky-sidebar-top: 112;
 .loaderText {
 	@include body-font(400);
 
-	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: rem(12);
 	color: $color-ink;
 	font-size: rem(16);
 	line-height: 1;
+}
 
-	&::before {
-		display: inline-block;
-		width: rem(30);
+.loaderDots {
+	display: inline-flex;
+	align-items: center;
+	gap: rem(5);
+
+	span {
+		width: rem(6);
 		height: rem(6);
-		margin-right: rem(12);
-		vertical-align: middle;
-		background: linear-gradient(
-			90deg,
-			$color-cyan 0 20%,
-			transparent 20% 40%,
-			$color-cyan 40% 60%,
-			transparent 60% 80%,
-			$color-cyan 80%
-		);
-		content: '';
+		background: $color-cyan;
+		border-radius: 50%;
+		animation: news-loader-dot 900ms ease-in-out infinite;
+	}
+
+	span:nth-child(2) {
+		animation-delay: 120ms;
+	}
+
+	span:nth-child(3) {
+		animation-delay: 240ms;
+	}
+}
+
+@keyframes news-loader-dot {
+	0%,
+	80%,
+	100% {
+		opacity: 0.35;
+		transform: translateY(0);
+	}
+
+	40% {
+		opacity: 1;
+		transform: translateY(rem(-4));
 	}
 }
 

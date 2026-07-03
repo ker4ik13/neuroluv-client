@@ -96,12 +96,14 @@
 .cards {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: stretch;
 	gap: rem(20);
 }
 
 .card {
 	display: flex;
-	min-width: 0;
+	min-width: rem(280);
+	max-width: calc((100% - rem(40)) / 3);
 	flex: 1 1 calc((100% - rem(40)) / 3);
 	flex-direction: column;
 	overflow: hidden;
@@ -124,10 +126,13 @@
 	}
 
 	@media (max-width: em($breakpoint-laptop)) {
+		max-width: calc((100% - rem(20)) / 2);
 		flex-basis: calc((100% - rem(20)) / 2);
 	}
 
 	@media (max-width: em($breakpoint-tablet)) {
+		min-width: 0;
+		max-width: none;
 		flex-basis: 100%;
 		border-radius: rem(20);
 	}

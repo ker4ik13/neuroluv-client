@@ -22,16 +22,22 @@ export function BigCtaBlock({ block }: BigCtaBlockProps) {
 
           {block.advantages.length > 0 && (
             <div className={styles.advantages}>
-              {block.advantages.map((advantage) => (
-                <AdvantageCard advantage={advantage} key={advantage.id} />
+              {block.advantages.map((advantage, index) => (
+                <AdvantageCard
+                  advantage={advantage}
+                  key={`big-cta-advantage-${advantage.id}-${index}`}
+                />
               ))}
             </div>
           )}
 
           {block.buttons.length > 0 && (
             <div className={styles.actions}>
-              {block.buttons.map((button) => (
-                <CtaButton button={button} key={button.id} />
+              {block.buttons.map((button, index) => (
+                <CtaButton
+                  button={button}
+                  key={`big-cta-button-${button.id}-${index}`}
+                />
               ))}
             </div>
           )}
@@ -52,7 +58,7 @@ export function BigCtaBlock({ block }: BigCtaBlockProps) {
         {block.steps.length > 0 && (
           <div className={styles.steps}>
             {block.steps.map((step, index) => (
-              <div className={styles.step} key={step.id}>
+              <div className={styles.step} key={`big-cta-step-${step.id}-${index}`}>
                 <span className={styles.stepNumber}>
                   {String(index + 1).padStart(2, "0")}
                 </span>

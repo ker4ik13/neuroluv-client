@@ -30,8 +30,8 @@ export function TaskGridBlock({ block }: TaskGridBlockProps) {
         </div>
 
         <div className={styles.cards}>
-          {block.tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+          {block.tasks.map((task, index) => (
+            <TaskCard key={`task-grid-${task.id}-${index}`} task={task} />
           ))}
         </div>
       </div>

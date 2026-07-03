@@ -13,6 +13,7 @@ import type {
   NewsSortOrder,
   NewsTaxonomy,
 } from "@/entities/news";
+import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./NewsPage.module.scss";
 
@@ -38,7 +39,9 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
     key: "all:fresh",
     count: INITIAL_VISIBLE_COUNT,
   });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeFilterKey = getActiveFilterKey(activeTopic, activeTag);
   const listKey = `${activeFilterKey}:${sort}:${data.news.length}`;
 
@@ -63,7 +66,8 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
+        if (entry?.isIntersecting && !isLoadingMore) {
+          setIsLoadingMore(true);
           setVisibleState((state) => {
             const currentCount =
               state.key === listKey ? state.count : INITIAL_VISIBLE_COUNT;
@@ -73,6 +77,14 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
               count: Math.min(currentCount + LOAD_STEP, data.news.length),
             };
           });
+
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+          }
+
+          loadingTimeoutRef.current = setTimeout(() => {
+            setIsLoadingMore(false);
+          }, 450);
         }
       },
       { rootMargin: "240px" },
@@ -81,7 +93,15 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
     observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [data.news.length, hasMore, listKey]);
+  }, [data.news.length, hasMore, isLoadingMore, listKey]);
+
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className={styles.page}>
@@ -125,8 +145,8 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
 
               {gridNews.length > 0 && (
                 <div className={styles.grid}>
-                  {gridNews.map((item) => (
-                    <NewsCard item={item} key={item.id} />
+                  {gridNews.map((item, index) => (
+                    <NewsCard item={item} key={`news-card-${item.id}-${index}`} />
                   ))}
                 </div>
               )}
@@ -135,18 +155,31 @@ export function NewsPage({ activeTag, activeTopic, data, sort }: NewsPageProps) 
             <EmptyState />
           )}
 
-          <div className={styles.loader} ref={sentinelRef}>
-            <span className={styles.loaderLine} />
-            <span className={styles.loaderText}>
-              {hasMore ? "Загрузка..." : "Все новости показаны"}
-            </span>
+          <div
+            aria-live="polite"
+            className={`${styles.loader} ${isLoadingMore ? styles.loaderVisible : ""}`}
+            ref={sentinelRef}
+          >
+            {isLoadingMore && (
+              <>
+                <span className={styles.loaderLine} />
+                <span className={styles.loaderText}>
+                  <span className={styles.loaderDots} aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  Загрузка
+                </span>
+              </>
+            )}
           </div>
         </div>
 
         <NewsSidebar
           activeFilterKey={activeFilterKey}
           filters={filters.filter((filter) => filter.kind !== "all")}
-          news={data.news}
+          news={data.sidebarNews}
           sort={sort}
         />
       </div>
@@ -174,7 +207,7 @@ function FilterBar({
   return (
     <div className={styles.filtersWrap}>
       <div className={styles.filters} aria-label="Фильтр новостей" role="list">
-        {filters.map((filter) => (
+        {filters.map((filter, index) => (
           <Link
             className={`${styles.filterButton} ${
               activeFilterKey === getFilterKey(filter) ? styles.filterButtonActive : ""
@@ -183,7 +216,7 @@ function FilterBar({
               filter,
               sort,
             })}
-            key={filter.id}
+            key={`filter-${filter.id}-${index}`}
           >
             {filter.label}
           </Link>
@@ -320,12 +353,12 @@ function NewsSidebar({
   const visibleFilters = filters.slice(0, 12);
 
   return (
-    <aside className={styles.sidebar}>
+    <SmartStickySidebar className={styles.sidebar}>
       {trendNews.length > 0 && (
         <SidebarPanel title="В тренде">
           <ol className={styles.trendList}>
             {trendNews.map((item, index) => (
-              <li className={styles.trendItem} key={item.id}>
+              <li className={styles.trendItem} key={`trend-${item.id}-${index}`}>
                 <span className={styles.trendNumber}>{index + 1}</span>
                 <Link className={styles.trendLink} href={item.href}>
                   {item.title}
@@ -339,7 +372,7 @@ function NewsSidebar({
       {visibleFilters.length > 0 && (
         <SidebarPanel title="Популярные темы">
           <div className={styles.topicCloud}>
-            {visibleFilters.map((filter) => {
+            {visibleFilters.map((filter, index) => {
               const isActive = activeFilterKey === getFilterKey(filter);
 
               return (
@@ -352,7 +385,7 @@ function NewsSidebar({
                     ? buildNewsHref({ sort })
                     : buildNewsHref({ filter, sort })
                 }
-                key={filter.id}
+                key={`topic-${filter.id}-${index}`}
               >
                 <span>{filter.label}</span>
                 {isActive && <span className={styles.topicReset}>×</span>}
@@ -382,8 +415,12 @@ function NewsSidebar({
       {latestNews.length > 0 && (
         <SidebarPanel title="Последние новости">
           <div className={styles.latestList}>
-            {latestNews.map((item) => (
-              <Link className={styles.latestItem} href={item.href} key={item.id}>
+            {latestNews.map((item, index) => (
+              <Link
+                className={styles.latestItem}
+                href={item.href}
+                key={`latest-${item.id}-${index}`}
+              >
                 <NewsImage className={styles.latestImage} image={item.image} />
                 <span className={styles.latestText}>
                   <span className={styles.latestTitle}>{item.title}</span>
@@ -394,7 +431,7 @@ function NewsSidebar({
           </div>
         </SidebarPanel>
       )}
-    </aside>
+    </SmartStickySidebar>
   );
 }
 
