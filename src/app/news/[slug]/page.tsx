@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getNewsDetailPageData, getNewsSlugs } from "@/shared/api/directus/news";
 import { SITE_URL } from "@/shared/config/site";
 import { ContentDetailPage } from "@/widgets/content-detail";
+import { PageBlocks } from "@/widgets/page-blocks";
 
 type NewsDetailRouteProps = {
   params: Promise<{
@@ -64,5 +65,10 @@ export default async function NewsDetailRoute({ params }: NewsDetailRouteProps) 
     notFound();
   }
 
-  return <ContentDetailPage item={data.item} related={data.related} />;
+  return (
+    <>
+      <ContentDetailPage item={data.item} related={data.related} />
+      <PageBlocks blocks={data.blocks} />
+    </>
+  );
 }

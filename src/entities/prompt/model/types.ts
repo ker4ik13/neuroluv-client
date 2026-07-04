@@ -1,0 +1,89 @@
+export type PromptImage = {
+  id: string;
+  title: string;
+  url: string;
+  type: string | null;
+  width: number | null;
+  height: number | null;
+};
+
+export type PromptTaxonomy = {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+};
+
+export type PromptAuthor = {
+  id: string;
+  name: string;
+  avatar: PromptImage | null;
+};
+
+export type PromptContentBlock =
+  | {
+      id: number;
+      type: "html";
+      title: string | null;
+      content: string;
+    }
+  | {
+      id: number;
+      type: "quote";
+      title: string | null;
+      text: string;
+      author: string | null;
+    }
+  | {
+      id: number;
+      type: "list";
+      title: string | null;
+      items: PromptContentListItem[];
+    };
+
+export type PromptContentListItem = {
+  id: number;
+  title: string;
+  description: string;
+};
+
+export type PromptItem = {
+  id: number;
+  title: string;
+  slug: string;
+  href: string;
+  description: string;
+  image: PromptImage | null;
+  images: PromptImage[];
+  neuralNetwork: PromptTaxonomy | null;
+  format: string | null;
+  difficulty: string | null;
+  difficultyLabel: string | null;
+  goal: PromptTaxonomy | null;
+  types: PromptTaxonomy[];
+  tags: PromptTaxonomy[];
+  author: PromptAuthor | null;
+  publishedAt: string | null;
+  viewsCount: number;
+};
+
+export type PromptDetail = PromptItem & {
+  promptText: string;
+  contentBlocks: PromptContentBlock[];
+};
+
+export type PromptSortOrder = "fresh" | "old" | "popular";
+
+export type PromptsPageData = {
+  prompts: PromptItem[];
+  sidebarPrompts: PromptItem[];
+  types: PromptTaxonomy[];
+  tags: PromptTaxonomy[];
+  goals: PromptTaxonomy[];
+  neuralNetworks: PromptTaxonomy[];
+};
+
+export type PromptDetailPageData = {
+  item: PromptDetail;
+  related: PromptItem[];
+};

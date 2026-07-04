@@ -13,7 +13,13 @@ import type {
   NewsSortOrder,
   NewsTaxonomy,
 } from "@/entities/news";
+import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
+import {
+  PAGE_FIELDS,
+  normalizePageBlocks,
+  type DirectusPageBlock,
+} from "@/shared/api/directus/pages";
 import { DIRECTUS_URL } from "@/shared/config/directus";
 
 type DirectusFile = {
@@ -281,6 +287,10 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
   year: "numeric",
 });
 
+type NewsDetailPageDataWithBlocks = NewsDetailPageData & {
+  blocks: PageBlock[];
+};
+
 export type GetNewsPageDataParams = {
   sort?: NewsSortOrder;
   tag?: string | null;
@@ -383,19 +393,40 @@ export async function getRelatedNews(
 
 export async function getNewsDetailPageData(
   slug: string,
-): Promise<NewsDetailPageData | null> {
+): Promise<NewsDetailPageDataWithBlocks | null> {
   const item = await getNewsBySlug(slug);
 
   if (!item) {
     return null;
   }
 
-  const related = await getRelatedNews(item.id);
+  const [related, blocks] = await Promise.all([
+    getRelatedNews(item.id),
+    getNewsPageBlocksBySlug(slug),
+  ]);
 
   return {
+    blocks,
     item,
     related,
   };
+}
+
+async function getNewsPageBlocksBySlug(slug: string): Promise<PageBlock[]> {
+  const params = new URLSearchParams({
+    fields: PAGE_FIELDS,
+    limit: "1",
+  });
+
+  params.set("filter[status][_eq]", "published");
+  params.set("filter[slug][_eq]", slug);
+
+  const news = await directusRequest<{ blocks?: DirectusPageBlock[] }[]>(
+    `/items/news?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return normalizePageBlocks(news[0]?.blocks || []);
 }
 
 export async function getNewsSlugs(): Promise<string[]> {

@@ -347,7 +347,7 @@ type DirectusMiniCtaBlock = {
   buttons?: DirectusHeroButtonJunction[];
 };
 
-type DirectusPageBlock = {
+export type DirectusPageBlock = {
   id: number;
   sort: number | null;
   collection: string | null;
@@ -376,7 +376,7 @@ type DirectusPage = {
   blocks?: DirectusPageBlock[];
 };
 
-const PAGE_FIELDS = [
+export const PAGE_FIELDS = [
   "id",
   "title",
   "slug",
@@ -686,11 +686,11 @@ function normalizePage(page: DirectusPage | null): Page | null {
     id: page.id,
     title: page.title || "",
     slug: page.slug,
-    blocks: normalizeBlocks(page.blocks || []),
+    blocks: normalizePageBlocks(page.blocks || []),
   };
 }
 
-function normalizeBlocks(blocks: DirectusPageBlock[]): PageBlock[] {
+export function normalizePageBlocks(blocks: DirectusPageBlock[]): PageBlock[] {
   return blocks
     .sort((first, second) => (first.sort || 0) - (second.sort || 0))
     .map(normalizeBlock)

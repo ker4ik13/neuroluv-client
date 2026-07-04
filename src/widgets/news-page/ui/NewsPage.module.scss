@@ -464,6 +464,10 @@ $sticky-sidebar-top: 112;
 
 .metaDark {
 	color: rgba($color-white, 0.78);
+
+	.viewsMeta {
+		color: $color-cyan-bright;
+	}
 }
 
 .author {
@@ -512,6 +516,21 @@ $sticky-sidebar-top: 112;
 		flex-direction: column;
 		align-items: flex-end;
 		gap: rem(4);
+	}
+}
+
+.viewsMeta {
+	@include body-font(600);
+
+	display: inline-flex;
+	align-items: center;
+	gap: rem(6);
+	color: $color-cyan;
+
+	svg {
+		width: rem(16);
+		height: rem(16);
+		flex: 0 0 rem(16);
 	}
 }
 

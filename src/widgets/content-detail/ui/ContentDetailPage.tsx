@@ -452,9 +452,9 @@ function RelatedCard({
         <span>{item.author?.name || "Нейролюб"}</span>
         <span>
           {item.viewsCount !== null
-            ? `${item.viewsCount} просмотров`
+            ? `${item.viewsCount} `
             : item.publishedAtLabel}
-          <BsEye aria-hidden="true" />
+          <BsEye aria-hidden="true" aria-label="Просмотры" />
         </span>
       </span>
     </Link>

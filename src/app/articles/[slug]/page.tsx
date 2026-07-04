@@ -7,6 +7,7 @@ import {
 } from "@/shared/api/directus/articles";
 import { SITE_URL } from "@/shared/config/site";
 import { ContentDetailPage } from "@/widgets/content-detail";
+import { PageBlocks } from "@/widgets/page-blocks";
 
 type ArticleDetailRouteProps = {
   params: Promise<{
@@ -70,12 +71,15 @@ export default async function ArticleDetailRoute({
   }
 
   return (
-    <ContentDetailPage
-      basePath="/articles"
-      contentLabel="Статья"
-      item={data.item}
-      related={data.related}
-      relatedTitle="Другие статьи"
-    />
+    <>
+      <ContentDetailPage
+        basePath="/articles"
+        contentLabel="Статья"
+        item={data.item}
+        related={data.related}
+        relatedTitle="Другие статьи"
+      />
+      <PageBlocks blocks={data.blocks} />
+    </>
   );
 }

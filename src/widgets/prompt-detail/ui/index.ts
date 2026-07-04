@@ -1,0 +1,1 @@
+export { PromptDetailPage } from "./PromptDetailPage";

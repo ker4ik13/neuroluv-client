@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BsFilter } from "react-icons/bs";
+import { BsEye, BsFilter } from "react-icons/bs";
 import { FaTelegram } from "react-icons/fa6";
 
 import type {
@@ -357,7 +357,12 @@ function NewsMeta({ item, isDark }: { item: NewsItem; isDark?: boolean }) {
       <span className={styles.metaDetails}>
         {item.publishedAtLabel && <span>{item.publishedAtLabel}</span>}
         {item.readTime && <span>{item.readTime} мин</span>}
-        {item.viewsCount !== null && <span>{item.viewsCount} просмотров</span>}
+        {item.viewsCount !== null && (
+          <span className={styles.viewsMeta}>
+            {item.viewsCount} 
+            <BsEye aria-hidden="true" aria-label="Просмотры" />
+          </span>
+        )}
       </span>
     </span>
   );

@@ -13,7 +13,13 @@ import type {
   NewsSortOrder,
   NewsTaxonomy,
 } from "@/entities/news";
+import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
+import {
+  PAGE_FIELDS,
+  normalizePageBlocks,
+  type DirectusPageBlock,
+} from "@/shared/api/directus/pages";
 import { DIRECTUS_URL } from "@/shared/config/directus";
 
 type DirectusFile = {
@@ -303,6 +309,10 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
   year: "numeric",
 });
 
+type ArticleDetailPageDataWithBlocks = NewsDetailPageData & {
+  blocks: PageBlock[];
+};
+
 export type GetArticlesPageDataParams = {
   sort?: NewsSortOrder;
   tag?: string | null;
@@ -405,19 +415,40 @@ export async function getRelatedArticles(
 
 export async function getArticleDetailPageData(
   slug: string,
-): Promise<NewsDetailPageData | null> {
+): Promise<ArticleDetailPageDataWithBlocks | null> {
   const item = await getArticleBySlug(slug);
 
   if (!item) {
     return null;
   }
 
-  const related = await getRelatedArticles(item.id);
+  const [related, blocks] = await Promise.all([
+    getRelatedArticles(item.id),
+    getArticlePageBlocksBySlug(slug),
+  ]);
 
   return {
+    blocks,
     item,
     related,
   };
+}
+
+async function getArticlePageBlocksBySlug(slug: string): Promise<PageBlock[]> {
+  const params = new URLSearchParams({
+    fields: PAGE_FIELDS,
+    limit: "1",
+  });
+
+  params.set("filter[status][_eq]", "published");
+  params.set("filter[slug][_eq]", slug);
+
+  const articles = await directusRequest<{ blocks?: DirectusPageBlock[] }[]>(
+    `/items/articles?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return normalizePageBlocks(articles[0]?.blocks || []);
 }
 
 export async function getArticleSlugs(): Promise<string[]> {
@@ -460,7 +491,9 @@ function normalizeArticleItem(item: DirectusArticleItem): NewsItem | null {
   };
 }
 
-function normalizeArticleDetail(item: DirectusArticleItem | null): NewsDetail | null {
+function normalizeArticleDetail(
+  item: DirectusArticleItem | null,
+): NewsDetail | null {
   if (!item) {
     return null;
   }
