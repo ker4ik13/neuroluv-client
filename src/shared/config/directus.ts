@@ -4,5 +4,10 @@ export const DIRECTUS_URL = (
   process.env.NEXT_PUBLIC_DIRECTUS_URL || DEFAULT_DIRECTUS_URL
 ).replace(/\/$/, "");
 
-export const DIRECTUS_CODEX_TOKEN =
-  process.env.NEXT_PUBLIC_DIRECTUS_CODEX_TOKEN || "";
+export const DIRECTUS_TOKEN =
+  process.env.DIRECTUS_TOKEN ||
+  process.env.NEXT_PUBLIC_DIRECTUS_TOKEN ||
+  process.env.NEXT_PUBLIC_DIRECTUS_CODEX_TOKEN ||
+  "";
+
+export const DIRECTUS_CODEX_TOKEN = DIRECTUS_TOKEN;

@@ -1,4 +1,4 @@
-import { DIRECTUS_CODEX_TOKEN, DIRECTUS_URL } from "@/shared/config/directus";
+import { DIRECTUS_TOKEN, DIRECTUS_URL } from "@/shared/config/directus";
 
 type DirectusResponse<T> = {
   data: T;
@@ -22,14 +22,14 @@ export async function directusRequest<T>(
   path: string,
   options: DirectusRequestOptions = {},
 ): Promise<T> {
-  if (!DIRECTUS_CODEX_TOKEN) {
-    throw new DirectusApiError("Directus token is not configured", 500);
-  }
+  const headers = DIRECTUS_TOKEN
+    ? {
+        Authorization: `Bearer ${DIRECTUS_TOKEN}`,
+      }
+    : undefined;
 
   const response = await fetch(`${DIRECTUS_URL}${path}`, {
-    headers: {
-      Authorization: `Bearer ${DIRECTUS_CODEX_TOKEN}`,
-    },
+    headers,
     next: options.next,
   });
 
