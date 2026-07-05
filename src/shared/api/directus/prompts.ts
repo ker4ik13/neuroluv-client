@@ -13,10 +13,15 @@ import type {
 import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
-  PAGE_FIELDS,
+  PAGE_BLOCK_FIELDS,
   normalizePageBlocks,
   type DirectusPageBlock,
 } from "@/shared/api/directus/pages";
+import {
+  DIRECTUS_SEO_FIELDS,
+  normalizeDirectusSeo,
+  type DirectusSeoFields,
+} from "@/shared/api/directus/seo";
 import { DIRECTUS_URL } from "@/shared/config/directus";
 
 type DirectusFile = {
@@ -128,7 +133,7 @@ type DirectusPromptItem = {
   types?: DirectusPromptTypeJunction[];
   images?: DirectusPromptImageJunction[];
   content_blocks?: DirectusContentBlock[];
-};
+} & DirectusSeoFields;
 
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: "Легко",
@@ -186,6 +191,7 @@ const PROMPT_FIELDS = [
   "images.directus_files_id.type",
   "images.directus_files_id.width",
   "images.directus_files_id.height",
+  DIRECTUS_SEO_FIELDS,
 ].join(",");
 
 const PROMPT_DETAIL_FIELDS = [
@@ -376,7 +382,7 @@ export async function getPromptDetailPageData(
 
 async function getPromptPageBlocksBySlug(slug: string): Promise<PageBlock[]> {
   const params = new URLSearchParams({
-    fields: PAGE_FIELDS,
+    fields: PAGE_BLOCK_FIELDS,
     limit: "1",
   });
 
@@ -499,6 +505,7 @@ function normalizePromptItem(item: DirectusPromptItem): PromptItem | null {
     author: normalizeAuthor(item.author),
     publishedAt: item.published_at,
     viewsCount: item.views_count || 0,
+    seo: normalizeDirectusSeo(item, item.title, item.description || ""),
   };
 }
 

@@ -16,9 +16,20 @@ export async function generateMetadata({
   params,
 }: DynamicPageProps): Promise<Metadata> {
   const pageSlug = await getPageSlug(params);
-  const seo = await getPageSeoBySlug(pageSlug);
+  const [seo, page] = await Promise.all([
+    getPageSeoBySlug(pageSlug),
+    getPageBySlug(pageSlug),
+  ]);
+  const title = page?.h1 || page?.title || seo?.title || "";
 
-  return buildPageMetadata(seo);
+  return buildPageMetadata(seo, {
+    canonicalPath: pageSlug,
+    fallbackTitle: "{TITLE} | {SITE_NAME}",
+    variables: {
+      TITLE: title,
+      URL: pageSlug,
+    },
+  });
 }
 
 export default async function DynamicPage({ params }: DynamicPageProps) {

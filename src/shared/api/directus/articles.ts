@@ -16,10 +16,15 @@ import type {
 import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
-  PAGE_FIELDS,
+  PAGE_BLOCK_FIELDS,
   normalizePageBlocks,
   type DirectusPageBlock,
 } from "@/shared/api/directus/pages";
+import {
+  DIRECTUS_SEO_FIELDS,
+  normalizeDirectusSeo,
+  type DirectusSeoFields,
+} from "@/shared/api/directus/seo";
 import { DIRECTUS_URL } from "@/shared/config/directus";
 
 type DirectusFile = {
@@ -180,7 +185,7 @@ type DirectusArticleItem = {
   tags?: DirectusArticleTagJunction[];
   topics?: DirectusArticleTopicJunction[];
   content_blocks?: DirectusContentBlock[];
-};
+} & DirectusSeoFields;
 
 const ARTICLE_FIELDS = [
   "id",
@@ -221,6 +226,7 @@ const ARTICLE_FIELDS = [
   "topics.article_topics_id.slug",
   "topics.article_topics_id.description",
   "topics.article_topics_id.is_active",
+  DIRECTUS_SEO_FIELDS,
   "content_blocks.id",
   "content_blocks.sort",
   "content_blocks.collection",
@@ -436,7 +442,7 @@ export async function getArticleDetailPageData(
 
 async function getArticlePageBlocksBySlug(slug: string): Promise<PageBlock[]> {
   const params = new URLSearchParams({
-    fields: PAGE_FIELDS,
+    fields: PAGE_BLOCK_FIELDS,
     limit: "1",
   });
 
@@ -488,6 +494,7 @@ function normalizeArticleItem(item: DirectusArticleItem): NewsItem | null {
     topic: normalizeTopics(item.topics || [])[0] || null,
     tags: normalizeTags(item.tags || []),
     viewsCount: item.views_count,
+    seo: normalizeDirectusSeo(item, item.title, item.description || ""),
   };
 }
 

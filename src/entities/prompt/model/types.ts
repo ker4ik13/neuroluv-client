@@ -1,3 +1,5 @@
+import type { PageSeo } from "@/entities/seo";
+
 export type PromptImage = {
   id: string;
   title: string;
@@ -65,6 +67,7 @@ export type PromptItem = {
   author: PromptAuthor | null;
   publishedAt: string | null;
   viewsCount: number;
+  seo: PageSeo | null;
 };
 
 export type PromptDetail = PromptItem & {

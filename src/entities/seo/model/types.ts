@@ -23,6 +23,7 @@ export type PageSeo = {
   keywords: string[];
   noindex: boolean;
   nofollow: boolean;
+  canonicalUrl: string | null;
   ogTitle: string;
   ogDescription: string;
   ogImage: SeoAsset | null;

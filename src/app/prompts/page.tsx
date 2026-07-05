@@ -4,8 +4,9 @@ import type { PromptsPageData, PromptSortOrder } from "@/entities/prompt";
 import type { PageBlock } from "@/entities/page";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPromptsPageData } from "@/shared/api/directus/prompts";
-import { getPageSeoBySlug } from "@/shared/api/directus/seo";
+import { getPageSeoByPath } from "@/shared/api/directus/seo";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import { buildPathWithSearch } from "@/shared/lib/url/search-path";
 import { PageBlocks } from "@/widgets/page-blocks";
 import { PromptsPage } from "@/widgets/prompts-page";
 
@@ -18,6 +19,8 @@ const EMPTY_PROMPTS_DATA: PromptsPageData = {
   neuralNetworks: [],
 };
 
+const DEFAULT_HERO_TITLE = "Идеи, промпты и референсы для AI-контента";
+
 type PromptsRouteProps = {
   searchParams?: Promise<{
     goal?: string;
@@ -29,10 +32,23 @@ type PromptsRouteProps = {
   }>;
 };
 
-export async function generateMetadata(): Promise<Metadata> {
-  const seo = await getPageSeoBySlug("/prompts");
+export async function generateMetadata({
+  searchParams,
+}: PromptsRouteProps): Promise<Metadata> {
+  const params = await searchParams;
+  const currentPath = buildPathWithSearch("/prompts", params);
+  const exactSeo =
+    currentPath === "/prompts" ? null : await getPageSeoByPath(currentPath);
+  const seo = exactSeo || (await getPageSeoByPath("/prompts"));
 
-  return buildPageMetadata(seo);
+  return buildPageMetadata(seo, {
+    canonicalPath: exactSeo ? currentPath : "/prompts",
+    fallbackTitle: "Промпты | {SITE_NAME}",
+    variables: {
+      TITLE: "Промпты",
+      URL: currentPath,
+    },
+  });
 }
 
 export default async function PromptsRoute({ searchParams }: PromptsRouteProps) {
@@ -45,15 +61,22 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
   const q = normalizeQueryParam(params?.q);
   let data = EMPTY_PROMPTS_DATA;
   let blocks: PageBlock[] = [];
+  let heroTitle = DEFAULT_HERO_TITLE;
 
   try {
-    const [promptsData, page] = await Promise.all([
+    const currentPath = buildPathWithSearch("/prompts", params);
+    const [promptsData, exactPage, basePage] = await Promise.all([
       getPromptsPageData({ goal, network, q, sort, tag, type }),
+      currentPath === "/prompts"
+        ? Promise.resolve(null)
+        : getPageBySlug(currentPath),
       getPageBySlug("/prompts"),
     ]);
+    const page = exactPage || basePage;
 
     data = promptsData;
-    blocks = page?.blocks || [];
+    blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
+    heroTitle = page?.h1 || DEFAULT_HERO_TITLE;
   } catch {
     data = EMPTY_PROMPTS_DATA;
     blocks = [];
@@ -68,6 +91,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
         activeTag={tag}
         activeType={type}
         data={data}
+        heroTitle={heroTitle}
         sort={sort}
       />
       <PageBlocks blocks={blocks} />

@@ -4,8 +4,9 @@ import type { NewsPageData } from "@/entities/news";
 import type { PageBlock } from "@/entities/page";
 import { getArticlesPageData } from "@/shared/api/directus/articles";
 import { getPageBySlug } from "@/shared/api/directus/pages";
-import { getPageSeoBySlug } from "@/shared/api/directus/seo";
+import { getPageSeoByPath } from "@/shared/api/directus/seo";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import { buildPathWithSearch } from "@/shared/lib/url/search-path";
 import { NewsPage } from "@/widgets/news-page";
 import { PageBlocks } from "@/widgets/page-blocks";
 
@@ -35,10 +36,23 @@ type ArticlesRouteProps = {
   }>;
 };
 
-export async function generateMetadata(): Promise<Metadata> {
-  const seo = await getPageSeoBySlug("/articles");
+export async function generateMetadata({
+  searchParams,
+}: ArticlesRouteProps): Promise<Metadata> {
+  const params = await searchParams;
+  const currentPath = buildPathWithSearch("/articles", params);
+  const exactSeo =
+    currentPath === "/articles" ? null : await getPageSeoByPath(currentPath);
+  const seo = exactSeo || (await getPageSeoByPath("/articles"));
 
-  return buildPageMetadata(seo);
+  return buildPageMetadata(seo, {
+    canonicalPath: exactSeo ? currentPath : "/articles",
+    fallbackTitle: "Статьи | {SITE_NAME}",
+    variables: {
+      TITLE: "Статьи",
+      URL: currentPath,
+    },
+  });
 }
 
 export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps) {
@@ -48,15 +62,22 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
   const tag = topic ? null : normalizeQueryParam(params?.tag);
   let data = EMPTY_ARTICLES_DATA;
   let blocks: PageBlock[] = [];
+  let heroTitle = ARTICLES_PAGE_CONFIG.heroTitle;
 
   try {
-    const [articlesData, page] = await Promise.all([
+    const currentPath = buildPathWithSearch("/articles", params);
+    const [articlesData, exactPage, basePage] = await Promise.all([
       getArticlesPageData({ sort, tag, topic }),
+      currentPath === "/articles"
+        ? Promise.resolve(null)
+        : getPageBySlug(currentPath),
       getPageBySlug("/articles"),
     ]);
+    const page = exactPage || basePage;
 
     data = articlesData;
-    blocks = page?.blocks || [];
+    blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
+    heroTitle = page?.h1 || ARTICLES_PAGE_CONFIG.heroTitle;
   } catch {
     data = EMPTY_ARTICLES_DATA;
     blocks = [];
@@ -67,7 +88,7 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
       <NewsPage
         activeTag={tag}
         activeTopic={topic}
-        config={ARTICLES_PAGE_CONFIG}
+        config={{ ...ARTICLES_PAGE_CONFIG, heroTitle }}
         data={data}
         sort={sort}
       />

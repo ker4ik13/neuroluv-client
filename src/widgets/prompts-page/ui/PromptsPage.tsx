@@ -22,6 +22,7 @@ type PromptsPageProps = {
   activeTag: string | null;
   activeType: string | null;
   data: PromptsPageData;
+  heroTitle?: string;
   sort: PromptSortOrder;
 };
 
@@ -41,6 +42,7 @@ export function PromptsPage({
   activeTag,
   activeType,
   data,
+  heroTitle = "Идеи, промпты и референсы для AI-контента",
   sort,
 }: PromptsPageProps) {
   const activeParams = {
@@ -57,9 +59,7 @@ export function PromptsPage({
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <p className={styles.heroEyebrow}>Промпты</p>
-          <h1 className={styles.heroTitle}>
-            Идеи, промпты и референсы для AI-контента
-          </h1>
+          <h1 className={styles.heroTitle}>{heroTitle}</h1>
           <p className={styles.heroDescription}>
             800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.
           </p>

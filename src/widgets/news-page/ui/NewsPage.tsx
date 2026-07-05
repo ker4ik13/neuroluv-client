@@ -25,7 +25,7 @@ type NewsPageProps = {
   sort: NewsSortOrder;
 };
 
-type ContentListPageConfig = {
+export type ContentListPageConfig = {
   basePath: string;
   heroDescription: string;
   heroEyebrow: string;

@@ -236,5 +236,6 @@ export type Page = {
   id: number;
   title: string;
   slug: string;
+  h1: string | null;
   blocks: PageBlock[];
 };

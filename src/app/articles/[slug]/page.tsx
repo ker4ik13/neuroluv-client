@@ -5,7 +5,7 @@ import {
   getArticleDetailPageData,
   getArticleSlugs,
 } from "@/shared/api/directus/articles";
-import { SITE_URL } from "@/shared/config/site";
+import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { ContentDetailPage } from "@/widgets/content-detail";
 import { PageBlocks } from "@/widgets/page-blocks";
 
@@ -31,33 +31,20 @@ export async function generateMetadata({
     return {};
   }
 
-  const image = data.item.image;
-
-  return {
-    title: data.item.title,
-    description: data.item.description,
-    alternates: {
-      canonical: `${SITE_URL}/articles/${data.item.slug}`,
+  return buildPageMetadata(data.item.seo, {
+    author: data.item.author?.name,
+    canonicalPath: `/articles/${data.item.slug}`,
+    fallbackDescription: data.item.description,
+    fallbackImage: data.item.image,
+    fallbackTitle: "{TITLE} | {SITE_NAME}",
+    openGraphType: "article",
+    publishedTime: data.item.publishedAt,
+    variables: {
+      AUTHOR: data.item.author?.name,
+      TITLE: data.item.title,
+      URL: `/articles/${data.item.slug}`,
     },
-    openGraph: {
-      title: data.item.title,
-      description: data.item.description,
-      type: "article",
-      url: `${SITE_URL}/articles/${data.item.slug}`,
-      publishedTime: data.item.publishedAt || undefined,
-      images: image
-        ? [
-            {
-              url: image.url,
-              alt: image.title,
-              width: image.width || undefined,
-              height: image.height || undefined,
-              type: image.type || undefined,
-            },
-          ]
-        : [],
-    },
-  };
+  });
 }
 
 export default async function ArticleDetailRoute({

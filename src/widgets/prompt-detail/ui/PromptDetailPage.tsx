@@ -20,11 +20,19 @@ type PromptDetailPageProps = {
   related: PromptItem[];
 };
 
+type PromptHeading = {
+  id: string;
+  title: string;
+  blockId: number | "prompt";
+  localIndex: number;
+};
+
 export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
   const shareHref = buildTelegramShareHref(item);
   const contentBlocks = item.contentBlocks.filter(
     (block) => !(block.type === "html" && block.content === item.promptText),
   );
+  const headings = buildPromptHeadings(item.promptText, contentBlocks);
 
   return (
     <main className={styles.page}>
@@ -95,7 +103,12 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
             </div>
             <div
               className={styles.promptText}
-              dangerouslySetInnerHTML={{ __html: item.promptText }}
+              dangerouslySetInnerHTML={{
+                __html: addHeadingIdsToHtml(
+                  item.promptText,
+                  getBlockHeadings(headings, "prompt"),
+                ),
+              }}
             />
           </section>
 
@@ -104,6 +117,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
               {contentBlocks.map((block, index) => (
                 <ContentBlockView
                   block={block}
+                  headings={headings}
                   key={`prompt-content-${block.type}-${block.id}-${index}`}
                 />
               ))}
@@ -114,10 +128,11 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
         <SmartStickySidebar className={styles.sidebar}>
           <SidebarPanel title="В этом промпте">
             <div className={styles.toc}>
-              <a href="#prompt">Промпт</a>
-              <a href="#usage">Как использовать</a>
-              <a href="#parameters">Параметры</a>
-              <a href="#tags">Теги</a>
+              {headings.map((heading) => (
+                <a href={`#${heading.id}`} key={heading.id}>
+                  {heading.title}
+                </a>
+              ))}
             </div>
             <div className={styles.shareRow}>
               <a href={shareHref} rel="noreferrer" target="_blank">
@@ -165,13 +180,23 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
   );
 }
 
-function ContentBlockView({ block }: { block: PromptContentBlock }) {
+function ContentBlockView({
+  block,
+  headings,
+}: {
+  block: PromptContentBlock;
+  headings: PromptHeading[];
+}) {
   if (block.type === "html") {
     return (
       <section
         className={styles.htmlBlock}
-        id="usage"
-        dangerouslySetInnerHTML={{ __html: block.content }}
+        dangerouslySetInnerHTML={{
+          __html: addHeadingIdsToHtml(
+            block.content,
+            getBlockHeadings(headings, block.id),
+          ),
+        }}
       />
     );
   }
@@ -187,7 +212,7 @@ function ContentBlockView({ block }: { block: PromptContentBlock }) {
 
   return (
     <section className={styles.listBlock}>
-      {block.title && <h2>{block.title}</h2>}
+      {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
       <div className={styles.steps}>
         {block.items.map((item, index) => (
           <div className={styles.step} key={`step-${item.id}-${index}`}>
@@ -334,4 +359,130 @@ function buildTelegramShareHref(item: PromptDetail): string {
   const text = `${item.title} - Нейролюб`;
 
   return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+}
+
+function buildPromptHeadings(
+  promptText: string,
+  blocks: PromptContentBlock[],
+): PromptHeading[] {
+  const usedIds = new Map<string, number>();
+  const headings: PromptHeading[] = [];
+
+  extractHtmlHeadings(promptText).forEach((title, localIndex) => {
+    headings.push({
+      id: createUniqueHeadingId(title, usedIds),
+      title,
+      blockId: "prompt",
+      localIndex,
+    });
+  });
+
+  if (headings.length === 0) {
+    headings.push({
+      id: "prompt",
+      title: "Промпт",
+      blockId: "prompt",
+      localIndex: 0,
+    });
+  }
+
+  blocks.forEach((block) => {
+    if (block.type === "html") {
+      extractHtmlHeadings(block.content).forEach((title, localIndex) => {
+        headings.push({
+          id: createUniqueHeadingId(title, usedIds),
+          title,
+          blockId: block.id,
+          localIndex,
+        });
+      });
+
+      return;
+    }
+
+    const title = getContentBlockTitle(block);
+
+    if (title) {
+      headings.push({
+        id: createUniqueHeadingId(title, usedIds),
+        title,
+        blockId: block.id,
+        localIndex: 0,
+      });
+    }
+  });
+
+  return headings;
+}
+
+function extractHtmlHeadings(html: string): string[] {
+  return [...html.matchAll(/<h[2-3][^>]*>([\s\S]*?)<\/h[2-3]>/gi)]
+    .map((match) => stripHtml(match[1] || "").trim())
+    .filter(Boolean);
+}
+
+function addHeadingIdsToHtml(html: string, headings: PromptHeading[]): string {
+  let index = 0;
+
+  return html.replace(
+    /<(h[2-3])([^>]*)>([\s\S]*?)<\/\1>/gi,
+    (match, tag: string, attributes: string, content: string) => {
+      const heading = headings[index];
+      index += 1;
+
+      if (!heading) {
+        return match;
+      }
+
+      const cleanAttributes = attributes.replace(/\s+id=(["']).*?\1/i, "");
+
+      return `<${tag}${cleanAttributes} id="${heading.id}">${content}</${tag}>`;
+    },
+  );
+}
+
+function getContentBlockTitle(block: PromptContentBlock): string | null {
+  if (block.type === "list") {
+    return block.title;
+  }
+
+  return null;
+}
+
+function getBlockHeadings(
+  headings: PromptHeading[],
+  blockId: PromptHeading["blockId"],
+): PromptHeading[] {
+  return headings.filter((heading) => heading.blockId === blockId);
+}
+
+function getBlockHeadingId(
+  headings: PromptHeading[],
+  blockId: PromptHeading["blockId"],
+): string | undefined {
+  return headings.find((heading) => heading.blockId === blockId)?.id;
+}
+
+function createUniqueHeadingId(
+  title: string,
+  usedIds: Map<string, number>,
+): string {
+  const baseId = slugify(title) || "section";
+  const count = usedIds.get(baseId) || 0;
+
+  usedIds.set(baseId, count + 1);
+
+  return count === 0 ? baseId : `${baseId}-${count + 1}`;
+}
+
+function slugify(value: string): string {
+  return stripHtml(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9а-яё]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]+>/g, "");
 }

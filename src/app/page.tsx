@@ -8,7 +8,14 @@ import { PageBlocks } from "@/widgets/page-blocks";
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await getPageSeoBySlug("/");
 
-  return buildPageMetadata(seo);
+  return buildPageMetadata(seo, {
+    canonicalPath: "/",
+    fallbackTitle: "{SITE_NAME}",
+    variables: {
+      TITLE: "Главная",
+      URL: "/",
+    },
+  });
 }
 
 export default async function Home() {

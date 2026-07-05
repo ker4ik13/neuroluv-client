@@ -1,3 +1,5 @@
+import type { PageSeo } from "@/entities/seo";
+
 export type NewsImage = {
   id: string;
   title: string;
@@ -35,6 +37,7 @@ export type NewsItem = {
   author: NewsAuthor | null;
   topic: NewsTaxonomy | null;
   tags: NewsTaxonomy[];
+  seo: PageSeo | null;
 };
 
 export type NewsSortOrder = "fresh" | "old";

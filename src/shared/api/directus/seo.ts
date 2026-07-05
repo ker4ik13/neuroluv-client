@@ -27,6 +27,7 @@ type DirectusPageSeo = {
   seo_keywords: string | null;
   seo_noindex: boolean | null;
   seo_nofollow: boolean | null;
+  canonical_url: string | null;
   og_title: string | null;
   og_description: string | null;
   og_image: DirectusFile | string | null;
@@ -50,13 +51,16 @@ const SITE_SEO_FIELDS = [
   "default_og_image.height",
 ].join(",");
 
-const PAGE_SEO_FIELDS = [
+export type DirectusSeoFields = DirectusPageSeo;
+
+export const DIRECTUS_SEO_FIELDS = [
   "title",
   "seo_title",
   "seo_description",
   "seo_keywords",
   "seo_noindex",
   "seo_nofollow",
+  "canonical_url",
   "og_title",
   "og_description",
   "og_image.id",
@@ -90,10 +94,11 @@ export async function getSiteSeo(): Promise<SiteSeo> {
 
 export async function getPageSeoBySlug(slug: string): Promise<PageSeo | null> {
   const params = new URLSearchParams({
-    fields: PAGE_SEO_FIELDS,
+    fields: DIRECTUS_SEO_FIELDS,
     limit: "1",
   });
 
+  params.set("filter[status][_eq]", "published");
   params.set("filter[slug][_eq]", slug);
 
   const pages = await directusRequest<DirectusPageSeo[]>(
@@ -107,18 +112,39 @@ export async function getPageSeoBySlug(slug: string): Promise<PageSeo | null> {
     return null;
   }
 
-  const title = page.seo_title || page.title || "";
-  const description = page.seo_description || "";
+  return normalizeDirectusSeo(page);
+}
+
+export async function getPageSeoByPath(path: string): Promise<PageSeo | null> {
+  return getPageSeoBySlug(path);
+}
+
+export function normalizeDirectusSeo(
+  source: DirectusSeoFields | null,
+  fallbackTitle = "",
+  fallbackDescription = "",
+): PageSeo | null {
+  if (!source) {
+    return null;
+  }
+
+  const title = source.seo_title || source.title || fallbackTitle;
+  const description = source.seo_description || fallbackDescription;
+
+  if (!title && !description) {
+    return null;
+  }
 
   return {
     title,
     description,
-    keywords: normalizeKeywords(page.seo_keywords),
-    noindex: Boolean(page.seo_noindex),
-    nofollow: Boolean(page.seo_nofollow),
-    ogTitle: page.og_title || title,
-    ogDescription: page.og_description || description,
-    ogImage: normalizeAsset(page.og_image, "Open Graph"),
+    keywords: normalizeKeywords(source.seo_keywords),
+    noindex: Boolean(source.seo_noindex),
+    nofollow: Boolean(source.seo_nofollow),
+    canonicalUrl: source.canonical_url || null,
+    ogTitle: source.og_title || title,
+    ogDescription: source.og_description || description,
+    ogImage: normalizeAsset(source.og_image, "Open Graph"),
   };
 }
 
