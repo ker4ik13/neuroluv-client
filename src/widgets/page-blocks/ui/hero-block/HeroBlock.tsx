@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FaTelegram } from "react-icons/fa6";
+import { FaTelegram } from "react-icons/fa";
 
 import type { PageHeroBlock, PageHeroButton } from "@/entities/page";
 import { AppIcon } from "@/shared/ui/app-icon";

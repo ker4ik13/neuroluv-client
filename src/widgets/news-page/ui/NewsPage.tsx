@@ -4,8 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BsEye, BsFilter } from "react-icons/bs";
-import { FaTelegram } from "react-icons/fa6";
+import { FaEye, FaFilter, FaTelegram } from "react-icons/fa";
 
 import type {
   NewsItem,
@@ -16,6 +15,7 @@ import type {
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./NewsPage.module.scss";
+import { AiOutlineFilter } from "react-icons/ai";
 
 type NewsPageProps = {
   activeTag: string | null;
@@ -265,7 +265,7 @@ function FilterBar({
         })}
       >
         <span>{sort === "fresh" ? "Свежее" : "Старые"}</span>
-        <BsFilter
+        <AiOutlineFilter
           aria-hidden="true"
           className={`${styles.sortIcon} ${sort === "old" ? styles.sortIconReversed : ""}`}
         />
@@ -360,7 +360,7 @@ function NewsMeta({ item, isDark }: { item: NewsItem; isDark?: boolean }) {
         {item.viewsCount !== null && (
           <span className={styles.viewsMeta}>
             {item.viewsCount} 
-            <BsEye aria-hidden="true" aria-label="Просмотры" />
+            <FaEye aria-hidden="true" aria-label="Просмотры" />
           </span>
         )}
       </span>

@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BsArrowRight, BsEye, BsShareFill } from "react-icons/bs";
-import { FaTelegram } from "react-icons/fa6";
+import { FaArrowRight, FaEye, FaShareAlt, FaTelegram } from "react-icons/fa";
 
 import type {
   PromptContentBlock,
@@ -57,7 +56,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
               target="_blank"
             >
               Заказать адаптацию
-              <BsArrowRight aria-hidden="true" />
+              <FaArrowRight aria-hidden="true" />
             </a>
           </div>
           <div className={styles.heroMeta}>
@@ -139,7 +138,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
                 <FaTelegram aria-hidden="true" />
               </a>
               <a href={shareHref} rel="noreferrer" target="_blank">
-                <BsShareFill aria-hidden="true" />
+                <FaShareAlt aria-hidden="true" />
               </a>
             </div>
           </SidebarPanel>
@@ -154,7 +153,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
             <p>Адаптируем стиль, тон, цвета и референсы.</p>
             <a href="https://t.me/neuroluv" rel="noreferrer" target="_blank">
               Заказать
-              <BsArrowRight aria-hidden="true" />
+              <FaArrowRight aria-hidden="true" />
             </a>
           </div>
         </SmartStickySidebar>
@@ -348,7 +347,7 @@ function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
       <p>{prompt.description}</p>
       <span className={styles.relatedMeta}>
         {prompt.viewsCount} просмотров
-        <BsEye aria-hidden="true" />
+        <FaEye aria-hidden="true" />
       </span>
     </Link>
   );

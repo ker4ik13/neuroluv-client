@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BsArrowRight, BsEye, BsShareFill } from "react-icons/bs";
-import { FaTelegram } from "react-icons/fa6";
+import { FaArrowRight, FaEye, FaShareAlt, FaTelegram } from "react-icons/fa";
 
 import type { NewsContentBlock, NewsDetail, NewsItem } from "@/entities/news";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
@@ -84,7 +83,7 @@ export function ContentDetailPage({
                 <FaTelegram aria-hidden="true" />
               </a>
               <a className={styles.shareButton} href={shareHref}>
-                <BsShareFill aria-hidden="true" />
+                <FaShareAlt aria-hidden="true" />
               </a>
             </div>
           </SidebarPanel>
@@ -101,7 +100,7 @@ export function ContentDetailPage({
               target="_blank"
             >
               Обсудить
-              <BsArrowRight aria-hidden="true" />
+              <FaArrowRight aria-hidden="true" />
             </a>
           </div>
         </SmartStickySidebar>
@@ -216,7 +215,7 @@ function DetailHero({
           target="_blank"
         >
           Поделиться
-          <BsShareFill aria-hidden="true" />
+          <FaShareAlt aria-hidden="true" />
         </a>
       </div>
 
@@ -454,7 +453,7 @@ function RelatedCard({
           {item.viewsCount !== null
             ? `${item.viewsCount} `
             : item.publishedAtLabel}
-          <BsEye aria-hidden="true" aria-label="Просмотры" />
+          <FaEye aria-hidden="true" aria-label="Просмотры" />
         </span>
       </span>
     </Link>

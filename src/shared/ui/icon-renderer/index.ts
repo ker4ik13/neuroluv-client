@@ -1,0 +1,1 @@
+export { IconRenderer } from "./IconRenderer";

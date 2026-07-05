@@ -10,8 +10,8 @@ type TaskGridBlockProps = {
 
 const FALLBACK_ICON: NavigationIcon = {
   title: "Задача",
-  code: "bot",
-  library: "react-icons",
+  code: "FaRobot",
+  library: "fa",
 };
 
 export function TaskGridBlock({ block }: TaskGridBlockProps) {

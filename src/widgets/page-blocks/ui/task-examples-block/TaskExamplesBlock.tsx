@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { FiArrowUpRight } from "react-icons/fi";
 
 import type { NavigationIcon } from "@/entities/navigation";
 import type {
@@ -7,6 +6,7 @@ import type {
   PageTaskExamplesCard,
 } from "@/entities/page";
 import { AppIcon } from "@/shared/ui/app-icon";
+import { IconRenderer } from "@/shared/ui/icon-renderer";
 
 import styles from "./TaskExamplesBlock.module.scss";
 
@@ -16,8 +16,8 @@ type TaskExamplesBlockProps = {
 
 const FALLBACK_ICON: NavigationIcon = {
   title: "Контент",
-  code: "file-text",
-  library: "react-icons",
+  code: "FaFileAlt",
+  library: "fa",
 };
 
 export function TaskExamplesBlock({ block }: TaskExamplesBlockProps) {
@@ -54,7 +54,7 @@ function TaskExamplesCard({ card }: { card: PageTaskExamplesCard }) {
         <span className={styles.iconBox}>
           <AppIcon className={styles.icon} icon={card.icon || FALLBACK_ICON} />
         </span>
-        <FiArrowUpRight aria-hidden="true" className={styles.arrow} />
+        <IconRenderer className={styles.arrow} code="FaArrowRight" library="fa" />
       </div>
       <div className={styles.cardContent}>
         <h3 className={styles.cardTitle}>{card.title}</h3>

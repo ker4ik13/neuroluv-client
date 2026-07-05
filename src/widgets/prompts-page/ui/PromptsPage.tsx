@@ -2,8 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AiOutlineSearch } from "react-icons/ai";
-import { BsArrowRight, BsEye, BsStars } from "react-icons/bs";
-import { FaTelegram } from "react-icons/fa6";
+import { FaArrowRight, FaEye, FaMagic, FaTelegram } from "react-icons/fa";
 
 import type {
   PromptItem,
@@ -70,7 +69,7 @@ export function PromptsPage({
             target="_blank"
           >
             Заказать AI-контент
-            <BsStars aria-hidden="true" />
+            <FaMagic aria-hidden="true" />
           </a>
         </div>
         <div className={styles.heroImage}>
@@ -158,7 +157,7 @@ function SearchAndFilters({
         )}
         <button type="submit">
           Найти
-          <BsArrowRight aria-hidden="true" />
+          <FaArrowRight aria-hidden="true" />
         </button>
       </form>
 
@@ -243,7 +242,7 @@ function PromptCard({ prompt }: { prompt: PromptItem }) {
         )}
         <span className={styles.cardFooter}>
           <span>{prompt.viewsCount} просмотров</span>
-          <BsEye aria-hidden="true" />
+          <FaEye aria-hidden="true" />
         </span>
       </span>
     </Link>
@@ -326,7 +325,7 @@ function PromptsSidebar({
         <p>10 000+ подписчиков. Лучшие промпты каждую неделю.</p>
         <a href="https://t.me/neuroluv" rel="noreferrer" target="_blank">
           Подписаться
-          <BsArrowRight aria-hidden="true" />
+          <FaArrowRight aria-hidden="true" />
         </a>
       </div>
     </SmartStickySidebar>

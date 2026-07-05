@@ -12,8 +12,8 @@ type ServicesBlockProps = {
 
 const FALLBACK_ICON: NavigationIcon = {
   title: "Услуга",
-  code: "briefcase",
-  library: "react-icons",
+  code: "FaBriefcase",
+  library: "fa",
 };
 
 export function ServicesBlock({ block }: ServicesBlockProps) {
