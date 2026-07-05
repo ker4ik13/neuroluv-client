@@ -289,6 +289,7 @@ type DirectusPromptsBlock = {
   title: string | null;
   description: string | null;
   link: string | null;
+  selection_mode: "manual" | "popular" | "fresh" | string | null;
   is_active: boolean | null;
   prompts?: DirectusPromptJunction[];
 };
@@ -555,6 +556,7 @@ export const PAGE_FIELDS = [
   "blocks.item:block_prompts.title",
   "blocks.item:block_prompts.description",
   "blocks.item:block_prompts.link",
+  "blocks.item:block_prompts.selection_mode",
   "blocks.item:block_prompts.is_active",
   "blocks.item:block_prompts.prompts.id",
   "blocks.item:block_prompts.prompts.sort",
@@ -660,7 +662,7 @@ export async function getPageBySlug(slug: string): Promise<Page | null> {
     { next: { revalidate: 60 } },
   );
 
-  return normalizePage(pages[0] || null);
+  return hydratePageDynamicBlocks(normalizePage(pages[0] || null));
 }
 
 export async function getHomePage(): Promise<Page | null> {
@@ -683,7 +685,7 @@ export async function getHomePage(): Promise<Page | null> {
     { next: { revalidate: 60 } },
   );
 
-  return normalizePage(pages[0] || null);
+  return hydratePageDynamicBlocks(normalizePage(pages[0] || null));
 }
 
 function normalizePage(page: DirectusPage | null): Page | null {
@@ -1121,8 +1123,83 @@ function normalizePromptsBlock(
     title: item.title,
     description: item.description || "",
     link: item.link || null,
+    selectionMode: normalizePromptsSelectionMode(item.selection_mode),
     prompts: normalizePromptCards(item.prompts || []),
   };
+}
+
+async function hydratePageDynamicBlocks(page: Page | null): Promise<Page | null> {
+  if (!page) {
+    return null;
+  }
+
+  const blocks = await Promise.all(
+    page.blocks.map(async (block) => {
+      if (block.type !== "prompts" || block.selectionMode === "manual") {
+        return block;
+      }
+
+      return {
+        ...block,
+        prompts: await getDynamicPromptCards(block.selectionMode),
+      };
+    }),
+  );
+
+  return {
+    ...page,
+    blocks,
+  };
+}
+
+const PROMPTS_BLOCK_LIMIT = 3;
+
+async function getDynamicPromptCards(
+  selectionMode: Exclude<PagePromptsBlock["selectionMode"], "manual">,
+): Promise<PagePromptCard[]> {
+  const params = new URLSearchParams({
+    fields: PROMPTS_BLOCK_ITEM_FIELDS,
+    limit: String(PROMPTS_BLOCK_LIMIT),
+    sort: selectionMode === "popular" ? "-views_count,-published_at,-id" : "-published_at,-id",
+  });
+
+  params.set("filter[status][_eq]", "published");
+
+  const prompts = await directusRequest<DirectusPrompt[]>(
+    `/items/prompts?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return normalizePromptItems(prompts);
+}
+
+const PROMPTS_BLOCK_ITEM_FIELDS = [
+  "id",
+  "title",
+  "slug",
+  "description",
+  "format",
+  "difficulty",
+  "views_count",
+  "status",
+  "published_at",
+  "neural_network.name",
+  "images.sort",
+  "images.directus_files_id.id",
+  "images.directus_files_id.title",
+  "images.directus_files_id.type",
+  "images.directus_files_id.width",
+  "images.directus_files_id.height",
+].join(",");
+
+function normalizePromptsSelectionMode(
+  mode: DirectusPromptsBlock["selection_mode"],
+): PagePromptsBlock["selectionMode"] {
+  if (mode === "fresh" || mode === "popular") {
+    return mode;
+  }
+
+  return "manual";
 }
 
 function normalizePromptCards(prompts: DirectusPromptJunction[]): PagePromptCard[] {
@@ -1131,20 +1208,31 @@ function normalizePromptCards(prompts: DirectusPromptJunction[]): PagePromptCard
     .map((prompt) => prompt.prompts_id)
     .filter(isPublishedDirectusPrompt)
     .filter((prompt) => Boolean(prompt.title && prompt.slug))
-    .map((prompt) => ({
-      id: prompt.id,
-      title: prompt.title || "",
-      description: prompt.description || "",
-      href: `/prompts/${prompt.slug || ""}`,
-      format: prompt.format,
-      difficulty: prompt.difficulty,
-      viewsCount: prompt.views_count || 0,
-      neuralNetwork:
-        typeof prompt.neural_network === "object" && prompt.neural_network !== null
-          ? prompt.neural_network.name
-          : null,
-      image: normalizePromptImage(prompt.images || []),
-    }));
+    .map(normalizePromptCard);
+}
+
+function normalizePromptItems(prompts: DirectusPrompt[]): PagePromptCard[] {
+  return prompts
+    .filter(isPublishedDirectusPrompt)
+    .filter((prompt) => Boolean(prompt.title && prompt.slug))
+    .map(normalizePromptCard);
+}
+
+function normalizePromptCard(prompt: DirectusPrompt): PagePromptCard {
+  return {
+    id: prompt.id,
+    title: prompt.title || "",
+    description: prompt.description || "",
+    href: `/prompts/${prompt.slug || ""}`,
+    format: prompt.format,
+    difficulty: prompt.difficulty,
+    viewsCount: prompt.views_count || 0,
+    neuralNetwork:
+      typeof prompt.neural_network === "object" && prompt.neural_network !== null
+        ? prompt.neural_network.name
+        : null,
+    image: normalizePromptImage(prompt.images || []),
+  };
 }
 
 function isPublishedDirectusPrompt(

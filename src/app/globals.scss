@@ -3,15 +3,6 @@
 @use "../styles/vars" as *;
 
 @font-face {
-  font-family: "Raleway";
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  src: url("../styles/fonts/Raleway/Raleway-VariableFont_wght.ttf")
-    format("truetype");
-}
-
-@font-face {
   font-family: "Gilroy";
   font-weight: 400;
   font-style: normal;
@@ -33,6 +24,30 @@
   font-style: normal;
   font-display: swap;
   src: url("../styles/fonts/Gilroy/Gilroy-Semibold_0.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Gilroy";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("../styles/fonts/Gilroy/Gilroy-Bold_0.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Gilroy";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url("../styles/fonts/Gilroy/Gilroy-Extrabold_0.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Gilroy";
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url("../styles/fonts/Gilroy/Gilroy-Black_0.ttf") format("truetype");
 }
 
 :root {

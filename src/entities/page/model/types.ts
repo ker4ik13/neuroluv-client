@@ -173,6 +173,7 @@ export type PagePromptsBlock = {
   title: string;
   description: string;
   link: string | null;
+  selectionMode: "manual" | "popular" | "fresh";
   prompts: PagePromptCard[];
 };
 
