@@ -292,6 +292,11 @@ $header-burger-breakpoint: 900;
 	}
 }
 
+.navLinkActive {
+	color: $color-cyan;
+	background-color: rgba($color-cyan, 0.1);
+}
+
 .navIcon {
 	width: rem(24);
 	height: rem(24);
@@ -438,6 +443,11 @@ $header-burger-breakpoint: 900;
 	@media (max-width: em($header-burger-breakpoint)) {
 		justify-content: flex-end;
 	}
+}
+
+.dropdownLinkActive {
+	color: $color-cyan;
+	background: rgba($color-cyan, 0.1);
 }
 
 .socials {

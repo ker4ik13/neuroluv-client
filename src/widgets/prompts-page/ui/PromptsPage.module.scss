@@ -196,18 +196,32 @@ $sticky-sidebar-top: 112;
 .searchForm {
 	display: flex;
 	width: 100%;
-	height: rem(56);
+	min-height: rem(64);
 	align-items: center;
 	gap: rem(12);
-	padding: rem(8) rem(8) rem(8) rem(16);
+	padding: rem(8);
 	background: $color-white;
-	border-radius: rem(16);
-	box-shadow: 0 rem(18) rem(38) rgba(0, 0, 0, 0.06);
+	border-radius: rem(100);
+	box-shadow: 0 rem(18) rem(38) rgba(0, 0, 0, 0.07);
 
 	@media (max-width: em($breakpoint-tablet)) {
 		height: auto;
 		align-items: stretch;
-		flex-wrap: wrap;
+		flex-direction: column;
+		gap: rem(10);
+		border-radius: rem(22);
+	}
+
+	.searchField {
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		align-items: center;
+		gap: rem(12);
+
+		@media (max-width: em($breakpoint-tablet)) {
+			width: 100%;
+		}
 	}
 
 	input {
@@ -215,8 +229,9 @@ $sticky-sidebar-top: 112;
 
 		min-width: 0;
 		flex: 1;
+		height: rem(48);
 		color: $color-ink;
-		font-size: rem(16);
+		font-size: rem(18);
 		background: transparent;
 		border: 0;
 		outline: 0;
@@ -226,29 +241,29 @@ $sticky-sidebar-top: 112;
 		}
 
 		@media (max-width: em($breakpoint-tablet)) {
-			min-width: calc(100% - #{rem(34)});
-			height: rem(40);
+			font-size: rem(16);
 		}
 	}
 
 	button {
-		@include body-font(700);
+		@include body-font(600);
 
 		display: inline-flex;
-		height: rem(40);
+		height: rem(48);
 		align-items: center;
+		justify-content: center;
 		gap: rem(8);
-		padding: 0 rem(16);
+		padding: 0 rem(24);
 		color: $color-white;
-		font-size: rem(15);
+		font-size: rem(18);
 		background: $color-cyan;
 		border: 0;
-		border-radius: rem(12);
+		border-radius: rem(100);
 		cursor: pointer;
 
 		@media (max-width: em($breakpoint-tablet)) {
 			width: 100%;
-			justify-content: center;
+			font-size: rem(16);
 		}
 	}
 }
@@ -257,19 +272,22 @@ $sticky-sidebar-top: 112;
 	width: rem(20);
 	height: rem(20);
 	flex: 0 0 rem(20);
+	margin-left: rem(10);
 	color: $color-ink-muted;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		margin-left: rem(8);
+	}
 }
 
-.typeTabs,
-.sortTabs {
+.typeTabs {
 	display: flex;
 	flex-wrap: wrap;
 	gap: rem(10);
 	align-items: center;
 }
 
-.typeTab,
-.sortTab {
+.typeTab {
 	@include body-font(700);
 
 	display: inline-flex;
@@ -293,17 +311,72 @@ $sticky-sidebar-top: 112;
 	}
 }
 
-.sortTab {
-	height: rem(36);
-	font-size: rem(14);
-	border-radius: rem(12);
-}
-
-.typeTabActive,
-.sortTabActive {
+.typeTabActive {
 	color: $color-white;
 	background: $color-ink-soft;
 	border-color: $color-ink-soft;
+}
+
+.filterActions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(10);
+	align-items: center;
+}
+
+.sortButton,
+.resetButton {
+	@include body-font(600);
+
+	display: inline-flex;
+	min-height: rem(48);
+	align-items: center;
+	justify-content: center;
+	gap: rem(10);
+	padding: rem(8) rem(22);
+	color: $color-ink;
+	font-size: rem(18);
+	white-space: nowrap;
+	background: $color-white;
+	border: rem(1) solid #cfcfcf;
+	border-radius: rem(100);
+	transition:
+		background-color 160ms ease,
+		border-color 160ms ease,
+		color 160ms ease;
+
+	&:hover {
+		border-color: rgba($color-cyan, 0.5);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		flex: 1 1 rem(180);
+		font-size: rem(16);
+	}
+}
+
+.resetButton {
+	color: $color-white;
+	background: $color-ink-soft;
+	border-color: $color-ink-soft;
+}
+
+.sortIcon {
+	width: rem(20);
+	height: rem(20);
+	transition: transform 160ms ease;
+}
+
+.sortIconReversed {
+	transform: rotate(180deg);
+}
+
+.sortIconPopular {
+	transform: rotate(90deg);
 }
 
 .cards {

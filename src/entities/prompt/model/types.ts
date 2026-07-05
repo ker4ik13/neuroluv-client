@@ -14,6 +14,7 @@ export type PromptTaxonomy = {
   title: string;
   slug: string;
   description: string;
+  count?: number;
 };
 
 export type PromptAuthor = {
@@ -143,6 +144,7 @@ export type PromptsPageData = {
   hasMore: boolean;
   prompts: PromptItem[];
   sidebarPrompts: PromptItem[];
+  totalCount: number;
   types: PromptTaxonomy[];
   tags: PromptTaxonomy[];
   goals: PromptTaxonomy[];

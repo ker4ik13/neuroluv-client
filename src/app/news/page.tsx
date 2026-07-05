@@ -32,6 +32,7 @@ const NEWS_PAGE_CONFIG: ContentListPageConfig = {
 type NewsRouteProps = {
   searchParams?: Promise<{
     page?: string;
+    q?: string;
     sort?: string;
     tag?: string;
     topic?: string;
@@ -61,16 +62,18 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
   const params = await searchParams;
   const paginationPage = normalizePage(params?.page);
   const sort = params?.sort === "old" ? "old" : "fresh";
+  const q = normalizeQueryParam(params?.q);
   const topic = normalizeQueryParam(params?.topic);
   const tag = topic ? null : normalizeQueryParam(params?.tag);
   let data = EMPTY_NEWS_DATA;
   let blocks: PageBlock[] = [];
   let heroTitle = NEWS_PAGE_CONFIG.heroTitle;
+  let heroDescription = NEWS_PAGE_CONFIG.heroDescription;
 
   try {
     const currentPath = buildPathWithSearch("/news", params);
     const [newsData, exactPage, basePage] = await Promise.all([
-      getNewsPageData({ page: paginationPage, sort, tag, topic }),
+      getNewsPageData({ page: paginationPage, q, sort, tag, topic }),
       currentPath === "/news" ? Promise.resolve(null) : getPageBySlug(currentPath),
       getPageBySlug("/news"),
     ]);
@@ -78,7 +81,11 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
 
     data = newsData;
     blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
-    heroTitle = page?.h1 || NEWS_PAGE_CONFIG.heroTitle;
+    heroTitle = exactPage?.h1 || basePage?.h1 || NEWS_PAGE_CONFIG.heroTitle;
+    heroDescription =
+      exactPage?.h1Description ||
+      basePage?.h1Description ||
+      NEWS_PAGE_CONFIG.heroDescription;
   } catch {
     data = EMPTY_NEWS_DATA;
     blocks = [];
@@ -87,9 +94,10 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
   return (
     <>
       <NewsPage
+        activeQuery={q}
         activeTag={tag}
         activeTopic={topic}
-        config={{ ...NEWS_PAGE_CONFIG, heroTitle }}
+        config={{ ...NEWS_PAGE_CONFIG, heroDescription, heroTitle }}
         currentPage={paginationPage}
         data={data}
         sort={sort}

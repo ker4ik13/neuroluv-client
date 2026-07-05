@@ -238,5 +238,6 @@ export type Page = {
   title: string;
   slug: string;
   h1: string | null;
+  h1Description: string | null;
   blocks: PageBlock[];
 };

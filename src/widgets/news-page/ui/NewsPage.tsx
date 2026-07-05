@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode, Ref } from "react";
 import { useEffect, useMemo, useRef, useTransition } from "react";
-import { AiOutlineFilter } from "react-icons/ai";
 import { FaEye, FaTelegram } from "react-icons/fa";
 
 import type {
@@ -14,11 +13,18 @@ import type {
   NewsSortOrder,
   NewsTaxonomy,
 } from "@/entities/news";
+import {
+  ContentListControls,
+  type ContentListFilter,
+  type ContentListSortOption,
+} from "@/shared/ui/content-list-controls";
+import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./NewsPage.module.scss";
 
 type NewsPageProps = {
+  activeQuery: string | null;
   activeTag: string | null;
   activeTopic: string | null;
   config?: ContentListPageConfig;
@@ -58,6 +64,7 @@ const DEFAULT_CONFIG: ContentListPageConfig = {
 };
 
 export function NewsPage({
+  activeQuery,
   activeTag,
   activeTopic,
   config = DEFAULT_CONFIG,
@@ -140,6 +147,7 @@ export function NewsPage({
         <div className={styles.mainColumn}>
           <FilterBar
             activeFilterKey={activeFilterKey}
+            activeQuery={activeQuery}
             activeTag={activeTag}
             activeTopic={activeTopic}
             basePath={config.basePath}
@@ -206,6 +214,7 @@ export function NewsPage({
       </div>
 
       <DigestCta />
+      <ScrollTopButton />
     </div>
   );
 }
@@ -224,6 +233,7 @@ function buildPaginationHref(page: number): string {
 
 function FilterBar({
   activeFilterKey,
+  activeQuery,
   activeTag,
   activeTopic,
   basePath,
@@ -231,50 +241,66 @@ function FilterBar({
   sort,
 }: {
   activeFilterKey: string;
+  activeQuery: string | null;
   activeTag: string | null;
   activeTopic: string | null;
   basePath: string;
   filters: FilterOption[];
   sort: NewsSortOrder;
 }) {
-  const nextSort: NewsSortOrder = sort === "fresh" ? "old" : "fresh";
+  const controlFilters: ContentListFilter[] = filters.map((filter) => ({
+    id: filter.id,
+    href: buildNewsHref({
+      basePath,
+      filter,
+      q: activeQuery,
+      sort,
+    }),
+    isActive: activeFilterKey === getFilterKey(filter),
+    label: filter.label,
+  }));
+  const sortOptions: ContentListSortOption[] = [
+    {
+      href: buildNewsHref({
+        basePath,
+        q: activeQuery,
+        sort: "fresh",
+        tag: activeTag,
+        topic: activeTopic,
+      }),
+      isActive: sort === "fresh",
+      label: "По свежести",
+      value: "fresh",
+    },
+    {
+      href: buildNewsHref({
+        basePath,
+        q: activeQuery,
+        sort: "old",
+        tag: activeTag,
+        topic: activeTopic,
+      }),
+      isActive: sort === "old",
+      label: "Сначала старые",
+      value: "old",
+    },
+  ];
 
   return (
-    <div className={styles.filtersWrap}>
-      <div className={styles.filters} aria-label="Фильтр новостей" role="list">
-        {filters.map((filter, index) => (
-          <Link
-            className={`${styles.filterButton} ${
-              activeFilterKey === getFilterKey(filter) ? styles.filterButtonActive : ""
-            }`}
-            href={buildNewsHref({
-              basePath,
-              filter,
-              sort,
-            })}
-            key={`filter-${filter.id}-${index}`}
-          >
-            {filter.label}
-          </Link>
-        ))}
-      </div>
-
-      <Link
-        className={styles.sortButton}
-        href={buildNewsHref({
-          basePath,
-          sort: nextSort,
-          tag: activeTag,
-          topic: activeTopic,
-        })}
-      >
-        <span>{sort === "fresh" ? "Свежее" : "Старые"}</span>
-        <AiOutlineFilter
-          aria-hidden="true"
-          className={`${styles.sortIcon} ${sort === "old" ? styles.sortIconReversed : ""}`}
-        />
-      </Link>
-    </div>
+    <ContentListControls
+      action={basePath}
+      filters={controlFilters}
+      hiddenInputs={{
+        sort: sort !== "fresh" ? sort : null,
+        tag: activeTag,
+        topic: activeTopic,
+      }}
+      resetHref={basePath}
+      searchDefaultValue={activeQuery}
+      searchLabel="Поиск по материалам"
+      searchPlaceholder="Поиск по темам, тегам и материалам..."
+      sortOptions={sortOptions}
+    />
   );
 }
 
@@ -618,17 +644,23 @@ function getActiveFilterKey(topic: string | null, tag: string | null): string {
 function buildNewsHref({
   basePath,
   filter,
+  q,
   sort,
   tag,
   topic,
 }: {
   basePath: string;
   filter?: FilterOption;
+  q?: string | null;
   sort: NewsSortOrder;
   tag?: string | null;
   topic?: string | null;
 }): string {
   const params = new URLSearchParams();
+
+  if (q) {
+    params.set("q", q);
+  }
 
   if (sort === "old") {
     params.set("sort", "old");

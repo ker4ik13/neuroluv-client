@@ -217,6 +217,16 @@ type DirectusPromptItem = {
   content_blocks?: DirectusContentBlock[];
 } & DirectusSeoFields;
 
+type DirectusAggregateCount = {
+  count?: {
+    id?: number | string | null;
+  };
+};
+
+type DirectusPromptGoalCount = DirectusAggregateCount & {
+  goal?: number | string | DirectusTaxonomy | null;
+};
+
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: "Легко",
   medium: "Средне",
@@ -412,10 +422,27 @@ export async function getPromptsPageData({
     limit: "100",
     sort: "-views_count,-published_at,-id",
   });
+  const totalParams = new URLSearchParams();
+  const goalCountsParams = new URLSearchParams();
 
+  totalParams.set("aggregate[count]", "id");
+  goalCountsParams.set("aggregate[count]", "id");
+  goalCountsParams.set("groupBy[]", "goal");
   applyPublishedFilter(sidebarPromptsParams);
+  applyPublishedFilter(totalParams);
+  applyPublishedFilter(goalCountsParams);
+  applyPromptFilters(totalParams, { goal, network, q, tag, type });
 
-  const [prompts, sidebarPrompts, types, tags, goals, neuralNetworks] =
+  const [
+    prompts,
+    sidebarPrompts,
+    totalRows,
+    goalCountRows,
+    types,
+    tags,
+    goals,
+    neuralNetworks,
+  ] =
     await Promise.all([
       directusRequest<DirectusPromptItem[]>(
         `/items/prompts?${promptsParams.toString()}`,
@@ -423,6 +450,14 @@ export async function getPromptsPageData({
       ),
       directusRequest<DirectusPromptItem[]>(
         `/items/prompts?${sidebarPromptsParams.toString()}`,
+        { next: { revalidate: 60 } },
+      ),
+      directusRequest<DirectusAggregateCount[]>(
+        `/items/prompts?${totalParams.toString()}`,
+        { next: { revalidate: 60 } },
+      ),
+      directusRequest<DirectusPromptGoalCount[]>(
+        `/items/prompts?${goalCountsParams.toString()}`,
         { next: { revalidate: 60 } },
       ),
       directusRequest<DirectusTaxonomy[]>(
@@ -444,15 +479,63 @@ export async function getPromptsPageData({
     ]);
 
   const normalizedPrompts = prompts.map(normalizePromptItem).filter(isPromptItem);
+  const goalCounts = normalizeGoalCounts(goalCountRows);
 
   return {
     hasMore: normalizedPrompts.length > requestedLimit,
     prompts: normalizedPrompts.slice(0, requestedLimit),
     sidebarPrompts: sidebarPrompts.map(normalizePromptItem).filter(isPromptItem),
+    totalCount: normalizeAggregateCount(totalRows),
     types: types.map(normalizeTaxonomy).filter(isTaxonomy),
     tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
-    goals: goals.map(normalizeTaxonomy).filter(isTaxonomy),
+    goals: goals
+      .map((item) => normalizeTaxonomyWithCount(item, goalCounts))
+      .filter(isTaxonomy),
     neuralNetworks: neuralNetworks.map(normalizeNetwork).filter(isTaxonomy),
+  };
+}
+
+function normalizeAggregateCount(rows: DirectusAggregateCount[]): number {
+  const count = Number(rows[0]?.count?.id || 0);
+
+  return Number.isFinite(count) ? count : 0;
+}
+
+function normalizeGoalCounts(rows: DirectusPromptGoalCount[]): Map<number, number> {
+  const counts = new Map<number, number>();
+
+  rows.forEach((row) => {
+    if (!row.goal) {
+      return;
+    }
+
+    const goalId =
+      typeof row.goal === "object" && row.goal !== null
+        ? row.goal.id
+        : Number(row.goal);
+    const count = Number(row.count?.id || 0);
+
+    if (Number.isFinite(goalId) && Number.isFinite(count)) {
+      counts.set(goalId, count);
+    }
+  });
+
+  return counts;
+}
+
+function normalizeTaxonomyWithCount(
+  taxonomy: DirectusTaxonomy,
+  counts: Map<number, number>,
+): PromptTaxonomy | null {
+  const normalized = normalizeTaxonomy(taxonomy);
+
+  if (!normalized) {
+    return null;
+  }
+
+  return {
+    ...normalized,
+    count: counts.get(normalized.id) || 0,
   };
 }
 

@@ -1,0 +1,330 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+@use '../../../styles/vars' as *;
+
+.controls {
+	display: flex;
+	flex-direction: column;
+	gap: rem(14);
+}
+
+.searchForm {
+	display: flex;
+	width: 100%;
+	min-height: rem(56);
+	align-items: center;
+	gap: rem(12);
+	padding: rem(7);
+	background: $color-white;
+	border-radius: rem(100);
+	box-shadow: 0 rem(18) rem(38) rgba(0, 0, 0, 0.07);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		height: auto;
+		align-items: stretch;
+		flex-direction: column;
+		gap: rem(10);
+		border-radius: rem(22);
+	}
+
+	button {
+		@include body-font(600);
+
+		display: inline-flex;
+		height: rem(42);
+		align-items: center;
+		justify-content: center;
+		gap: rem(8);
+		padding: 0 rem(22);
+		color: $color-white;
+		font-size: rem(16);
+		background: $color-cyan;
+		border: 0;
+		border-radius: rem(100);
+		cursor: pointer;
+
+		@media (max-width: em($breakpoint-tablet)) {
+			width: 100%;
+			font-size: rem(16);
+		}
+	}
+}
+
+.searchField {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	align-items: center;
+	gap: rem(12);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		width: 100%;
+	}
+
+	input {
+		@include body-font(400);
+
+		min-width: 0;
+		flex: 1;
+		height: rem(42);
+		color: $color-ink;
+		font-size: rem(16);
+		background: transparent;
+		border: 0;
+		outline: 0;
+
+		&::placeholder {
+			color: $color-ink-muted;
+		}
+
+		@media (max-width: em($breakpoint-tablet)) {
+			font-size: rem(16);
+		}
+	}
+}
+
+.searchIcon {
+	width: rem(20);
+	height: rem(20);
+	flex: 0 0 rem(20);
+	margin-left: rem(10);
+	color: $color-ink-muted;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		margin-left: rem(8);
+	}
+}
+
+.filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(10);
+	align-items: center;
+}
+
+.filterButton {
+	@include body-font(700);
+
+	display: inline-flex;
+	min-height: rem(32);
+	align-items: center;
+	justify-content: center;
+	padding: rem(6) rem(14);
+	color: $color-ink;
+	font-size: rem(13);
+	white-space: nowrap;
+	background: $color-white;
+	border: rem(1) solid rgba($color-border, 0.9);
+	border-radius: rem(16);
+	transition:
+		background-color 160ms ease,
+		color 160ms ease,
+		border-color 160ms ease;
+
+	&:hover {
+		border-color: rgba($color-cyan, 0.45);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.filterButtonActive {
+	color: $color-white;
+	background: $color-ink-soft;
+	border-color: $color-ink-soft;
+}
+
+.metaRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: rem(16);
+	padding-top: rem(4);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}
+
+.resultLabel {
+	@include body-font(700);
+
+	margin: 0;
+	color: $color-ink;
+	font-size: rem(22);
+	line-height: 1.25;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		font-size: rem(18);
+	}
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: rem(10);
+	margin-left: auto;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		width: 100%;
+		margin-left: 0;
+	}
+}
+
+.sortSelect {
+	position: relative;
+	flex: 0 0 auto;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		flex: 1 1 rem(220);
+	}
+
+	&[open] .sortChevron {
+		transform: rotate(180deg);
+	}
+
+	summary {
+		@include body-font(700);
+
+		display: inline-flex;
+		min-height: rem(44);
+		align-items: center;
+		justify-content: center;
+		gap: rem(14);
+		padding: rem(8) rem(14);
+		color: $color-ink;
+		font-size: rem(15);
+		line-height: 1.2;
+		white-space: nowrap;
+		background: $color-white;
+		border: rem(1) solid rgba($color-border, 0.95);
+		border-radius: rem(100);
+		box-shadow: 0 rem(8) rem(24) rgba($color-ink, 0.04);
+		cursor: pointer;
+		list-style: none;
+		transition:
+			border-color 160ms ease,
+			box-shadow 160ms ease;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+
+		&:hover {
+			border-color: rgba($color-cyan, 0.5);
+		}
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+
+		@media (max-width: em($breakpoint-tablet)) {
+			width: 100%;
+			font-size: rem(16);
+		}
+
+		span {
+			display: inline-flex;
+			align-items: center;
+			gap: rem(6);
+		}
+	}
+}
+
+.sortDirection {
+	width: rem(14);
+	height: rem(14);
+	transition: transform 160ms ease;
+}
+
+.sortDirectionReversed {
+	transform: rotate(180deg);
+}
+
+.sortChevron {
+	width: rem(14);
+	height: rem(14);
+	transition: transform 160ms ease;
+}
+
+.sortMenu {
+	position: absolute;
+	top: calc(100% + rem(8));
+	right: 0;
+	z-index: 20;
+	display: flex;
+	min-width: 100%;
+	flex-direction: column;
+	gap: rem(4);
+	padding: rem(6);
+	background: $color-white;
+	border: rem(1) solid rgba($color-border, 0.9);
+	border-radius: rem(16);
+	box-shadow: 0 rem(18) rem(38) rgba($color-ink, 0.12);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		right: auto;
+		left: 0;
+		width: 100%;
+	}
+}
+
+.sortOption {
+	@include body-font(600);
+
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	padding: rem(10) rem(12);
+	color: $color-ink;
+	font-size: rem(16);
+	border-radius: rem(12);
+
+	&:hover {
+		color: $color-cyan;
+		background: rgba($color-cyan, 0.08);
+	}
+}
+
+.sortOptionActive {
+	color: $color-cyan;
+	background: rgba($color-cyan, 0.1);
+}
+
+.resetButton {
+	@include body-font(700);
+
+	display: inline-flex;
+	min-height: rem(44);
+	align-items: center;
+	justify-content: center;
+	padding: rem(8) rem(14);
+	color: $color-white;
+	font-size: rem(15);
+	line-height: 1.2;
+	white-space: nowrap;
+	background: $color-ink-soft;
+	border: rem(1) solid $color-ink-soft;
+	border-radius: rem(100);
+	transition:
+		background-color 160ms ease,
+		border-color 160ms ease;
+
+	&:hover {
+		background: $color-ink;
+		border-color: $color-ink;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		flex: 1 1 rem(180);
+		font-size: rem(16);
+	}
+}

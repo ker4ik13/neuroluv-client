@@ -5,15 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode, Ref } from "react";
 import { useEffect, useRef, useTransition } from "react";
-import { AiOutlineSearch } from "react-icons/ai";
 import { FaArrowRight, FaMagic, FaTelegram } from "react-icons/fa";
 
 import type {
   PromptItem,
   PromptsPageData,
   PromptSortOrder,
-  PromptTaxonomy,
 } from "@/entities/prompt";
+import {
+  ContentListControls,
+  type ContentListFilter,
+  type ContentListSortOption,
+} from "@/shared/ui/content-list-controls";
+import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./PromptsPage.module.scss";
@@ -26,6 +30,7 @@ type PromptsPageProps = {
   activeType: string | null;
   currentPage: number;
   data: PromptsPageData;
+  heroDescription?: string;
   heroTitle?: string;
   sort: PromptSortOrder;
 };
@@ -49,6 +54,7 @@ export function PromptsPage({
   activeType,
   currentPage,
   data,
+  heroDescription = "800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.",
   heroTitle = "Идеи, промпты и референсы для AI-контента",
   sort,
 }: PromptsPageProps) {
@@ -109,9 +115,7 @@ export function PromptsPage({
         <div className={styles.heroContent}>
           <p className={styles.heroEyebrow}>Промпты</p>
           <h1 className={styles.heroTitle}>{heroTitle}</h1>
-          <p className={styles.heroDescription}>
-            800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.
-          </p>
+          <p className={styles.heroDescription}>{heroDescription}</p>
           <a
             className={styles.heroButton}
             href="https://t.me/neuroluv"
@@ -191,13 +195,15 @@ export function PromptsPage({
                 key={`goal-${goal.id}`}
               >
                 <strong>{goal.title}</strong>
-                <span>{getGoalCount(goal, data.sidebarPrompts)} промптов</span>
+                <span>{goal.count || 0} промптов</span>
                 <small>Смотреть</small>
               </Link>
             ))}
           </div>
         </section>
       )}
+
+      <ScrollTopButton />
     </main>
   );
 }
@@ -209,73 +215,63 @@ function SearchAndFilters({
   activeParams: PromptFilterParams;
   data: PromptsPageData;
 }) {
+  const currentSort = activeParams.sort || "fresh";
+  const hasActiveFilters = Boolean(
+    activeParams.goal ||
+      activeParams.network ||
+      activeParams.q ||
+      activeParams.tag ||
+      activeParams.type ||
+      currentSort !== "fresh",
+  );
+  const resultLabel = `${hasActiveFilters ? "Найдено" : "Всего"} ${data.totalCount} ${getPromptsCountWord(data.totalCount)}`;
+  const filters: ContentListFilter[] = [
+    {
+      id: "all",
+      href: buildPromptsHref({ ...activeParams, type: null }),
+      isActive: !activeParams.type,
+      label: "Все",
+    },
+    ...data.types.map((type) => ({
+      id: `type-${type.id}`,
+      href: buildPromptsHref({ ...activeParams, type: type.slug }),
+      isActive: activeParams.type === type.slug,
+      label: type.title,
+    })),
+  ];
+  const sortOptions: ContentListSortOption[] = [
+    {
+      href: buildPromptsHref({ ...activeParams, sort: "fresh" }),
+      isActive: currentSort !== "old",
+      label: "Новые",
+      value: "fresh",
+    },
+    {
+      href: buildPromptsHref({ ...activeParams, sort: "old" }),
+      isActive: currentSort === "old",
+      label: "Старые",
+      value: "old",
+    },
+  ];
+
   return (
-    <section className={styles.filtersPanel}>
-      <form action="/prompts" className={styles.searchForm}>
-        <AiOutlineSearch aria-hidden="true" className={styles.searchIcon} />
-        <input
-          aria-label="Поиск по промптам"
-          defaultValue={activeParams.q || ""}
-          name="q"
-          placeholder="Поиск по промптам, стилям, нейросетям..."
-          type="search"
-        />
-        {activeParams.type && <input name="type" type="hidden" value={activeParams.type} />}
-        {activeParams.tag && <input name="tag" type="hidden" value={activeParams.tag} />}
-        {activeParams.network && (
-          <input name="network" type="hidden" value={activeParams.network} />
-        )}
-        {activeParams.goal && <input name="goal" type="hidden" value={activeParams.goal} />}
-        {activeParams.sort && activeParams.sort !== "fresh" && (
-          <input name="sort" type="hidden" value={activeParams.sort} />
-        )}
-        <button type="submit">
-          Найти
-          <FaArrowRight aria-hidden="true" />
-        </button>
-      </form>
-
-      <div className={styles.typeTabs} aria-label="Типы промптов">
-        <Link
-          className={`${styles.typeTab} ${!activeParams.type ? styles.typeTabActive : ""}`}
-          href={buildPromptsHref({ ...activeParams, type: null })}
-        >
-          Все
-        </Link>
-        {data.types.map((type) => (
-          <Link
-            className={`${styles.typeTab} ${
-              activeParams.type === type.slug ? styles.typeTabActive : ""
-            }`}
-            href={buildPromptsHref({ ...activeParams, type: type.slug })}
-            key={`type-${type.id}`}
-          >
-            {type.title}
-          </Link>
-        ))}
-      </div>
-
-      <div className={styles.sortTabs}>
-        <Link
-          className={`${styles.sortTab} ${activeParams.sort === "fresh" ? styles.sortTabActive : ""}`}
-          href={buildPromptsHref({ ...activeParams, sort: "fresh" })}
-        >
-          Свежее
-        </Link>
-        <Link
-          className={`${styles.sortTab} ${activeParams.sort === "popular" ? styles.sortTabActive : ""}`}
-          href={buildPromptsHref({ ...activeParams, sort: "popular" })}
-        >
-          Популярное
-        </Link>
-        <Link
-          className={`${styles.sortTab} ${activeParams.sort === "old" ? styles.sortTabActive : ""}`}
-          href={buildPromptsHref({ ...activeParams, sort: "old" })}
-        >
-          Старые
-        </Link>
-      </div>
-    </section>
+    <ContentListControls
+      action="/prompts"
+      filters={filters}
+      hiddenInputs={{
+        goal: activeParams.goal,
+        network: activeParams.network,
+        sort: currentSort !== "fresh" ? currentSort : null,
+        tag: activeParams.tag,
+        type: activeParams.type,
+      }}
+      resetHref="/prompts"
+      resultLabel={resultLabel}
+      searchDefaultValue={activeParams.q}
+      searchLabel="Поиск по промптам"
+      searchPlaceholder="Поиск по промптам, стилям, нейросетям..."
+      sortOptions={sortOptions}
+    />
   );
 }
 
@@ -289,6 +285,26 @@ function buildPaginationHref(page: number): string {
   }
 
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function getPromptsCountWord(count: number): string {
+  const absoluteCount = Math.abs(count);
+  const lastTwoDigits = absoluteCount % 100;
+  const lastDigit = absoluteCount % 10;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return "промптов";
+  }
+
+  if (lastDigit === 1) {
+    return "промпт";
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return "промпта";
+  }
+
+  return "промптов";
 }
 
 function PromptCard({
@@ -348,7 +364,7 @@ function PromptsSidebar({
           {data.goals.slice(0, 8).map((goal) => (
             <SidebarCountLink
               active={activeParams.goal === goal.slug}
-              count={getGoalCount(goal, data.sidebarPrompts)}
+              count={goal.count || 0}
               href={buildPromptsHref({
                 ...activeParams,
                 goal: activeParams.goal === goal.slug ? null : goal.slug,
@@ -462,10 +478,6 @@ function EmptyState() {
       <Link href="/prompts">Сбросить фильтры</Link>
     </section>
   );
-}
-
-function getGoalCount(goal: PromptTaxonomy, prompts: PromptItem[]): number {
-  return prompts.filter((prompt) => prompt.goal?.slug === goal.slug).length;
 }
 
 function buildPromptsHref(params: PromptFilterParams = {}): string {

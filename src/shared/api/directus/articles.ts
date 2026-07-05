@@ -350,6 +350,7 @@ type ArticleDetailPageDataWithBlocks = NewsDetailPageData & {
 
 export type GetArticlesPageDataParams = {
   page?: number;
+  q?: string | null;
   sort?: NewsSortOrder;
   tag?: string | null;
   topic?: string | null;
@@ -357,6 +358,7 @@ export type GetArticlesPageDataParams = {
 
 export async function getArticlesPageData({
   page = 1,
+  q,
   sort = "fresh",
   tag,
   topic,
@@ -376,6 +378,11 @@ export async function getArticlesPageData({
 
   if (tag) {
     articlesParams.set("filter[tags][article_tags_id][slug][_eq]", tag);
+  }
+
+  if (q) {
+    articlesParams.set("filter[_or][0][title][_icontains]", q);
+    articlesParams.set("filter[_or][1][description][_icontains]", q);
   }
 
   const sidebarArticlesParams = new URLSearchParams({

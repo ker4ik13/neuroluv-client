@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
 
@@ -21,6 +22,7 @@ type HeaderViewProps = {
 };
 
 export function HeaderView({ navigation }: HeaderViewProps) {
+  const pathname = usePathname();
   const headerRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
@@ -118,6 +120,7 @@ export function HeaderView({ navigation }: HeaderViewProps) {
                 <NavigationEntry
                   item={item}
                   key={`nav-${item.id}-${index}`}
+                  pathname={pathname}
                   isMenuOpen={isMenuOpen}
                   isOpen={openDropdownId === item.id}
                   onClose={() =>
@@ -178,6 +181,7 @@ function LogoMark({ logo }: LogoMarkProps) {
 
 type NavigationEntryProps = {
   item: NavigationItem;
+  pathname: string;
   isMenuOpen: boolean;
   isOpen: boolean;
   onClose: () => void;
@@ -188,6 +192,7 @@ type NavigationEntryProps = {
 
 function NavigationEntry({
   item,
+  pathname,
   isMenuOpen,
   isOpen,
   onClose,
@@ -195,6 +200,8 @@ function NavigationEntry({
   onOpen,
   onToggle,
 }: NavigationEntryProps) {
+  const isActive = isNavigationItemActive(item, pathname);
+
   if (item.children.length > 0) {
     return (
       <div
@@ -245,7 +252,8 @@ function NavigationEntry({
       >
         <div className={styles.navDropdownTrigger}>
           <Link
-            className={styles.navLink}
+            aria-current={isActive ? "page" : undefined}
+            className={`${styles.navLink} ${isActive ? styles.navLinkActive : ""}`}
             href={item.href}
             rel={item.target === "_blank" ? "noreferrer" : undefined}
             target={item.target}
@@ -266,18 +274,23 @@ function NavigationEntry({
         </div>
 
         <div className={styles.dropdownPanel}>
-          {item.children.map((child, index) => (
-            <Link
-              className={styles.dropdownLink}
-              href={child.href}
-              key={`dropdown-${item.id}-${child.id}-${index}`}
-              rel={child.target === "_blank" ? "noreferrer" : undefined}
-              target={child.target}
-              onClick={onNavigate}
-            >
-              <NavLinkContent item={child} />
-            </Link>
-          ))}
+          {item.children.map((child, index) => {
+            const isChildActive = isNavigationItemActive(child, pathname);
+
+            return (
+              <Link
+                aria-current={isChildActive ? "page" : undefined}
+                className={`${styles.dropdownLink} ${isChildActive ? styles.dropdownLinkActive : ""}`}
+                href={child.href}
+                key={`dropdown-${item.id}-${child.id}-${index}`}
+                rel={child.target === "_blank" ? "noreferrer" : undefined}
+                target={child.target}
+                onClick={onNavigate}
+              >
+                <NavLinkContent item={child} />
+              </Link>
+            );
+          })}
         </div>
       </div>
     );
@@ -285,7 +298,8 @@ function NavigationEntry({
 
   return (
     <Link
-      className={styles.navLink}
+      aria-current={isActive ? "page" : undefined}
+      className={`${styles.navLink} ${isActive ? styles.navLinkActive : ""}`}
       href={item.href}
       rel={item.target === "_blank" ? "noreferrer" : undefined}
       target={item.target}
@@ -294,6 +308,41 @@ function NavigationEntry({
       <NavLinkContent item={item} />
     </Link>
   );
+}
+
+function isNavigationItemActive(
+  item: NavigationItem,
+  pathname: string,
+): boolean {
+  return (
+    isPathActive(item.href, pathname) ||
+    item.children.some((child) => isNavigationItemActive(child, pathname))
+  );
+}
+
+function isPathActive(href: string, pathname: string) {
+  if (!href || href.startsWith("http") || href.startsWith("#")) {
+    return false;
+  }
+
+  const normalizedHref = normalizePath(href);
+  const normalizedPathname = normalizePath(pathname);
+
+  if (normalizedHref === "/") {
+    return normalizedPathname === "/";
+  }
+
+  return (
+    normalizedPathname === normalizedHref ||
+    normalizedPathname.startsWith(`${normalizedHref}/`)
+  );
+}
+
+function normalizePath(path: string) {
+  const pathname = path.split(/[?#]/)[0] || "/";
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+
+  return normalized.length > 1 ? normalized.replace(/\/+$/, "") : normalized;
 }
 
 function NavLinkContent({ item }: { item: NavigationItem }) {

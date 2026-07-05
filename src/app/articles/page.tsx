@@ -32,6 +32,7 @@ const ARTICLES_PAGE_CONFIG = {
 type ArticlesRouteProps = {
   searchParams?: Promise<{
     page?: string;
+    q?: string;
     sort?: string;
     tag?: string;
     topic?: string;
@@ -61,16 +62,18 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
   const params = await searchParams;
   const paginationPage = normalizePage(params?.page);
   const sort = params?.sort === "old" ? "old" : "fresh";
+  const q = normalizeQueryParam(params?.q);
   const topic = normalizeQueryParam(params?.topic);
   const tag = topic ? null : normalizeQueryParam(params?.tag);
   let data = EMPTY_ARTICLES_DATA;
   let blocks: PageBlock[] = [];
   let heroTitle = ARTICLES_PAGE_CONFIG.heroTitle;
+  let heroDescription = ARTICLES_PAGE_CONFIG.heroDescription;
 
   try {
     const currentPath = buildPathWithSearch("/articles", params);
     const [articlesData, exactPage, basePage] = await Promise.all([
-      getArticlesPageData({ page: paginationPage, sort, tag, topic }),
+      getArticlesPageData({ page: paginationPage, q, sort, tag, topic }),
       currentPath === "/articles"
         ? Promise.resolve(null)
         : getPageBySlug(currentPath),
@@ -80,7 +83,11 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
 
     data = articlesData;
     blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
-    heroTitle = page?.h1 || ARTICLES_PAGE_CONFIG.heroTitle;
+    heroTitle = exactPage?.h1 || basePage?.h1 || ARTICLES_PAGE_CONFIG.heroTitle;
+    heroDescription =
+      exactPage?.h1Description ||
+      basePage?.h1Description ||
+      ARTICLES_PAGE_CONFIG.heroDescription;
   } catch {
     data = EMPTY_ARTICLES_DATA;
     blocks = [];
@@ -89,9 +96,10 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
   return (
     <>
       <NewsPage
+        activeQuery={q}
         activeTag={tag}
         activeTopic={topic}
-        config={{ ...ARTICLES_PAGE_CONFIG, heroTitle }}
+        config={{ ...ARTICLES_PAGE_CONFIG, heroDescription, heroTitle }}
         currentPage={paginationPage}
         data={data}
         sort={sort}

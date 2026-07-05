@@ -14,6 +14,7 @@ const EMPTY_PROMPTS_DATA: PromptsPageData = {
   hasMore: false,
   prompts: [],
   sidebarPrompts: [],
+  totalCount: 0,
   types: [],
   tags: [],
   goals: [],
@@ -21,6 +22,8 @@ const EMPTY_PROMPTS_DATA: PromptsPageData = {
 };
 
 const DEFAULT_HERO_TITLE = "Идеи, промпты и референсы для AI-контента";
+const DEFAULT_HERO_DESCRIPTION =
+  "800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.";
 
 type PromptsRouteProps = {
   searchParams?: Promise<{
@@ -65,6 +68,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
   let data = EMPTY_PROMPTS_DATA;
   let blocks: PageBlock[] = [];
   let heroTitle = DEFAULT_HERO_TITLE;
+  let heroDescription = DEFAULT_HERO_DESCRIPTION;
 
   try {
     const currentPath = buildPathWithSearch("/prompts", params);
@@ -79,7 +83,11 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
 
     data = promptsData;
     blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
-    heroTitle = page?.h1 || DEFAULT_HERO_TITLE;
+    heroTitle = exactPage?.h1 || basePage?.h1 || DEFAULT_HERO_TITLE;
+    heroDescription =
+      exactPage?.h1Description ||
+      basePage?.h1Description ||
+      DEFAULT_HERO_DESCRIPTION;
   } catch {
     data = EMPTY_PROMPTS_DATA;
     blocks = [];
@@ -95,6 +103,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
         activeType={type}
         currentPage={paginationPage}
         data={data}
+        heroDescription={heroDescription}
         heroTitle={heroTitle}
         sort={sort}
       />
@@ -114,7 +123,7 @@ function normalizePage(value: string | undefined): number {
 }
 
 function normalizeSort(value: string | undefined): PromptSortOrder {
-  if (value === "old" || value === "popular") {
+  if (value === "old") {
     return value;
   }
 
