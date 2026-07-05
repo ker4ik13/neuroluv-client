@@ -77,10 +77,6 @@ function PromptCard({ prompt }: { prompt: PagePromptCard }) {
         </span>
 
         <span className={styles.cardTitle}>{prompt.title}</span>
-        {prompt.description && (
-          <span className={styles.cardDescription}>{prompt.description}</span>
-        )}
-        <span className={styles.views}>{prompt.viewsCount} просмотров</span>
       </span>
     </Link>
   );

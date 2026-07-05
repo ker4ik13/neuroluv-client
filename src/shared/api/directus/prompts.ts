@@ -1,7 +1,10 @@
 import type {
   PromptAuthor,
   PromptContentBlock,
+  PromptContentButton,
+  PromptContentCard,
   PromptContentListItem,
+  PromptContentStep,
   PromptDetail,
   PromptDetailPageData,
   PromptImage,
@@ -22,7 +25,7 @@ import {
   normalizeDirectusSeo,
   type DirectusSeoFields,
 } from "@/shared/api/directus/seo";
-import { DIRECTUS_URL } from "@/shared/config/directus";
+import { buildDirectusAssetUrl } from "@/shared/config/directus";
 
 type DirectusFile = {
   id: string;
@@ -79,12 +82,45 @@ type DirectusContentListItem = {
   description: string | null;
 };
 
+type DirectusContentCard = {
+  id: number;
+  sort: number | null;
+  title: string | null;
+  description: string | null;
+  link: string | null;
+  image: DirectusFile | string | null;
+};
+
+type DirectusContentStep = {
+  id: number;
+  sort: number | null;
+  is_active: boolean | null;
+  title: string | null;
+  description: string | null;
+};
+
+type DirectusContentButton = {
+  id: number;
+  label: string | null;
+  url: string | null;
+  target: "_self" | "_blank" | null;
+  variant: "primary" | "secondary" | "outline" | null;
+  is_active: boolean | null;
+};
+
+type DirectusContentButtonJunction = {
+  sort: number | null;
+  hero_buttons_id: DirectusContentButton | number | null;
+};
+
 type DirectusContentHtml = {
   id: number;
   is_active: boolean | null;
   title: string | null;
   content: string | null;
 };
+
+type DirectusContentText = DirectusContentHtml;
 
 type DirectusContentQuote = {
   id: number;
@@ -101,14 +137,59 @@ type DirectusContentList = {
   items?: DirectusContentListItem[];
 };
 
+type DirectusContentImage = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  caption: string | null;
+  image: DirectusFile | string | null;
+};
+
+type DirectusContentVideo = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  caption: string | null;
+  video: DirectusFile | string | null;
+  video_url: string | null;
+};
+
+type DirectusContentCta = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  description: string | null;
+  buttons?: DirectusContentButtonJunction[];
+};
+
+type DirectusContentCards = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  cards?: DirectusContentCard[];
+};
+
+type DirectusContentSteps = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  steps?: DirectusContentStep[];
+};
+
 type DirectusContentBlock = {
   id: number;
   sort: number | null;
   collection: string | null;
   item:
     | DirectusContentHtml
+    | DirectusContentText
     | DirectusContentQuote
     | DirectusContentList
+    | DirectusContentImage
+    | DirectusContentVideo
+    | DirectusContentCta
+    | DirectusContentCards
+    | DirectusContentSteps
     | number
     | string
     | null;
@@ -129,6 +210,7 @@ type DirectusPromptItem = {
   updated_at: string | null;
   views_count: number | null;
   goal: DirectusTaxonomy | number | null;
+  prompt: string | null;
   tags?: DirectusPromptTagJunction[];
   types?: DirectusPromptTypeJunction[];
   images?: DirectusPromptImageJunction[];
@@ -196,6 +278,7 @@ const PROMPT_FIELDS = [
 
 const PROMPT_DETAIL_FIELDS = [
   PROMPT_FIELDS,
+  "prompt",
   "content_blocks.id",
   "content_blocks.sort",
   "content_blocks.collection",
@@ -203,6 +286,10 @@ const PROMPT_DETAIL_FIELDS = [
   "content_blocks.item:content_html.is_active",
   "content_blocks.item:content_html.title",
   "content_blocks.item:content_html.content",
+  "content_blocks.item:content_text.id",
+  "content_blocks.item:content_text.is_active",
+  "content_blocks.item:content_text.title",
+  "content_blocks.item:content_text.content",
   "content_blocks.item:content_quote.id",
   "content_blocks.item:content_quote.is_active",
   "content_blocks.item:content_quote.title",
@@ -215,6 +302,57 @@ const PROMPT_DETAIL_FIELDS = [
   "content_blocks.item:content_list.items.sort",
   "content_blocks.item:content_list.items.title",
   "content_blocks.item:content_list.items.description",
+  "content_blocks.item:content_image.id",
+  "content_blocks.item:content_image.is_active",
+  "content_blocks.item:content_image.title",
+  "content_blocks.item:content_image.caption",
+  "content_blocks.item:content_image.image.id",
+  "content_blocks.item:content_image.image.title",
+  "content_blocks.item:content_image.image.type",
+  "content_blocks.item:content_image.image.width",
+  "content_blocks.item:content_image.image.height",
+  "content_blocks.item:content_video.id",
+  "content_blocks.item:content_video.is_active",
+  "content_blocks.item:content_video.title",
+  "content_blocks.item:content_video.caption",
+  "content_blocks.item:content_video.video.id",
+  "content_blocks.item:content_video.video.title",
+  "content_blocks.item:content_video.video.type",
+  "content_blocks.item:content_video.video.width",
+  "content_blocks.item:content_video.video.height",
+  "content_blocks.item:content_video.video_url",
+  "content_blocks.item:content_cta.id",
+  "content_blocks.item:content_cta.is_active",
+  "content_blocks.item:content_cta.title",
+  "content_blocks.item:content_cta.description",
+  "content_blocks.item:content_cta.buttons.sort",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.id",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.label",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.url",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.target",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.variant",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.is_active",
+  "content_blocks.item:content_cards.id",
+  "content_blocks.item:content_cards.is_active",
+  "content_blocks.item:content_cards.title",
+  "content_blocks.item:content_cards.cards.id",
+  "content_blocks.item:content_cards.cards.sort",
+  "content_blocks.item:content_cards.cards.title",
+  "content_blocks.item:content_cards.cards.description",
+  "content_blocks.item:content_cards.cards.link",
+  "content_blocks.item:content_cards.cards.image.id",
+  "content_blocks.item:content_cards.cards.image.title",
+  "content_blocks.item:content_cards.cards.image.type",
+  "content_blocks.item:content_cards.cards.image.width",
+  "content_blocks.item:content_cards.cards.image.height",
+  "content_blocks.item:content_steps.id",
+  "content_blocks.item:content_steps.is_active",
+  "content_blocks.item:content_steps.title",
+  "content_blocks.item:content_steps.steps.id",
+  "content_blocks.item:content_steps.steps.sort",
+  "content_blocks.item:content_steps.steps.is_active",
+  "content_blocks.item:content_steps.steps.title",
+  "content_blocks.item:content_steps.steps.description",
 ].join(",");
 
 const TAXONOMY_FIELDS = [
@@ -238,9 +376,12 @@ type PromptDetailPageDataWithBlocks = PromptDetailPageData & {
   blocks: PageBlock[];
 };
 
+const PAGE_SIZE = 30;
+
 export type GetPromptsPageDataParams = {
   goal?: string | null;
   network?: string | null;
+  page?: number;
   q?: string | null;
   sort?: PromptSortOrder;
   tag?: string | null;
@@ -250,14 +391,16 @@ export type GetPromptsPageDataParams = {
 export async function getPromptsPageData({
   goal,
   network,
+  page = 1,
   q,
   sort = "fresh",
   tag,
   type,
 }: GetPromptsPageDataParams = {}): Promise<PromptsPageData> {
+  const requestedLimit = getListLimit(page);
   const promptsParams = new URLSearchParams({
     fields: PROMPT_FIELDS,
-    limit: "100",
+    limit: String(requestedLimit + 1),
     sort: getSort(sort),
   });
 
@@ -300,14 +443,21 @@ export async function getPromptsPageData({
       ),
     ]);
 
+  const normalizedPrompts = prompts.map(normalizePromptItem).filter(isPromptItem);
+
   return {
-    prompts: prompts.map(normalizePromptItem).filter(isPromptItem),
+    hasMore: normalizedPrompts.length > requestedLimit,
+    prompts: normalizedPrompts.slice(0, requestedLimit),
     sidebarPrompts: sidebarPrompts.map(normalizePromptItem).filter(isPromptItem),
     types: types.map(normalizeTaxonomy).filter(isTaxonomy),
     tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
     goals: goals.map(normalizeTaxonomy).filter(isTaxonomy),
     neuralNetworks: neuralNetworks.map(normalizeNetwork).filter(isTaxonomy),
   };
+}
+
+function getListLimit(page: number): number {
+  return Math.max(1, page) * PAGE_SIZE;
 }
 
 export async function getPromptBySlug(slug: string): Promise<PromptDetail | null> {
@@ -524,6 +674,7 @@ function normalizePromptDetail(
 
   const contentBlocks = normalizeContentBlocks(item.content_blocks || []);
   const promptText =
+    item.prompt ||
     contentBlocks.find((block) => block.type === "html")?.content ||
     promptItem.description;
 
@@ -548,12 +699,36 @@ function normalizeContentBlock(
     return normalizeHtmlBlock(block.id, block.item);
   }
 
+  if (block.collection === "content_text") {
+    return normalizeTextBlock(block.id, block.item);
+  }
+
   if (block.collection === "content_quote") {
     return normalizeQuoteBlock(block.id, block.item);
   }
 
   if (block.collection === "content_list") {
     return normalizeListBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_image") {
+    return normalizeImageBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_video") {
+    return normalizeVideoBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_cta") {
+    return normalizeCtaBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_cards") {
+    return normalizeCardsBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_steps") {
+    return normalizeStepsContentBlock(block.id, block.item);
   }
 
   return null;
@@ -578,6 +753,28 @@ function normalizeHtmlBlock(
     type: "html",
     title: html.title,
     content: html.content,
+  };
+}
+
+function normalizeTextBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): PromptContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const text = item as DirectusContentText;
+
+  if (!text.content) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "text",
+    title: text.title,
+    content: text.content,
   };
 }
 
@@ -632,6 +829,130 @@ function normalizeListBlock(
   };
 }
 
+function normalizeImageBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): PromptContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const imageBlock = item as DirectusContentImage;
+  const image = normalizeImage(imageBlock.image, imageBlock.title || "Изображение");
+
+  if (!image) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "image",
+    title: imageBlock.title,
+    caption: imageBlock.caption,
+    image,
+  };
+}
+
+function normalizeVideoBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): PromptContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const videoBlock = item as DirectusContentVideo;
+  const video = normalizeImage(videoBlock.video, videoBlock.title || "Видео");
+
+  if (!video && !videoBlock.video_url) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "video",
+    title: videoBlock.title,
+    caption: videoBlock.caption,
+    video,
+    videoUrl: videoBlock.video_url,
+  };
+}
+
+function normalizeCtaBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): PromptContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const cta = item as DirectusContentCta;
+
+  if (!cta.title || !cta.description) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "cta",
+    title: cta.title,
+    description: cta.description,
+    buttons: normalizeContentButtons(cta.buttons || []),
+  };
+}
+
+function normalizeCardsBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): PromptContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const cardsBlock = item as DirectusContentCards;
+  const cards = (cardsBlock.cards || [])
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map(normalizeContentCard)
+    .filter((card): card is PromptContentCard => card !== null);
+
+  if (cards.length === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "cards",
+    title: cardsBlock.title,
+    cards,
+  };
+}
+
+function normalizeStepsContentBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): PromptContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const stepsBlock = item as DirectusContentSteps;
+  const steps = (stepsBlock.steps || [])
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map(normalizeContentStep)
+    .filter((step): step is PromptContentStep => step !== null);
+
+  if (steps.length === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "steps",
+    title: stepsBlock.title,
+    steps,
+  };
+}
+
 function normalizeContentListItem(
   item: DirectusContentListItem,
 ): PromptContentListItem | null {
@@ -644,6 +965,52 @@ function normalizeContentListItem(
     title: item.title || "",
     description: item.description || "",
   };
+}
+
+function normalizeContentCard(item: DirectusContentCard): PromptContentCard | null {
+  if (!item.title && !item.description) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title || "",
+    description: item.description || "",
+    href: item.link,
+    image: normalizeImage(item.image, item.title || "Карточка"),
+  };
+}
+
+function normalizeContentStep(item: DirectusContentStep): PromptContentStep | null {
+  if (item.is_active === false || (!item.title && !item.description)) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title || "",
+    description: item.description || "",
+  };
+}
+
+function normalizeContentButtons(
+  buttons: DirectusContentButtonJunction[],
+): PromptContentButton[] {
+  return buttons
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map((junction) => junction.hero_buttons_id)
+    .filter(
+      (button): button is DirectusContentButton =>
+        Boolean(button) && typeof button === "object",
+    )
+    .filter((button) => button.is_active !== false && Boolean(button.label && button.url))
+    .map((button) => ({
+      id: button.id,
+      label: button.label || "",
+      href: button.url || "#",
+      target: button.target || "_self",
+      variant: button.variant || "primary",
+    }));
 }
 
 function normalizeTypes(types: DirectusPromptTypeJunction[]): PromptTaxonomy[] {
@@ -763,7 +1130,7 @@ function normalizeImage(
   return {
     id: file.id,
     title: file.title || fallbackTitle,
-    url: `${DIRECTUS_URL}/assets/${file.id}`,
+    url: buildDirectusAssetUrl(file.id, { type: file.type }),
     type: file.type,
     width: file.width,
     height: file.height,

@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import type { ReactNode, Ref } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { AiOutlineSearch } from "react-icons/ai";
-import { FaArrowRight, FaEye, FaMagic, FaTelegram } from "react-icons/fa";
+import { FaArrowRight, FaMagic, FaTelegram } from "react-icons/fa";
 
 import type {
   PromptItem,
@@ -20,6 +24,7 @@ type PromptsPageProps = {
   activeQuery: string | null;
   activeTag: string | null;
   activeType: string | null;
+  currentPage: number;
   data: PromptsPageData;
   heroTitle?: string;
   sort: PromptSortOrder;
@@ -34,16 +39,25 @@ type PromptFilterParams = {
   type?: string | null;
 };
 
+const PAGINATION_STEP = 30;
+
 export function PromptsPage({
   activeGoal,
   activeNetwork,
   activeQuery,
   activeTag,
   activeType,
+  currentPage,
   data,
   heroTitle = "Идеи, промпты и референсы для AI-контента",
   sort,
 }: PromptsPageProps) {
+  const router = useRouter();
+  const [isPaginationPending, startPaginationTransition] = useTransition();
+  const pageAnchorRef = useRef<HTMLAnchorElement>(null);
+  const shouldRestorePaginationScrollRef = useRef(currentPage > 1);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const pageStartIndex = currentPage > 1 ? (currentPage - 1) * PAGINATION_STEP : -1;
   const activeParams = {
     goal: activeGoal,
     network: activeNetwork,
@@ -52,6 +66,42 @@ export function PromptsPage({
     tag: activeTag,
     type: activeType,
   };
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+
+    if (!sentinel || !data.hasMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && !isPaginationPending) {
+          startPaginationTransition(() => {
+            router.replace(buildPaginationHref(currentPage + 1), { scroll: false });
+          });
+        }
+      },
+      { rootMargin: "240px" },
+    );
+
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [currentPage, data.hasMore, isPaginationPending, router]);
+
+  useEffect(() => {
+    if (!shouldRestorePaginationScrollRef.current || !pageAnchorRef.current) {
+      return;
+    }
+
+    shouldRestorePaginationScrollRef.current = false;
+
+    requestAnimationFrame(() => {
+      pageAnchorRef.current?.scrollIntoView({ block: "start" });
+      window.scrollBy({ top: -130 });
+    });
+  }, [data.prompts.length]);
 
   return (
     <main className={styles.page}>
@@ -93,12 +143,36 @@ export function PromptsPage({
           {data.prompts.length > 0 ? (
             <div className={styles.cards}>
               {data.prompts.map((prompt, index) => (
-                <PromptCard key={`prompt-${prompt.id}-${index}`} prompt={prompt} />
+                <PromptCard
+                  anchorRef={index === pageStartIndex ? pageAnchorRef : undefined}
+                  key={`prompt-${prompt.id}-${index}`}
+                  prompt={prompt}
+                />
               ))}
             </div>
           ) : (
             <EmptyState />
           )}
+
+          <div
+            aria-live="polite"
+            className={`${styles.loader} ${isPaginationPending ? styles.loaderVisible : ""}`}
+            ref={sentinelRef}
+          >
+            {isPaginationPending && (
+              <>
+                <span className={styles.loaderLine} />
+                <span className={styles.loaderText}>
+                  <span className={styles.loaderDots} aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  Загрузка
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         <PromptsSidebar activeParams={activeParams} data={data} />
@@ -205,11 +279,29 @@ function SearchAndFilters({
   );
 }
 
-function PromptCard({ prompt }: { prompt: PromptItem }) {
+function buildPaginationHref(page: number): string {
+  const url = new URL(window.location.href);
+
+  if (page <= 1) {
+    url.searchParams.delete("page");
+  } else {
+    url.searchParams.set("page", String(page));
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function PromptCard({
+  anchorRef,
+  prompt,
+}: {
+  anchorRef?: Ref<HTMLAnchorElement>;
+  prompt: PromptItem;
+}) {
   const type = prompt.types[0];
 
   return (
-    <Link className={styles.card} href={prompt.href}>
+    <Link className={styles.card} href={prompt.href} ref={anchorRef}>
       <span className={styles.cardImage}>
         {prompt.image ? (
           <Image
@@ -237,13 +329,6 @@ function PromptCard({ prompt }: { prompt: PromptItem }) {
           )}
         </span>
         <span className={styles.cardTitle}>{prompt.title}</span>
-        {prompt.description && (
-          <span className={styles.cardDescription}>{prompt.description}</span>
-        )}
-        <span className={styles.cardFooter}>
-          <span>{prompt.viewsCount} просмотров</span>
-          <FaEye aria-hidden="true" />
-        </span>
       </span>
     </Link>
   );

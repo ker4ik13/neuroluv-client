@@ -31,6 +31,12 @@ export type PromptContentBlock =
     }
   | {
       id: number;
+      type: "text";
+      title: string | null;
+      content: string;
+    }
+  | {
+      id: number;
       type: "quote";
       title: string | null;
       text: string;
@@ -41,9 +47,65 @@ export type PromptContentBlock =
       type: "list";
       title: string | null;
       items: PromptContentListItem[];
+    }
+  | {
+      id: number;
+      type: "image";
+      title: string | null;
+      caption: string | null;
+      image: PromptImage;
+    }
+  | {
+      id: number;
+      type: "video";
+      title: string | null;
+      caption: string | null;
+      video: PromptImage | null;
+      videoUrl: string | null;
+    }
+  | {
+      id: number;
+      type: "cta";
+      title: string;
+      description: string;
+      buttons: PromptContentButton[];
+    }
+  | {
+      id: number;
+      type: "cards";
+      title: string | null;
+      cards: PromptContentCard[];
+    }
+  | {
+      id: number;
+      type: "steps";
+      title: string | null;
+      steps: PromptContentStep[];
     };
 
 export type PromptContentListItem = {
+  id: number;
+  title: string;
+  description: string;
+};
+
+export type PromptContentButton = {
+  id: number;
+  label: string;
+  href: string;
+  target: "_self" | "_blank";
+  variant: "primary" | "secondary" | "outline";
+};
+
+export type PromptContentCard = {
+  id: number;
+  title: string;
+  description: string;
+  href: string | null;
+  image: PromptImage | null;
+};
+
+export type PromptContentStep = {
   id: number;
   title: string;
   description: string;
@@ -78,6 +140,7 @@ export type PromptDetail = PromptItem & {
 export type PromptSortOrder = "fresh" | "old" | "popular";
 
 export type PromptsPageData = {
+  hasMore: boolean;
   prompts: PromptItem[];
   sidebarPrompts: PromptItem[];
   types: PromptTaxonomy[];

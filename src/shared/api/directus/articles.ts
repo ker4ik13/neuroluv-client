@@ -25,7 +25,7 @@ import {
   normalizeDirectusSeo,
   type DirectusSeoFields,
 } from "@/shared/api/directus/seo";
-import { DIRECTUS_URL } from "@/shared/config/directus";
+import { buildDirectusAssetUrl } from "@/shared/config/directus";
 
 type DirectusFile = {
   id: string;
@@ -106,6 +106,8 @@ type DirectusContentHtml = {
   content: string | null;
 };
 
+type DirectusContentText = DirectusContentHtml;
+
 type DirectusContentQuote = {
   id: number;
   is_active: boolean | null;
@@ -127,6 +129,15 @@ type DirectusContentImage = {
   title: string | null;
   caption: string | null;
   image: DirectusFile | string | null;
+};
+
+type DirectusContentVideo = {
+  id: number;
+  is_active: boolean | null;
+  title: string | null;
+  caption: string | null;
+  video: DirectusFile | string | null;
+  video_url: string | null;
 };
 
 type DirectusContentCta = {
@@ -157,9 +168,11 @@ type DirectusContentBlock = {
   collection: string | null;
   item:
     | DirectusContentHtml
+    | DirectusContentText
     | DirectusContentQuote
     | DirectusContentList
     | DirectusContentImage
+    | DirectusContentVideo
     | DirectusContentCta
     | DirectusContentCards
     | DirectusContentSteps
@@ -254,6 +267,10 @@ const ARTICLE_DETAIL_FIELDS = [
   "content_blocks.item:content_html.is_active",
   "content_blocks.item:content_html.title",
   "content_blocks.item:content_html.content",
+  "content_blocks.item:content_text.id",
+  "content_blocks.item:content_text.is_active",
+  "content_blocks.item:content_text.title",
+  "content_blocks.item:content_text.content",
   "content_blocks.item:content_quote.id",
   "content_blocks.item:content_quote.is_active",
   "content_blocks.item:content_quote.title",
@@ -275,6 +292,16 @@ const ARTICLE_DETAIL_FIELDS = [
   "content_blocks.item:content_image.image.type",
   "content_blocks.item:content_image.image.width",
   "content_blocks.item:content_image.image.height",
+  "content_blocks.item:content_video.id",
+  "content_blocks.item:content_video.is_active",
+  "content_blocks.item:content_video.title",
+  "content_blocks.item:content_video.caption",
+  "content_blocks.item:content_video.video.id",
+  "content_blocks.item:content_video.video.title",
+  "content_blocks.item:content_video.video.type",
+  "content_blocks.item:content_video.video.width",
+  "content_blocks.item:content_video.video.height",
+  "content_blocks.item:content_video.video_url",
   "content_blocks.item:content_cta.id",
   "content_blocks.item:content_cta.is_active",
   "content_blocks.item:content_cta.title",
@@ -315,24 +342,29 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
   year: "numeric",
 });
 
+const PAGE_SIZE = 30;
+
 type ArticleDetailPageDataWithBlocks = NewsDetailPageData & {
   blocks: PageBlock[];
 };
 
 export type GetArticlesPageDataParams = {
+  page?: number;
   sort?: NewsSortOrder;
   tag?: string | null;
   topic?: string | null;
 };
 
 export async function getArticlesPageData({
+  page = 1,
   sort = "fresh",
   tag,
   topic,
 }: GetArticlesPageDataParams = {}): Promise<NewsPageData> {
+  const requestedLimit = getListLimit(page);
   const articlesParams = new URLSearchParams({
     fields: ARTICLE_FIELDS,
-    limit: "100",
+    limit: String(requestedLimit + 1),
     sort: sort === "old" ? "created_at,id" : "-created_at,-id",
   });
 
@@ -373,12 +405,19 @@ export async function getArticlesPageData({
     ),
   ]);
 
+  const normalizedArticles = articles.map(normalizeArticleItem).filter(isArticleItem);
+
   return {
-    news: articles.map(normalizeArticleItem).filter(isArticleItem),
+    hasMore: normalizedArticles.length > requestedLimit,
+    news: normalizedArticles.slice(0, requestedLimit),
     sidebarNews: sidebarArticles.map(normalizeArticleItem).filter(isArticleItem),
     topics: topics.map(normalizeTaxonomy).filter(isTaxonomy),
     tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
   };
+}
+
+function getListLimit(page: number): number {
+  return Math.max(1, page) * PAGE_SIZE;
 }
 
 export async function getArticleBySlug(slug: string): Promise<NewsDetail | null> {
@@ -533,6 +572,10 @@ function normalizeContentBlock(block: DirectusContentBlock): NewsContentBlock | 
     return normalizeHtmlBlock(block.id, block.item);
   }
 
+  if (block.collection === "content_text") {
+    return normalizeTextBlock(block.id, block.item);
+  }
+
   if (block.collection === "content_quote") {
     return normalizeQuoteBlock(block.id, block.item);
   }
@@ -543,6 +586,10 @@ function normalizeContentBlock(block: DirectusContentBlock): NewsContentBlock | 
 
   if (block.collection === "content_image") {
     return normalizeImageBlock(block.id, block.item);
+  }
+
+  if (block.collection === "content_video") {
+    return normalizeVideoBlock(block.id, block.item);
   }
 
   if (block.collection === "content_cta") {
@@ -579,6 +626,28 @@ function normalizeHtmlBlock(
     type: "html",
     title: html.title,
     content: html.content,
+  };
+}
+
+function normalizeTextBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const text = item as DirectusContentText;
+
+  if (!text.content) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "text",
+    title: text.title,
+    content: text.content,
   };
 }
 
@@ -654,6 +723,31 @@ function normalizeImageBlock(
     title: imageBlock.title,
     caption: imageBlock.caption,
     image,
+  };
+}
+
+function normalizeVideoBlock(
+  id: number,
+  item: DirectusContentBlock["item"],
+): NewsContentBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  const videoBlock = item as DirectusContentVideo;
+  const video = normalizeImage(videoBlock.video, videoBlock.title || "Видео");
+
+  if (!video && !videoBlock.video_url) {
+    return null;
+  }
+
+  return {
+    id,
+    type: "video",
+    title: videoBlock.title,
+    caption: videoBlock.caption,
+    video,
+    videoUrl: videoBlock.video_url,
   };
 }
 
@@ -888,7 +982,7 @@ function normalizeImage(
   return {
     id: file.id,
     title: file.title || fallbackTitle,
-    url: `${DIRECTUS_URL}/assets/${file.id}`,
+    url: buildDirectusAssetUrl(file.id, { type: file.type }),
     type: file.type,
     width: file.width,
     height: file.height,

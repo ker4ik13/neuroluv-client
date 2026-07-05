@@ -11,6 +11,7 @@ import { PageBlocks } from "@/widgets/page-blocks";
 import { PromptsPage } from "@/widgets/prompts-page";
 
 const EMPTY_PROMPTS_DATA: PromptsPageData = {
+  hasMore: false,
   prompts: [],
   sidebarPrompts: [],
   types: [],
@@ -25,6 +26,7 @@ type PromptsRouteProps = {
   searchParams?: Promise<{
     goal?: string;
     network?: string;
+    page?: string;
     q?: string;
     sort?: string;
     tag?: string;
@@ -53,6 +55,7 @@ export async function generateMetadata({
 
 export default async function PromptsRoute({ searchParams }: PromptsRouteProps) {
   const params = await searchParams;
+  const paginationPage = normalizePage(params?.page);
   const sort = normalizeSort(params?.sort);
   const type = normalizeQueryParam(params?.type);
   const tag = normalizeQueryParam(params?.tag);
@@ -66,7 +69,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
   try {
     const currentPath = buildPathWithSearch("/prompts", params);
     const [promptsData, exactPage, basePage] = await Promise.all([
-      getPromptsPageData({ goal, network, q, sort, tag, type }),
+      getPromptsPageData({ goal, network, page: paginationPage, q, sort, tag, type }),
       currentPath === "/prompts"
         ? Promise.resolve(null)
         : getPageBySlug(currentPath),
@@ -90,6 +93,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
         activeQuery={q}
         activeTag={tag}
         activeType={type}
+        currentPage={paginationPage}
         data={data}
         heroTitle={heroTitle}
         sort={sort}
@@ -97,6 +101,16 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
       <PageBlocks blocks={blocks} />
     </>
   );
+}
+
+function normalizePage(value: string | undefined): number {
+  const page = Number(value);
+
+  if (!Number.isFinite(page) || page < 1) {
+    return 1;
+  }
+
+  return Math.floor(page);
 }
 
 function normalizeSort(value: string | undefined): PromptSortOrder {

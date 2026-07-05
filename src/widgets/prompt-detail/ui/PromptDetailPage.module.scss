@@ -28,7 +28,7 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	min-height: rem(520);
 	overflow: hidden;
-	align-items: center;
+	align-items: flex-start;
 	gap: rem(32);
 	padding: rem(54);
 	color: $color-white;
@@ -86,8 +86,8 @@ $sticky-sidebar-top: 112;
 	@include heading-font(800);
 
 	color: $color-white;
-	font-size: rem(56);
-	line-height: rem(55);
+	font-size: rem(48);
+	line-height: rem(50);
 
 	@media (max-width: em($breakpoint-tablet)) {
 		font-size: rem(40);
@@ -95,7 +95,8 @@ $sticky-sidebar-top: 112;
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
-		font-size: rem(32);
+		font-size: rem(28);
+		line-height: 1.08;
 	}
 }
 
@@ -117,6 +118,10 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	flex-wrap: wrap;
 	gap: rem(14);
+
+	@media (max-width: em($breakpoint-mobile)) {
+		width: 100%;
+	}
 }
 
 .copyButton,
@@ -149,6 +154,18 @@ $sticky-sidebar-top: 112;
 	svg {
 		width: rem(20);
 		height: rem(20);
+	}
+
+	@media (max-width: em($breakpoint-mobile)) {
+		width: 100%;
+		min-height: rem(48);
+		padding: rem(12) rem(16);
+		font-size: rem(16);
+
+		svg {
+			width: rem(18);
+			height: rem(18);
+		}
 	}
 }
 
@@ -189,14 +206,23 @@ $sticky-sidebar-top: 112;
 	position: relative;
 	z-index: 2;
 	width: rem(420);
-	height: rem(420);
+	height: auto;
 	flex: 0 0 rem(420);
 	overflow: hidden;
+	aspect-ratio: var(--prompt-media-ratio, 1 / 1);
 	background: #f1f4f6;
 	border-radius: rem(24);
 
 	img {
 		object-fit: cover;
+	}
+
+	video {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		background: $color-ink-soft;
 	}
 
 	> span {
@@ -217,7 +243,6 @@ $sticky-sidebar-top: 112;
 		width: 100%;
 		height: auto;
 		flex-basis: auto;
-		aspect-ratio: 16 / 10;
 	}
 }
 
@@ -237,17 +262,26 @@ $sticky-sidebar-top: 112;
 	min-width: 0;
 	flex: 1 1 auto;
 	flex-direction: column;
-	gap: rem(20);
+	gap: rem(32);
+	padding: rem(30);
+	background: $color-white;
+	border-radius: rem(28);
+	box-shadow: 0 rem(10) rem(14) rgba(0, 0, 0, 0.05);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		padding: rem(22);
+		border-radius: rem(22);
+	}
 }
 
 .promptBox,
 .htmlBlock,
 .quoteBlock,
 .listBlock {
-	padding: rem(24);
-	background: $color-white;
-	border-radius: rem(20);
-	box-shadow: 0 rem(12) rem(28) rgba(0, 0, 0, 0.06);
+	padding: 0;
+	background: transparent;
+	border-radius: 0;
+	box-shadow: none;
 }
 
 .promptBox {
@@ -285,6 +319,9 @@ $sticky-sidebar-top: 112;
 .promptText {
 	@include body-font(500);
 
+	display: flex;
+	flex-direction: column;
+	gap: rem(18);
 	padding: rem(20);
 	color: #d7e7ef;
 	font-size: rem(15);
@@ -304,61 +341,268 @@ $sticky-sidebar-top: 112;
 	p + p {
 		margin-top: rem(10);
 	}
+
+	p {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+}
+
+.promptModel {
+	@include body-font(800);
+
+	color: $color-cyan;
+	font-size: rem(16);
+	line-height: 1.2;
+}
+
+.promptVariables {
+	display: flex;
+	flex-direction: column;
+	gap: rem(16);
+	margin-top: rem(22);
+
+	h3 {
+		@include heading-font(800);
+
+		color: $color-ink;
+		font-size: rem(24);
+		line-height: 1.1;
+	}
+}
+
+.promptVariableFields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(12) rem(16);
+
+	input {
+		@include body-font(500);
+
+		max-width: 100%;
+		min-width: rem(168);
+		height: rem(44);
+		padding: 0 rem(18);
+		color: $color-ink;
+		font-size: rem(17);
+		line-height: 1;
+		background: rgba($color-cyan, 0.12);
+		border: rem(2) solid $color-cyan;
+		border-radius: rem(999);
+		outline: 0;
+		transition:
+			background-color 160ms ease,
+			box-shadow 160ms ease;
+
+		&::placeholder {
+			color: $color-cyan;
+			opacity: 1;
+		}
+
+		&:focus {
+			background: $color-white;
+			box-shadow: 0 0 0 rem(4) rgba($color-cyan, 0.14);
+		}
+	}
 }
 
 .contentBlocks {
 	display: flex;
 	flex-direction: column;
-	gap: rem(20);
+	gap: rem(34);
 }
 
-.htmlBlock {
+.htmlBlock,
+.textBlock {
 	@include body-font(400);
 
+	display: flex;
+	flex-direction: column;
+	gap: rem(16);
 	color: $color-ink-muted;
 	font-size: rem(18);
 	line-height: 1.55;
 	scroll-margin-top: rem(130);
 
+	:where(h2, h3, p, ul, ol, blockquote) {
+		margin: 0;
+	}
+
 	h2,
 	h3 {
 		@include heading-font(900);
 
-		margin-bottom: rem(14);
 		color: $color-ink;
 		font-size: rem(30);
 		line-height: 1.1;
 	}
 
-	p + p {
-		margin-top: rem(12);
+	p {
+		color: $color-ink-muted;
+	}
+
+	> div {
+		display: flex;
+		flex-direction: column;
+		gap: rem(12);
 	}
 }
 
 .quoteBlock {
 	@include body-font(500);
 
+	position: relative;
+	display: flex;
+	overflow: hidden;
+	flex-direction: column;
+	gap: rem(18);
+	padding: rem(30) rem(32) rem(30) rem(88);
 	color: $color-white;
 	font-size: rem(22);
-	line-height: 1.35;
+	line-height: 1.4;
 	background: $color-ink-soft;
+	border-radius: rem(24);
+
+	&::before {
+		@include heading-font(900);
+
+		position: absolute;
+		top: rem(30);
+		left: rem(30);
+		display: flex;
+		width: rem(42);
+		height: rem(42);
+		align-items: center;
+		justify-content: center;
+		color: $color-white;
+		font-size: rem(42);
+		line-height: 1;
+		border-radius: rem(14);
+		content: '\201c';
+	}
+
+	h2 {
+		@include heading-font(800);
+
+		color: $color-white;
+		font-size: rem(24);
+		line-height: 1.1;
+	}
+
+	p {
+		margin: 0;
+		color: #e5f0f5;
+	}
+
+	footer {
+		display: flex;
+		align-items: center;
+		gap: rem(10);
+		margin-top: 0;
+
+		&::before {
+			display: block;
+			width: rem(28);
+			height: rem(2);
+			background: $color-cyan;
+			border-radius: rem(10);
+			content: '';
+		}
+	}
 
 	cite {
 		display: block;
-		margin-top: rem(14);
-		color: rgba($color-white, 0.72);
+		color: #c7dbe5;
 		font-style: normal;
 		font-size: rem(15);
 	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		padding: rem(24);
+		font-size: rem(19);
+
+		&::before {
+			position: static;
+			margin-bottom: rem(2);
+		}
+	}
 }
 
-.listBlock {
+.listBlock,
+.cardsBlock,
+.stepsBlock {
 	h2 {
 		@include heading-font(900);
 
 		margin-bottom: rem(18);
 		color: $color-ink;
 		font-size: rem(30);
+	}
+}
+
+.imageBlock,
+.videoBlock {
+	display: flex;
+	flex-direction: column;
+	gap: rem(10);
+
+	h2 {
+		@include heading-font(900);
+
+		color: $color-ink;
+		font-size: rem(30);
+		line-height: 1.1;
+	}
+
+	figcaption {
+		@include body-font(400);
+
+		color: $color-ink-muted;
+		font-size: rem(14);
+		line-height: 1.35;
+	}
+}
+
+.imageWrap {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: rem(340);
+	overflow: hidden;
+	background: $color-surface;
+	border-radius: rem(18);
+
+	img {
+		object-fit: cover;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		height: auto;
+		aspect-ratio: 16 / 10;
+	}
+}
+
+.videoBlock {
+	video {
+		display: block;
+		width: 100%;
+		max-height: rem(520);
+		background: $color-ink-soft;
+		border-radius: rem(18);
+	}
+
+	a {
+		@include body-font(700);
+
+		display: inline-flex;
+		width: fit-content;
+		align-items: center;
+		justify-content: center;
+		padding: rem(14) rem(20);
+		color: $color-white;
+		font-size: rem(16);
+		background: $color-cyan;
+		border-radius: rem(14);
 	}
 }
 
@@ -398,6 +642,173 @@ $sticky-sidebar-top: 112;
 		color: $color-ink-muted;
 		font-size: rem(16);
 		line-height: 1.4;
+	}
+}
+
+.ctaBlock {
+	display: flex;
+	flex-direction: column;
+	gap: rem(16);
+	padding: rem(24);
+	color: $color-white;
+	background: $color-ink-soft;
+	border-radius: rem(20);
+
+	h2 {
+		@include heading-font(900);
+
+		color: $color-white;
+		font-size: rem(30);
+		line-height: 1.1;
+	}
+
+	p {
+		@include body-font(400);
+
+		margin-top: rem(8);
+		color: #c7dbe5;
+		font-size: rem(17);
+		line-height: 1.4;
+	}
+}
+
+.ctaButtons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(12);
+}
+
+.ctaButton {
+	@include body-font(700);
+
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: rem(12) rem(18);
+	color: $color-white;
+	font-size: rem(16);
+	line-height: 1;
+	background: $color-cyan;
+	border: rem(1) solid $color-cyan;
+	border-radius: rem(14);
+}
+
+.ctaButtonOutline {
+	color: $color-white;
+	background: transparent;
+	border-color: rgba($color-white, 0.35);
+}
+
+.contentCards {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(16);
+}
+
+.contentCard {
+	display: flex;
+	min-width: rem(220);
+	flex: 1 1 calc((100% - rem(32)) / 3);
+	flex-direction: column;
+	overflow: hidden;
+	color: $color-white;
+	background: $color-ink;
+	border-radius: rem(18);
+	box-shadow: none;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		min-width: 0;
+		flex-basis: 100%;
+	}
+}
+
+.contentCardImage {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: rem(130);
+	background: rgba($color-white, 0.18);
+
+	img {
+		object-fit: cover;
+	}
+}
+
+.contentCardText {
+	display: flex;
+	flex-direction: column;
+	gap: rem(8);
+	padding: rem(16);
+
+	span {
+		@include body-font(800);
+
+		color: $color-white;
+		font-size: rem(18);
+		line-height: 1.15;
+	}
+
+	small {
+		@include body-font(400);
+
+		color: rgba($color-white, 0.82);
+		font-size: rem(14);
+		line-height: 1.35;
+	}
+}
+
+.stepsBlock {
+	padding: 0;
+	background: transparent;
+	border-radius: 0;
+	box-shadow: none;
+}
+
+.stepsList {
+	display: flex;
+	flex-direction: column;
+	gap: rem(12);
+}
+
+.stepItem {
+	display: flex;
+	align-items: flex-start;
+	gap: rem(16);
+	padding: rem(16);
+	background: $color-surface;
+	border-radius: rem(16);
+
+	> span {
+		@include body-font(800);
+
+		display: inline-flex;
+		width: rem(42);
+		height: rem(42);
+		flex: 0 0 rem(42);
+		align-items: center;
+		justify-content: center;
+		color: $color-white;
+		font-size: rem(18);
+		background: $color-blue;
+		border-radius: 50%;
+	}
+
+	p {
+		@include body-font(700);
+
+		color: $color-ink;
+		font-size: rem(18);
+		line-height: 1.2;
+	}
+
+	small {
+		@include body-font(400);
+
+		display: block;
+		margin-top: rem(5);
+		color: $color-ink-muted;
+		font-size: rem(15);
+		line-height: 1.35;
 	}
 }
 
@@ -702,7 +1113,7 @@ $sticky-sidebar-top: 112;
 		@include heading-font(800);
 
 		color: $color-ink;
-		font-size: rem(22);
+		font-size: rem(18);
 		line-height: 1.15;
 	}
 
@@ -724,7 +1135,7 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	width: 100%;
 	overflow: hidden;
-	aspect-ratio: 1.75 / 1;
+	aspect-ratio: 1 / 1;
 	align-items: center;
 	justify-content: center;
 	color: $color-white;

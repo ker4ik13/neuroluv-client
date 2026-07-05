@@ -79,6 +79,12 @@ export type NewsContentBlock =
     }
   | {
       id: number;
+      type: "text";
+      title: string | null;
+      content: string;
+    }
+  | {
+      id: number;
       type: "quote";
       title: string | null;
       text: string;
@@ -96,6 +102,14 @@ export type NewsContentBlock =
       title: string | null;
       caption: string | null;
       image: NewsImage;
+    }
+  | {
+      id: number;
+      type: "video";
+      title: string | null;
+      caption: string | null;
+      video: NewsImage | null;
+      videoUrl: string | null;
     }
   | {
       id: number;
@@ -122,6 +136,7 @@ export type NewsDetail = NewsItem & {
 };
 
 export type NewsPageData = {
+  hasMore: boolean;
   news: NewsItem[];
   sidebarNews: NewsItem[];
   topics: NewsTaxonomy[];

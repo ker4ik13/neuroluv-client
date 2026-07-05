@@ -29,7 +29,7 @@ import type {
   PageUseCasesBlock,
 } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
-import { DIRECTUS_URL } from "@/shared/config/directus";
+import { buildDirectusAssetUrl } from "@/shared/config/directus";
 
 type DirectusIcon = {
   title: string | null;
@@ -1277,7 +1277,7 @@ function normalizeImage(
   return {
     id: file.id,
     title: file.title || fallbackTitle,
-    url: `${DIRECTUS_URL}/assets/${file.id}`,
+    url: buildDirectusAssetUrl(file.id, { type: file.type }),
     type: file.type,
     width: file.width,
     height: file.height,

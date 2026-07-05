@@ -22,15 +22,13 @@ $sticky-sidebar-top: 112;
 }
 
 .hero {
-	@include floating-particles(1, 0.4);
+	@include floating-particles(1, 0.38);
 
 	position: relative;
 	display: flex;
-	min-height: rem(348);
+	min-height: rem(310);
 	overflow: hidden;
 	align-items: center;
-	justify-content: space-between;
-	gap: rem(32);
 	padding: rem(40);
 	color: $color-white;
 	background: $color-ink-soft;
@@ -40,11 +38,12 @@ $sticky-sidebar-top: 112;
 		align-items: flex-start;
 		flex-direction: column;
 		min-height: 0;
+		gap: rem(24);
 		padding: rem(32);
 	}
 
-	@media (max-width: em($breakpoint-mobile)) {
-		padding: rem(24);
+	@media (max-width: em($breakpoint-tablet)) {
+		padding: rem(26) rem(22);
 		border-radius: rem(22);
 	}
 }
@@ -53,16 +52,24 @@ $sticky-sidebar-top: 112;
 	position: relative;
 	z-index: 2;
 	display: flex;
-	max-width: rem(650);
+	max-width: rem(620);
 	flex-direction: column;
 	align-items: flex-start;
-	gap: rem(24);
+	gap: rem(30);
+
+	@media (max-width: em($breakpoint-laptop)) {
+		max-width: rem(720);
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		gap: rem(20);
+	}
 }
 
 .heroEyebrow {
 	@include body-font(800);
 
-	color: $color-cyan;
+	color: $color-cyan-bright;
 	font-size: rem(16);
 	line-height: rem(20);
 	text-transform: uppercase;
@@ -71,14 +78,14 @@ $sticky-sidebar-top: 112;
 .heroTitle {
 	@include heading-font(800);
 
-	max-width: rem(640);
+	max-width: rem(620);
 	color: $color-white;
 	font-size: rem(56);
 	line-height: rem(55);
 
 	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(40);
-		line-height: 1.08;
+		font-size: rem(38);
+		line-height: 1.05;
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
@@ -89,13 +96,14 @@ $sticky-sidebar-top: 112;
 .heroDescription {
 	@include body-font(400);
 
-	max-width: rem(560);
-	color: rgba($color-white, 0.85);
-	font-size: rem(22);
-	line-height: 1.25;
+	max-width: rem(582);
+	color: #e8e8e8;
+	font-size: rem(24);
+	line-height: 1.2;
 
 	@media (max-width: em($breakpoint-tablet)) {
 		font-size: rem(18);
+		line-height: 1.35;
 	}
 }
 
@@ -128,22 +136,31 @@ $sticky-sidebar-top: 112;
 }
 
 .heroImage {
-	position: relative;
-	z-index: 2;
-	width: rem(430);
-	height: rem(300);
-	flex: 0 0 rem(430);
+	position: absolute;
+	top: rem(-45);
+	right: rem(-37);
+	z-index: 1;
+	width: rem(622);
+	height: rem(622);
+	pointer-events: none;
 
 	img {
 		object-fit: contain;
-		object-position: right bottom;
+		object-position: right top;
 	}
 
 	@media (max-width: em($breakpoint-laptop)) {
+		position: relative;
+		top: auto;
+		right: auto;
 		width: 100%;
 		height: auto;
-		flex-basis: auto;
 		aspect-ratio: 16 / 7;
+		order: 2;
+
+		img {
+			object-position: center bottom;
+		}
 	}
 
 	@media (max-width: em($breakpoint-tablet)) {
@@ -325,7 +342,7 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	width: 100%;
 	overflow: hidden;
-	aspect-ratio: 1.55 / 1;
+	aspect-ratio: 1 / 1;
 	align-items: center;
 	justify-content: center;
 	color: $color-white;
@@ -394,7 +411,7 @@ $sticky-sidebar-top: 112;
 	@include heading-font(800);
 
 	color: #000000;
-	font-size: rem(22);
+	font-size: rem(18);
 	line-height: 1.15;
 }
 
@@ -423,6 +440,75 @@ $sticky-sidebar-top: 112;
 	svg {
 		width: rem(18);
 		height: rem(18);
+	}
+}
+
+.loader {
+	display: flex;
+	height: rem(1);
+	flex-direction: column;
+	align-items: center;
+	gap: 0;
+	overflow: hidden;
+	padding: 0;
+}
+
+.loaderVisible {
+	height: auto;
+	gap: rem(16);
+	padding: rem(32) 0;
+}
+
+.loaderLine {
+	width: 100%;
+	height: rem(1);
+	background: $color-border;
+}
+
+.loaderText {
+	@include body-font(400);
+
+	display: inline-flex;
+	align-items: center;
+	gap: rem(12);
+	color: $color-ink;
+	font-size: rem(16);
+	line-height: 1;
+}
+
+.loaderDots {
+	display: inline-flex;
+	align-items: center;
+	gap: rem(5);
+
+	span {
+		width: rem(6);
+		height: rem(6);
+		background: $color-cyan;
+		border-radius: 50%;
+		animation: prompts-loader-dot 900ms ease-in-out infinite;
+	}
+
+	span:nth-child(2) {
+		animation-delay: 120ms;
+	}
+
+	span:nth-child(3) {
+		animation-delay: 240ms;
+	}
+}
+
+@keyframes prompts-loader-dot {
+	0%,
+	80%,
+	100% {
+		opacity: 0.35;
+		transform: translateY(0);
+	}
+
+	40% {
+		opacity: 1;
+		transform: translateY(rem(-4));
 	}
 }
 

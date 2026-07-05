@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { FaEye, FaFilter, FaTelegram } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import type { ReactNode, Ref } from "react";
+import { useEffect, useMemo, useRef, useTransition } from "react";
+import { AiOutlineFilter } from "react-icons/ai";
+import { FaEye, FaTelegram } from "react-icons/fa";
 
 import type {
   NewsItem,
@@ -15,12 +17,12 @@ import type {
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./NewsPage.module.scss";
-import { AiOutlineFilter } from "react-icons/ai";
 
 type NewsPageProps = {
   activeTag: string | null;
   activeTopic: string | null;
   config?: ContentListPageConfig;
+  currentPage: number;
   data: NewsPageData;
   sort: NewsSortOrder;
 };
@@ -42,8 +44,7 @@ type FilterOption = {
   slug: string;
 };
 
-const INITIAL_VISIBLE_COUNT = 7;
-const LOAD_STEP = 6;
+const PAGINATION_STEP = 30;
 
 const DEFAULT_CONFIG: ContentListPageConfig = {
   basePath: "/news",
@@ -60,59 +61,38 @@ export function NewsPage({
   activeTag,
   activeTopic,
   config = DEFAULT_CONFIG,
+  currentPage,
   data,
   sort,
 }: NewsPageProps) {
-  const [visibleState, setVisibleState] = useState({
-    key: "all:fresh",
-    count: INITIAL_VISIBLE_COUNT,
-  });
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const router = useRouter();
+  const [isPaginationPending, startPaginationTransition] = useTransition();
+  const pageAnchorRef = useRef<HTMLAnchorElement>(null);
+  const shouldRestorePaginationScrollRef = useRef(currentPage > 1);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeFilterKey = getActiveFilterKey(activeTopic, activeTag);
-  const listKey = `${activeFilterKey}:${sort}:${data.news.length}`;
+  const featuredNews = data.news[0] || null;
+  const gridNews = data.news.slice(1);
+  const pageStartIndex = currentPage > 1 ? (currentPage - 1) * PAGINATION_STEP : -1;
 
   const filters = useMemo(
     () => buildFilterOptions(data.topics, data.tags),
     [data.tags, data.topics],
   );
 
-  const visibleCount =
-    visibleState.key === listKey ? visibleState.count : INITIAL_VISIBLE_COUNT;
-  const visibleNews = data.news.slice(0, visibleCount);
-  const featuredNews = visibleNews[0] || null;
-  const gridNews = visibleNews.slice(1);
-  const hasMore = visibleCount < data.news.length;
-
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
-    if (!sentinel || !hasMore) {
+    if (!sentinel || !data.hasMore) {
       return;
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting && !isLoadingMore) {
-          setIsLoadingMore(true);
-          setVisibleState((state) => {
-            const currentCount =
-              state.key === listKey ? state.count : INITIAL_VISIBLE_COUNT;
-
-            return {
-              key: listKey,
-              count: Math.min(currentCount + LOAD_STEP, data.news.length),
-            };
+        if (entry?.isIntersecting && !isPaginationPending) {
+          startPaginationTransition(() => {
+            router.replace(buildPaginationHref(currentPage + 1), { scroll: false });
           });
-
-          if (loadingTimeoutRef.current) {
-            clearTimeout(loadingTimeoutRef.current);
-          }
-
-          loadingTimeoutRef.current = setTimeout(() => {
-            setIsLoadingMore(false);
-          }, 450);
         }
       },
       { rootMargin: "240px" },
@@ -121,15 +101,20 @@ export function NewsPage({
     observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [data.news.length, hasMore, isLoadingMore, listKey]);
+  }, [currentPage, data.hasMore, isPaginationPending, router]);
 
   useEffect(() => {
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
-  }, []);
+    if (!shouldRestorePaginationScrollRef.current || !pageAnchorRef.current) {
+      return;
+    }
+
+    shouldRestorePaginationScrollRef.current = false;
+
+    requestAnimationFrame(() => {
+      pageAnchorRef.current?.scrollIntoView({ block: "start" });
+      window.scrollBy({ top: -130 });
+    });
+  }, [data.news.length]);
 
   return (
     <div className={styles.page}>
@@ -164,12 +149,19 @@ export function NewsPage({
 
           {featuredNews ? (
             <>
-              <FeaturedNewsCard item={featuredNews} label={config.itemLabel} />
+              <FeaturedNewsCard
+                anchorRef={pageStartIndex === 0 ? pageAnchorRef : undefined}
+                item={featuredNews}
+                label={config.itemLabel}
+              />
 
               {gridNews.length > 0 && (
                 <div className={styles.grid}>
                   {gridNews.map((item, index) => (
                     <NewsCard
+                      anchorRef={
+                        index + 1 === pageStartIndex ? pageAnchorRef : undefined
+                      }
                       item={item}
                       key={`news-card-${item.id}-${index}`}
                       label={config.itemLabel}
@@ -184,10 +176,10 @@ export function NewsPage({
 
           <div
             aria-live="polite"
-            className={`${styles.loader} ${isLoadingMore ? styles.loaderVisible : ""}`}
+            className={`${styles.loader} ${isPaginationPending ? styles.loaderVisible : ""}`}
             ref={sentinelRef}
           >
-            {isLoadingMore && (
+            {isPaginationPending && (
               <>
                 <span className={styles.loaderLine} />
                 <span className={styles.loaderText}>
@@ -216,6 +208,18 @@ export function NewsPage({
       <DigestCta />
     </div>
   );
+}
+
+function buildPaginationHref(page: number): string {
+  const url = new URL(window.location.href);
+
+  if (page <= 1) {
+    url.searchParams.delete("page");
+  } else {
+    url.searchParams.set("page", String(page));
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function FilterBar({
@@ -275,14 +279,16 @@ function FilterBar({
 }
 
 function FeaturedNewsCard({
+  anchorRef,
   item,
   label,
 }: {
+  anchorRef?: Ref<HTMLAnchorElement>;
   item: NewsItem;
   label: string;
 }) {
   return (
-    <Link className={styles.featuredCard} href={item.href}>
+    <Link className={styles.featuredCard} href={item.href} ref={anchorRef}>
       <NewsImage className={styles.featuredImage} image={item.image} priority />
       <span className={styles.featuredOverlay} />
       <span className={styles.featuredContent}>
@@ -299,9 +305,17 @@ function FeaturedNewsCard({
   );
 }
 
-function NewsCard({ item, label }: { item: NewsItem; label: string }) {
+function NewsCard({
+  anchorRef,
+  item,
+  label,
+}: {
+  anchorRef?: Ref<HTMLAnchorElement>;
+  item: NewsItem;
+  label: string;
+}) {
   return (
-    <Link className={styles.card} href={item.href}>
+    <Link className={styles.card} href={item.href} ref={anchorRef}>
       <NewsImage className={styles.cardImage} image={item.image} />
       <span className={styles.cardBody}>
         <TopicBadge item={item} label={label} />
@@ -513,7 +527,6 @@ function EmptyState() {
 function DigestCta() {
   return (
     <section className={styles.digest}>
-      <div className={styles.digestPattern} />
       <div className={styles.digestText}>
         <h2 className={styles.digestTitle}>Получайте дайджест Нейролюба</h2>
         <p className={styles.digestDescription}>

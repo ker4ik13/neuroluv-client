@@ -11,6 +11,7 @@ import { NewsPage, type ContentListPageConfig } from "@/widgets/news-page";
 import { PageBlocks } from "@/widgets/page-blocks";
 
 const EMPTY_NEWS_DATA: NewsPageData = {
+  hasMore: false,
   news: [],
   sidebarNews: [],
   topics: [],
@@ -30,6 +31,7 @@ const NEWS_PAGE_CONFIG: ContentListPageConfig = {
 
 type NewsRouteProps = {
   searchParams?: Promise<{
+    page?: string;
     sort?: string;
     tag?: string;
     topic?: string;
@@ -57,6 +59,7 @@ export async function generateMetadata({
 
 export default async function NewsRoute({ searchParams }: NewsRouteProps) {
   const params = await searchParams;
+  const paginationPage = normalizePage(params?.page);
   const sort = params?.sort === "old" ? "old" : "fresh";
   const topic = normalizeQueryParam(params?.topic);
   const tag = topic ? null : normalizeQueryParam(params?.tag);
@@ -67,7 +70,7 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
   try {
     const currentPath = buildPathWithSearch("/news", params);
     const [newsData, exactPage, basePage] = await Promise.all([
-      getNewsPageData({ sort, tag, topic }),
+      getNewsPageData({ page: paginationPage, sort, tag, topic }),
       currentPath === "/news" ? Promise.resolve(null) : getPageBySlug(currentPath),
       getPageBySlug("/news"),
     ]);
@@ -87,12 +90,23 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
         activeTag={tag}
         activeTopic={topic}
         config={{ ...NEWS_PAGE_CONFIG, heroTitle }}
+        currentPage={paginationPage}
         data={data}
         sort={sort}
       />
       <PageBlocks blocks={blocks} />
     </>
   );
+}
+
+function normalizePage(value: string | undefined): number {
+  const page = Number(value);
+
+  if (!Number.isFinite(page) || page < 1) {
+    return 1;
+  }
+
+  return Math.floor(page);
 }
 
 function normalizeQueryParam(value: string | undefined): string | null {

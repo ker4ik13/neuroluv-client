@@ -254,12 +254,51 @@ function ContentBlockView({
     );
   }
 
+  if (block.type === "text") {
+    return (
+      <section className={styles.textBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
+        <div
+          dangerouslySetInnerHTML={{
+            __html: addHeadingIdsToHtml(
+              block.content,
+              getBlockHeadings(headings, block.id),
+            ),
+          }}
+        />
+      </section>
+    );
+  }
+
   if (block.type === "quote") {
     return (
       <blockquote className={styles.quoteBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
         <p>{block.text}</p>
-        {block.author && <cite>{block.author}</cite>}
+        {block.author && (
+          <footer>
+            <cite>{block.author}</cite>
+          </footer>
+        )}
       </blockquote>
+    );
+  }
+
+  if (block.type === "video") {
+    const headingId = getBlockHeadingId(headings, block.id);
+
+    return (
+      <figure className={styles.videoBlock}>
+        {block.title && <h2 id={headingId}>{block.title}</h2>}
+        {block.video ? (
+          <video controls playsInline preload="metadata" src={block.video.url} />
+        ) : (
+          <a href={block.videoUrl || "#"} rel="noreferrer" target="_blank">
+            Смотреть видео
+          </a>
+        )}
+        {block.caption && <figcaption>{block.caption}</figcaption>}
+      </figure>
     );
   }
 
@@ -541,7 +580,14 @@ function addHeadingIdsToHtml(html: string, headings: ArticleHeading[]): string {
 }
 
 function getContentBlockTitle(block: NewsContentBlock): string | null {
-  if (block.type === "list" || block.type === "cta" || block.type === "cards" || block.type === "steps") {
+  if (
+    block.type === "text" ||
+    block.type === "video" ||
+    block.type === "list" ||
+    block.type === "cta" ||
+    block.type === "cards" ||
+    block.type === "steps"
+  ) {
     return block.title;
   }
 

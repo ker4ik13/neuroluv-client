@@ -1,6 +1,6 @@
 import type { PageSeo, SeoAsset, SiteSeo } from "@/entities/seo";
 import { directusRequest } from "@/shared/api/directus/client";
-import { DIRECTUS_URL } from "@/shared/config/directus";
+import { buildDirectusAssetUrl } from "@/shared/config/directus";
 
 type DirectusFile = {
   id: string;
@@ -51,6 +51,16 @@ const SITE_SEO_FIELDS = [
   "default_og_image.height",
 ].join(",");
 
+const FALLBACK_SITE_SEO: SiteSeo = {
+  siteName: "Нейролюб",
+  shortName: "Нейролюб",
+  siteDescription: "",
+  defaultMetaTitle: "Нейролюб",
+  defaultMetaDescription: "",
+  favicon: null,
+  defaultOgImage: null,
+};
+
 export type DirectusSeoFields = DirectusPageSeo;
 
 export const DIRECTUS_SEO_FIELDS = [
@@ -71,10 +81,16 @@ export const DIRECTUS_SEO_FIELDS = [
 ].join(",");
 
 export async function getSiteSeo(): Promise<SiteSeo> {
-  const settings = await directusRequest<DirectusSiteSettingsSeo>(
-    `/items/site_settings?fields=${SITE_SEO_FIELDS}`,
-    { next: { revalidate: 60 } },
-  );
+  let settings: DirectusSiteSettingsSeo;
+
+  try {
+    settings = await directusRequest<DirectusSiteSettingsSeo>(
+      `/items/site_settings?fields=${SITE_SEO_FIELDS}`,
+      { next: { revalidate: 60 } },
+    );
+  } catch {
+    return FALLBACK_SITE_SEO;
+  }
 
   const siteName = settings.site_name || "Нейролюб";
   const siteDescription = settings.site_description || "";
@@ -101,10 +117,16 @@ export async function getPageSeoBySlug(slug: string): Promise<PageSeo | null> {
   params.set("filter[status][_eq]", "published");
   params.set("filter[slug][_eq]", slug);
 
-  const pages = await directusRequest<DirectusPageSeo[]>(
-    `/items/pages?${params.toString()}`,
-    { next: { revalidate: 60 } },
-  );
+  let pages: DirectusPageSeo[];
+
+  try {
+    pages = await directusRequest<DirectusPageSeo[]>(
+      `/items/pages?${params.toString()}`,
+      { next: { revalidate: 60 } },
+    );
+  } catch {
+    return null;
+  }
 
   const page = pages[0];
 
@@ -170,7 +192,7 @@ function normalizeAsset(
   return {
     id: file.id,
     title: file.title || fallbackTitle,
-    url: `${DIRECTUS_URL}/assets/${file.id}`,
+    url: buildDirectusAssetUrl(file.id, { type: file.type }),
     type: file.type,
     width: file.width,
     height: file.height,

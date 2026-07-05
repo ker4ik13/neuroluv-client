@@ -865,9 +865,12 @@ $sticky-sidebar-top: 112;
 	background: $color-ink-soft;
 	border-radius: rem(24);
 
-	@media (max-width: em($breakpoint-tablet)) {
+	@media (max-width: em($breakpoint-laptop)) {
 		align-items: flex-start;
 		flex-direction: column;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
 		padding: rem(24);
 	}
 }
@@ -876,7 +879,7 @@ $sticky-sidebar-top: 112;
 	position: relative;
 	z-index: 2;
 	display: flex;
-	max-width: rem(650);
+	width: min(100%, rem(650));
 	flex-direction: column;
 	gap: rem(20);
 }
@@ -911,12 +914,13 @@ $sticky-sidebar-top: 112;
 
 .digestImage {
 	position: absolute;
-	right: rem(210);
+	right: clamp(#{rem(220)}, 18vw, #{rem(360)});
 	bottom: rem(-60);
 	z-index: 1;
 	width: rem(220);
 	height: rem(220);
 	object-fit: contain;
+	object-position: center bottom;
 
 	@media (max-width: em($breakpoint-laptop)) {
 		display: none;
@@ -931,7 +935,9 @@ $sticky-sidebar-top: 112;
 	display: inline-flex;
 	flex: 0 0 auto;
 	align-items: center;
+	justify-content: center;
 	gap: rem(10);
+	min-width: rem(220);
 	padding: rem(14) rem(28);
 	color: $color-white;
 	font-size: rem(18);

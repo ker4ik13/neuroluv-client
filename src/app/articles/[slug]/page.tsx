@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import {
-  getArticleDetailPageData,
-  getArticleSlugs,
-} from "@/shared/api/directus/articles";
+import { getArticleDetailPageData } from "@/shared/api/directus/articles";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { ContentDetailPage } from "@/widgets/content-detail";
 import { PageBlocks } from "@/widgets/page-blocks";
+
+export const revalidate = 60;
 
 type ArticleDetailRouteProps = {
   params: Promise<{
@@ -16,9 +15,7 @@ type ArticleDetailRouteProps = {
 };
 
 export async function generateStaticParams() {
-  const slugs = await getArticleSlugs();
-
-  return slugs.map((slug) => ({ slug }));
+  return [];
 }
 
 export async function generateMetadata({

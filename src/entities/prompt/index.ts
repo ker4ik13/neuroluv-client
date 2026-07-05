@@ -1,7 +1,10 @@
 export type {
   PromptAuthor,
   PromptContentBlock,
+  PromptContentButton,
+  PromptContentCard,
   PromptContentListItem,
+  PromptContentStep,
   PromptDetail,
   PromptDetailPageData,
   PromptImage,

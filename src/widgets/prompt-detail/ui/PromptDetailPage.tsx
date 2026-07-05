@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { FaArrowRight, FaEye, FaShareAlt, FaTelegram } from "react-icons/fa";
+import type { CSSProperties, ReactNode } from "react";
+import { FaArrowRight, FaShareAlt, FaTelegram } from "react-icons/fa";
 
 import type {
   PromptContentBlock,
@@ -12,6 +12,7 @@ import { SITE_URL } from "@/shared/config/site";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import { CopyPromptButton } from "./CopyPromptButton";
+import { PromptComposer } from "./PromptComposer";
 import styles from "./PromptDetailPage.module.scss";
 
 type PromptDetailPageProps = {
@@ -78,36 +79,15 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
           </div>
         </div>
 
-        <div className={styles.heroVisual}>
-          {item.image ? (
-            <Image
-              priority
-              alt={item.image.title}
-              fill
-              sizes="(max-width: 1024px) 100vw, 420px"
-              src={item.image.url}
-            />
-          ) : (
-            <span>{item.types[0]?.title || "AI"}</span>
-          )}
-        </div>
+        <PromptHeroVisual item={item} />
       </section>
 
       <div className={styles.layout}>
         <article className={styles.article}>
           <section className={styles.promptBox} id="prompt">
-            <div className={styles.promptBoxHead}>
-              <h2>Промпт</h2>
-              <CopyPromptButton text={item.promptText} />
-            </div>
-            <div
-              className={styles.promptText}
-              dangerouslySetInnerHTML={{
-                __html: addHeadingIdsToHtml(
-                  item.promptText,
-                  getBlockHeadings(headings, "prompt"),
-                ),
-              }}
+            <PromptComposer
+              modelLabel={item.neuralNetwork?.title}
+              promptText={item.promptText}
             />
           </section>
 
@@ -179,6 +159,37 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
   );
 }
 
+function PromptHeroVisual({ item }: { item: PromptDetail }) {
+  const mediaStyle = {
+    "--prompt-media-ratio": getPromptAspectRatio(item.format),
+  } as CSSProperties;
+
+  return (
+    <div className={styles.heroVisual} style={mediaStyle}>
+      {item.image ? (
+        item.image.type?.startsWith("video/") ? (
+          <video
+            controls
+            playsInline
+            preload="metadata"
+            src={item.image.url}
+          />
+        ) : (
+          <Image
+            priority
+            alt={item.image.title}
+            fill
+            sizes="(max-width: 1024px) 100vw, 420px"
+            src={item.image.url}
+          />
+        )
+      ) : (
+        <span>{item.types[0]?.title || "AI"}</span>
+      )}
+    </div>
+  );
+}
+
 function ContentBlockView({
   block,
   headings,
@@ -200,31 +211,186 @@ function ContentBlockView({
     );
   }
 
+  if (block.type === "text") {
+    return (
+      <section className={styles.htmlBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
+        <div
+          dangerouslySetInnerHTML={{
+            __html: addHeadingIdsToHtml(
+              block.content,
+              getBlockHeadings(headings, block.id),
+            ),
+          }}
+        />
+      </section>
+    );
+  }
+
   if (block.type === "quote") {
     return (
       <blockquote className={styles.quoteBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
         <p>{block.text}</p>
-        {block.author && <cite>{block.author}</cite>}
+        {block.author && (
+          <footer>
+            <cite>{block.author}</cite>
+          </footer>
+        )}
       </blockquote>
     );
   }
 
-  return (
-    <section className={styles.listBlock}>
-      {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
-      <div className={styles.steps}>
-        {block.items.map((item, index) => (
-          <div className={styles.step} key={`step-${item.id}-${index}`}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <div>
-              <strong>{item.title}</strong>
-              <p>{item.description}</p>
+  if (block.type === "list") {
+    return (
+      <section className={styles.listBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
+        <div className={styles.steps}>
+          {block.items.map((item, index) => (
+            <div className={styles.step} key={`step-${item.id}-${index}`}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.description}</p>
+              </div>
             </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (block.type === "image") {
+    return (
+      <figure className={styles.imageBlock}>
+        <span className={styles.imageWrap}>
+          <Image
+            alt={block.image.title}
+            fill
+            sizes="(max-width: 1024px) 100vw, 840px"
+            src={block.image.url}
+          />
+        </span>
+        {block.caption && <figcaption>{block.caption}</figcaption>}
+      </figure>
+    );
+  }
+
+  if (block.type === "video") {
+    return (
+      <figure className={styles.videoBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
+        {block.video ? (
+          <video controls playsInline preload="metadata" src={block.video.url} />
+        ) : (
+          <a href={block.videoUrl || "#"} rel="noreferrer" target="_blank">
+            Смотреть видео
+          </a>
+        )}
+        {block.caption && <figcaption>{block.caption}</figcaption>}
+      </figure>
+    );
+  }
+
+  if (block.type === "cta") {
+    return (
+      <section className={styles.ctaBlock}>
+        <div>
+          <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>
+          <p>{block.description}</p>
+        </div>
+        {block.buttons.length > 0 && (
+          <div className={styles.ctaButtons}>
+            {block.buttons.map((button, index) => (
+              <a
+                className={`${styles.ctaButton} ${
+                  button.variant === "outline" ? styles.ctaButtonOutline : ""
+                }`}
+                href={button.href}
+                key={`cta-button-${button.id}-${index}`}
+                rel={button.target === "_blank" ? "noreferrer" : undefined}
+                target={button.target}
+              >
+                {button.label}
+              </a>
+            ))}
           </div>
-        ))}
-      </div>
-    </section>
-  );
+        )}
+      </section>
+    );
+  }
+
+  if (block.type === "cards") {
+    return (
+      <section className={styles.cardsBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
+        <div className={styles.contentCards}>
+          {block.cards.map((card, index) => {
+            const content = (
+              <>
+                {card.image && (
+                  <span className={styles.contentCardImage}>
+                    <Image
+                      alt={card.image.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 260px"
+                      src={card.image.url}
+                    />
+                  </span>
+                )}
+                <span className={styles.contentCardText}>
+                  <span>{card.title}</span>
+                  <small>{card.description}</small>
+                </span>
+              </>
+            );
+
+            if (card.href) {
+              return (
+                <Link
+                  className={styles.contentCard}
+                  href={card.href}
+                  key={`content-card-${card.id}-${index}`}
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <div
+                className={styles.contentCard}
+                key={`content-card-${card.id}-${index}`}
+              >
+                {content}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
+  if (block.type === "steps") {
+    return (
+      <section className={styles.stepsBlock}>
+        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
+        <div className={styles.stepsList}>
+          {block.steps.map((step, index) => (
+            <div className={styles.stepItem} key={`step-${step.id}-${index}`}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <p>{step.title}</p>
+                <small>{step.description}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  return null;
 }
 
 function SidebarPanel({
@@ -268,7 +434,6 @@ function ParametersCard({ item }: { item: PromptDetail }) {
     ["Формат", item.format],
     ["Сложность", item.difficultyLabel],
     ["Цель", item.goal?.title],
-    ["Просмотры", `${item.viewsCount}`],
   ].filter((row): row is [string, string] => Boolean(row[1]));
 
   return (
@@ -344,11 +509,6 @@ function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
         {prompt.neuralNetwork && <small>{prompt.neuralNetwork.title}</small>}
       </span>
       <strong>{prompt.title}</strong>
-      <p>{prompt.description}</p>
-      <span className={styles.relatedMeta}>
-        {prompt.viewsCount} просмотров
-        <FaEye aria-hidden="true" />
-      </span>
     </Link>
   );
 }
@@ -441,11 +601,28 @@ function addHeadingIdsToHtml(html: string, headings: PromptHeading[]): string {
 }
 
 function getContentBlockTitle(block: PromptContentBlock): string | null {
-  if (block.type === "list") {
+  if (
+    block.type === "text" ||
+    block.type === "video" ||
+    block.type === "list" ||
+    block.type === "cta" ||
+    block.type === "cards" ||
+    block.type === "steps"
+  ) {
     return block.title;
   }
 
   return null;
+}
+
+function getPromptAspectRatio(format: string | null): string {
+  const match = format?.match(/(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)/);
+
+  if (!match) {
+    return "1 / 1";
+  }
+
+  return `${Number(match[1])} / ${Number(match[2])}`;
 }
 
 function getBlockHeadings(

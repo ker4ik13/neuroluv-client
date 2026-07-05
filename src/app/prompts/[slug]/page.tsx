@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import {
-  getPromptDetailPageData,
-  getPromptSlugs,
-} from "@/shared/api/directus/prompts";
+import { getPromptDetailPageData } from "@/shared/api/directus/prompts";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { PageBlocks } from "@/widgets/page-blocks";
 import { PromptDetailPage } from "@/widgets/prompt-detail";
+
+export const revalidate = 60;
 
 type PromptDetailRouteProps = {
   params: Promise<{
@@ -16,9 +15,7 @@ type PromptDetailRouteProps = {
 };
 
 export async function generateStaticParams() {
-  const slugs = await getPromptSlugs();
-
-  return slugs.map((slug) => ({ slug }));
+  return [];
 }
 
 export async function generateMetadata({
