@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 
 import type { PageSeo, SeoAsset, SiteSeo } from "@/entities/seo";
-import { SITE_URL } from "@/shared/config/site";
+import {
+  GOOGLE_SITE_VERIFICATION,
+  SITE_URL,
+  YANDEX_SITE_VERIFICATION,
+} from "@/shared/config/site";
 
 export type SeoTemplateVariables = Record<
   string,
@@ -32,6 +36,7 @@ export function buildSiteMetadata(seo: SiteSeo): Metadata {
       template: `%s | ${seo.shortName}`,
     },
     description: seo.defaultMetaDescription,
+    verification: buildVerification(),
     icons: buildIcons(seo.favicon),
     openGraph: {
       title: seo.defaultMetaTitle,
@@ -41,6 +46,17 @@ export function buildSiteMetadata(seo: SiteSeo): Metadata {
       locale: "ru_RU",
       type: "website",
     },
+  };
+}
+
+function buildVerification(): Metadata["verification"] {
+  if (!GOOGLE_SITE_VERIFICATION && !YANDEX_SITE_VERIFICATION) {
+    return undefined;
+  }
+
+  return {
+    google: GOOGLE_SITE_VERIFICATION || undefined,
+    yandex: YANDEX_SITE_VERIFICATION || undefined,
   };
 }
 
