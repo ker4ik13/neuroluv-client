@@ -143,6 +143,8 @@ type DirectusContentCta = {
   buttons?: DirectusContentButtonJunction[];
 };
 
+type DirectusMiniCta = DirectusContentCta;
+
 type DirectusContentCards = {
   id: number;
   is_active: boolean | null;
@@ -189,6 +191,7 @@ type DirectusNewsItem = {
   readtime: number | null;
   author: DirectusAuthor | string | null;
   topic: DirectusTaxonomy | number | null;
+  mini_cta: DirectusMiniCta | number | null;
   tags?: DirectusNewsTagJunction[];
   content_blocks?: DirectusContentBlock[];
 } & DirectusSeoFields;
@@ -222,6 +225,17 @@ const NEWS_FIELDS = [
   "author.avatar.type",
   "author.avatar.width",
   "author.avatar.height",
+  "mini_cta.id",
+  "mini_cta.is_active",
+  "mini_cta.title",
+  "mini_cta.description",
+  "mini_cta.buttons.sort",
+  "mini_cta.buttons.hero_buttons_id.id",
+  "mini_cta.buttons.hero_buttons_id.label",
+  "mini_cta.buttons.hero_buttons_id.url",
+  "mini_cta.buttons.hero_buttons_id.target",
+  "mini_cta.buttons.hero_buttons_id.variant",
+  "mini_cta.buttons.hero_buttons_id.is_active",
   "tags.sort",
   "tags.news_tags_id.id",
   "tags.news_tags_id.sort",
@@ -537,6 +551,7 @@ function normalizeNewsDetail(item: DirectusNewsItem | null): NewsDetail | null {
   return {
     ...newsItem,
     contentBlocks: normalizeContentBlocks(item.content_blocks || []),
+    miniCta: normalizeMiniCta(item.mini_cta),
   };
 }
 
@@ -756,6 +771,18 @@ function normalizeCtaBlock(
     description: cta.description,
     buttons: normalizeContentButtons(cta.buttons || []),
   };
+}
+
+function normalizeMiniCta(
+  item: DirectusMiniCta | number | null,
+): Extract<NewsContentBlock, { type: "cta" }> | null {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const normalized = normalizeCtaBlock(item.id, item);
+
+  return normalized?.type === "cta" ? normalized : null;
 }
 
 function normalizeCardsBlock(

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode, Ref } from "react";
-import { useEffect, useMemo, useRef, useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { FaEye, FaTelegram } from "react-icons/fa";
 
 import type {
@@ -15,7 +15,6 @@ import type {
 } from "@/entities/news";
 import {
   ContentListControls,
-  type ContentListFilter,
   type ContentListSortOption,
 } from "@/shared/ui/content-list-controls";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
@@ -41,13 +40,6 @@ export type ContentListPageConfig = {
   heroTitle: string;
   itemLabel: string;
   latestTitle: string;
-};
-
-type FilterOption = {
-  id: string;
-  kind: "all" | "tag" | "topic";
-  label: string;
-  slug: string;
 };
 
 const PAGINATION_STEP = 30;
@@ -77,15 +69,9 @@ export function NewsPage({
   const pageAnchorRef = useRef<HTMLAnchorElement>(null);
   const shouldRestorePaginationScrollRef = useRef(currentPage > 1);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const activeFilterKey = getActiveFilterKey(activeTopic, activeTag);
   const featuredNews = data.news[0] || null;
   const gridNews = data.news.slice(1);
   const pageStartIndex = currentPage > 1 ? (currentPage - 1) * PAGINATION_STEP : -1;
-
-  const filters = useMemo(
-    () => buildFilterOptions(data.topics, data.tags),
-    [data.tags, data.topics],
-  );
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -146,12 +132,10 @@ export function NewsPage({
       <div className={styles.contentShell}>
         <div className={styles.mainColumn}>
           <FilterBar
-            activeFilterKey={activeFilterKey}
             activeQuery={activeQuery}
             activeTag={activeTag}
             activeTopic={activeTopic}
             basePath={config.basePath}
-            filters={filters}
             sort={sort}
           />
 
@@ -204,16 +188,18 @@ export function NewsPage({
         </div>
 
         <NewsSidebar
-          activeFilterKey={activeFilterKey}
+          activeQuery={activeQuery}
+          activeTag={activeTag}
+          activeTopic={activeTopic}
           basePath={config.basePath}
-          filters={filters.filter((filter) => filter.kind !== "all")}
           latestTitle={config.latestTitle}
           news={data.sidebarNews}
           sort={sort}
+          tags={data.tags}
+          topics={data.topics}
         />
       </div>
 
-      <DigestCta />
       <ScrollTopButton />
     </div>
   );
@@ -232,33 +218,18 @@ function buildPaginationHref(page: number): string {
 }
 
 function FilterBar({
-  activeFilterKey,
   activeQuery,
   activeTag,
   activeTopic,
   basePath,
-  filters,
   sort,
 }: {
-  activeFilterKey: string;
   activeQuery: string | null;
   activeTag: string | null;
   activeTopic: string | null;
   basePath: string;
-  filters: FilterOption[];
   sort: NewsSortOrder;
 }) {
-  const controlFilters: ContentListFilter[] = filters.map((filter) => ({
-    id: filter.id,
-    href: buildNewsHref({
-      basePath,
-      filter,
-      q: activeQuery,
-      sort,
-    }),
-    isActive: activeFilterKey === getFilterKey(filter),
-    label: filter.label,
-  }));
   const sortOptions: ContentListSortOption[] = [
     {
       href: buildNewsHref({
@@ -289,7 +260,7 @@ function FilterBar({
   return (
     <ContentListControls
       action={basePath}
-      filters={controlFilters}
+      filters={[]}
       hiddenInputs={{
         sort: sort !== "fresh" ? sort : null,
         tag: activeTag,
@@ -423,62 +394,99 @@ function AuthorAvatar({ item }: { item: NewsItem }) {
 }
 
 function NewsSidebar({
-  activeFilterKey,
+  activeQuery,
+  activeTag,
+  activeTopic,
   basePath,
-  filters,
   latestTitle,
   news,
   sort,
+  tags,
+  topics,
 }: {
-  activeFilterKey: string;
+  activeQuery: string | null;
+  activeTag: string | null;
+  activeTopic: string | null;
   basePath: string;
-  filters: FilterOption[];
   latestTitle: string;
   news: NewsItem[];
   sort: NewsSortOrder;
+  tags: NewsTaxonomy[];
+  topics: NewsTaxonomy[];
 }) {
-  const trendNews = news.slice(0, 5);
   const latestNews = news.slice(0, 4);
-  const visibleFilters = filters.slice(0, 12);
+  const visibleTopics = topics.slice(0, 8);
+  const visibleTags = tags.slice(0, 18);
 
   return (
     <SmartStickySidebar className={styles.sidebar}>
-      {trendNews.length > 0 && (
-        <SidebarPanel title="В тренде">
-          <ol className={styles.trendList}>
-            {trendNews.map((item, index) => (
-              <li className={styles.trendItem} key={`trend-${item.id}-${index}`}>
-                <span className={styles.trendNumber}>{index + 1}</span>
-                <Link className={styles.trendLink} href={item.href}>
-                  {item.title}
-                </Link>
-              </li>
+      {latestNews.length > 0 && (
+        <SidebarPanel title={latestTitle}>
+          <div className={styles.latestList}>
+            {latestNews.map((item, index) => (
+              <Link
+                className={styles.latestItem}
+                href={item.href}
+                key={`latest-${item.id}-${index}`}
+              >
+                <NewsImage className={styles.latestImage} image={item.image} />
+                <span className={styles.latestText}>
+                  <span className={styles.latestTitle}>{item.title}</span>
+                  <span className={styles.latestDate}>{item.publishedAtLabel}</span>
+                </span>
+              </Link>
             ))}
-          </ol>
+          </div>
         </SidebarPanel>
       )}
 
-      {visibleFilters.length > 0 && (
-        <SidebarPanel title="Популярные темы">
-          <div className={styles.topicCloud}>
-            {visibleFilters.map((filter, index) => {
-              const isActive = activeFilterKey === getFilterKey(filter);
+      {visibleTopics.length > 0 && (
+        <SidebarPanel title="Темы">
+          <div className={styles.categoryList}>
+            {visibleTopics.map((topic) => {
+              const isActive = activeTopic === topic.slug;
 
               return (
-              <Link
-                className={`${styles.topicChip} ${
-                  isActive ? styles.topicChipActive : ""
-                }`}
-                href={
-                  isActive
-                    ? buildNewsHref({ basePath, sort })
-                    : buildNewsHref({ basePath, filter, sort })
-                }
-                key={`topic-${filter.id}-${index}`}
-              >
-                <span>{filter.label}</span>
-                {isActive && <span className={styles.topicReset}>×</span>}
-              </Link>
+                <SidebarTaxonomyLink
+                  active={isActive}
+                  href={buildNewsHref({
+                    basePath,
+                    q: activeQuery,
+                    sort,
+                    tag: activeTag,
+                    topic: isActive ? null : topic.slug,
+                  })}
+                  key={`sidebar-topic-${topic.id}`}
+                  title={topic.title}
+                />
+              );
+            })}
+          </div>
+        </SidebarPanel>
+      )}
+
+      {visibleTags.length > 0 && (
+        <SidebarPanel title="Теги">
+          <div className={styles.tagCloud}>
+            {visibleTags.map((tag) => {
+              const isActive = activeTag === tag.slug;
+
+              return (
+                <Link
+                  className={`${styles.tagChip} ${
+                    isActive ? styles.tagChipActive : ""
+                  }`}
+                  href={buildNewsHref({
+                    basePath,
+                    q: activeQuery,
+                    sort,
+                    tag: isActive ? null : tag.slug,
+                    topic: activeTopic,
+                  })}
+                  key={`sidebar-tag-${tag.id}`}
+                >
+                  #{tag.title}
+                </Link>
               );
             })}
           </div>
@@ -500,26 +508,6 @@ function NewsSidebar({
           <FaTelegram aria-hidden="true" className={styles.telegramIcon} />
         </a>
       </div>
-
-      {latestNews.length > 0 && (
-        <SidebarPanel title={latestTitle}>
-          <div className={styles.latestList}>
-            {latestNews.map((item, index) => (
-              <Link
-                className={styles.latestItem}
-                href={item.href}
-                key={`latest-${item.id}-${index}`}
-              >
-                <NewsImage className={styles.latestImage} image={item.image} />
-                <span className={styles.latestText}>
-                  <span className={styles.latestTitle}>{item.title}</span>
-                  <span className={styles.latestDate}>{item.publishedAtLabel}</span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </SidebarPanel>
-      )}
     </SmartStickySidebar>
   );
 }
@@ -539,6 +527,26 @@ function SidebarPanel({
   );
 }
 
+function SidebarTaxonomyLink({
+  active,
+  href,
+  title,
+}: {
+  active: boolean;
+  href: string;
+  title: string;
+}) {
+  return (
+    <Link
+      className={`${styles.categoryLink} ${active ? styles.categoryLinkActive : ""}`}
+      href={href}
+    >
+      <span>{title}</span>
+      {active && <small>×</small>}
+    </Link>
+  );
+}
+
 function EmptyState() {
   return (
     <div className={styles.empty}>
@@ -550,107 +558,14 @@ function EmptyState() {
   );
 }
 
-function DigestCta() {
-  return (
-    <section className={styles.digest}>
-      <div className={styles.digestText}>
-        <h2 className={styles.digestTitle}>Получайте дайджест Нейролюба</h2>
-        <p className={styles.digestDescription}>
-          Раз в неделю — лучшие новости, статьи, промпты и идеи для AI-контента.
-        </p>
-      </div>
-      <Image
-        alt=""
-        className={styles.digestImage}
-        height={220}
-        src="/images/news-hero-person.png"
-        width={220}
-      />
-      <a
-        className={styles.digestButton}
-        href="https://t.me/neuroluv"
-        rel="noreferrer"
-        target="_blank"
-      >
-        Подписаться
-        <FaTelegram aria-hidden="true" className={styles.digestIcon} />
-      </a>
-    </section>
-  );
-}
-
-function buildFilterOptions(
-  topics: NewsTaxonomy[],
-  tags: NewsTaxonomy[],
-): FilterOption[] {
-  const options = new Map<string, FilterOption>();
-
-  options.set("all", {
-    id: "all",
-    kind: "all",
-    label: "Все",
-    slug: "all",
-  });
-
-  topics.forEach((item) => {
-    const key = `topic:${item.slug}`;
-
-    if (!options.has(key)) {
-      options.set(key, {
-        id: key,
-        kind: "topic",
-        label: item.title,
-        slug: item.slug,
-      });
-    }
-  });
-
-  tags.forEach((item) => {
-    const key = `tag:${item.slug}`;
-
-    if (!options.has(key)) {
-      options.set(key, {
-        id: key,
-        kind: "tag",
-        label: item.title,
-        slug: item.slug,
-      });
-    }
-  });
-
-  return [...options.values()];
-}
-
-function getFilterKey(filter: FilterOption): string {
-  if (filter.kind === "all") {
-    return "all";
-  }
-
-  return `${filter.kind}:${filter.slug}`;
-}
-
-function getActiveFilterKey(topic: string | null, tag: string | null): string {
-  if (topic) {
-    return `topic:${topic}`;
-  }
-
-  if (tag) {
-    return `tag:${tag}`;
-  }
-
-  return "all";
-}
-
 function buildNewsHref({
   basePath,
-  filter,
   q,
   sort,
   tag,
   topic,
 }: {
   basePath: string;
-  filter?: FilterOption;
   q?: string | null;
   sort: NewsSortOrder;
   tag?: string | null;
@@ -666,22 +581,12 @@ function buildNewsHref({
     params.set("sort", "old");
   }
 
-  if (filter) {
-    if (filter.kind === "topic") {
-      params.set("topic", filter.slug);
-    }
+  if (topic) {
+    params.set("topic", topic);
+  }
 
-    if (filter.kind === "tag") {
-      params.set("tag", filter.slug);
-    }
-  } else {
-    if (topic) {
-      params.set("topic", topic);
-    }
-
-    if (tag) {
-      params.set("tag", tag);
-    }
+  if (tag) {
+    params.set("tag", tag);
   }
 
   const query = params.toString();

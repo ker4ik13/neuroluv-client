@@ -423,7 +423,7 @@ function PromptsSidebar({
           </span>
           <strong>Подпишись на Telegram</strong>
         </div>
-        <p>10 000+ подписчиков. Лучшие промпты каждую неделю.</p>
+        <p>6000+ подписчиков. Лучшие промпты каждую неделю.</p>
         <a href="https://t.me/neuroluv" rel="noreferrer" target="_blank">
           Подписаться
           <FaArrowRight aria-hidden="true" />

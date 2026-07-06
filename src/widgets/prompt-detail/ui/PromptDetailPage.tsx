@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { FaArrowRight, FaShareAlt, FaTelegram } from "react-icons/fa";
+import { FaArrowRight, FaTelegram } from "react-icons/fa";
+import { FaVk } from "react-icons/fa6";
 
 import type {
   PromptContentBlock,
@@ -29,10 +30,12 @@ type PromptHeading = {
 
 export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
   const shareHref = buildTelegramShareHref(item);
+  const vkShareHref = buildVkShareHref(item);
   const contentBlocks = item.contentBlocks.filter(
     (block) => !(block.type === "html" && block.content === item.promptText),
   );
   const headings = buildPromptHeadings(item.promptText, contentBlocks);
+  const sidebarCta = getSidebarCta(contentBlocks);
 
   return (
     <main className={styles.page}>
@@ -105,7 +108,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
         </article>
 
         <SmartStickySidebar className={styles.sidebar}>
-          <SidebarPanel title="В этом промпте">
+          <SidebarPanel title="Содержание">
             <div className={styles.toc}>
               {headings.map((heading) => (
                 <a href={`#${heading.id}`} key={heading.id}>
@@ -113,29 +116,21 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
                 </a>
               ))}
             </div>
+          </SidebarPanel>
+
+          <SidebarPanel title="Поделиться">
             <div className={styles.shareRow}>
               <a href={shareHref} rel="noreferrer" target="_blank">
                 <FaTelegram aria-hidden="true" />
               </a>
-              <a href={shareHref} rel="noreferrer" target="_blank">
-                <FaShareAlt aria-hidden="true" />
+              <a href={vkShareHref} rel="noreferrer" target="_blank">
+                <FaVk aria-hidden="true" />
               </a>
             </div>
           </SidebarPanel>
 
           <AuthorCard item={item} />
-          <ParametersCard item={item} />
-          {/* <AlbumCard item={item} /> */}
-          <TagsCard item={item} />
-
-          <div className={styles.sideCta}>
-            <h2>Нужен промпт под задачу?</h2>
-            <p>Адаптируем стиль, тон, цвета и референсы.</p>
-            <a href="https://t.me/neuroluv" rel="noreferrer" target="_blank">
-              Заказать
-              <FaArrowRight aria-hidden="true" />
-            </a>
-          </div>
+          {sidebarCta && <SidebarCta block={sidebarCta} />}
         </SmartStickySidebar>
       </div>
 
@@ -156,6 +151,28 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
         </section>
       )}
     </main>
+  );
+}
+
+type PromptCtaBlock = Extract<PromptContentBlock, { type: "cta" }>;
+
+function SidebarCta({ block }: { block: PromptCtaBlock }) {
+  return (
+    <div className={styles.sideCta}>
+      <h2>{block.title}</h2>
+      <p>{block.description}</p>
+      {block.buttons.map((button, index) => (
+        <a
+          href={button.href}
+          key={`prompt-sidebar-cta-${button.id}-${index}`}
+          rel={button.target === "_blank" ? "noreferrer" : undefined}
+          target={button.target}
+        >
+          {button.label}
+          <FaArrowRight aria-hidden="true" />
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -428,67 +445,6 @@ function AuthorCard({ item }: { item: PromptDetail }) {
   );
 }
 
-function ParametersCard({ item }: { item: PromptDetail }) {
-  const rows = [
-    ["Тип", item.types[0]?.title],
-    ["Формат", item.format],
-    ["Сложность", item.difficultyLabel],
-    ["Цель", item.goal?.title],
-  ].filter((row): row is [string, string] => Boolean(row[1]));
-
-  return (
-    <section className={styles.parameters} id="parameters">
-      <h2>Параметры</h2>
-      {rows.map(([label, value]) => (
-        <div key={label}>
-          <span>{label}</span>
-          <strong>{value}</strong>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-// function AlbumCard({ item }: { item: PromptDetail }) {
-//   const albumImage = item.images[1] || item.image;
-//
-//   if (!albumImage && !item.goal) {
-//     return null;
-//   }
-//
-//   return (
-//     <section className={styles.albumCard}>
-//       <h2>Альбом</h2>
-//       {albumImage && (
-//         <span className={styles.albumImage}>
-//           <Image alt={albumImage.title} fill sizes="270px" src={albumImage.url} />
-//         </span>
-//       )}
-//       <p>{item.goal?.description || item.goal?.title || "Промпты для AI-контента"}</p>
-//       {item.goal && <Link href={`/prompts?goal=${item.goal.slug}`}>Смотреть все</Link>}
-//     </section>
-//   );
-// }
-
-function TagsCard({ item }: { item: PromptDetail }) {
-  if (item.tags.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className={styles.tagsCard} id="tags">
-      <h2>Теги</h2>
-      <div>
-        {item.tags.map((tag) => (
-          <Link href={`/prompts?tag=${tag.slug}`} key={`prompt-tag-${tag.id}`}>
-            #{tag.title}
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
   return (
     <Link className={styles.relatedCard} href={prompt.href}>
@@ -518,6 +474,19 @@ function buildTelegramShareHref(item: PromptDetail): string {
   const text = `${item.title} - Нейролюб`;
 
   return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+}
+
+function buildVkShareHref(item: PromptDetail): string {
+  const params = new URLSearchParams({
+    title: item.title,
+    url: `${SITE_URL}/prompts/${item.slug}`,
+  });
+
+  if (item.description) {
+    params.set("description", item.description);
+  }
+
+  return `https://vk.com/share.php?${params.toString()}`;
 }
 
 function buildPromptHeadings(
@@ -661,4 +630,8 @@ function slugify(value: string): string {
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]+>/g, "");
+}
+
+function getSidebarCta(blocks: PromptContentBlock[]): PromptCtaBlock | null {
+  return blocks.find((block): block is PromptCtaBlock => block.type === "cta") || null;
 }

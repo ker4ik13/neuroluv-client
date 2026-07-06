@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FaArrowRight, FaEye, FaShareAlt, FaTelegram } from "react-icons/fa";
+import { FaVk } from "react-icons/fa6";
 
 import type { NewsContentBlock, NewsDetail, NewsItem } from "@/entities/news";
+import { SITE_URL } from "@/shared/config/site";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./ContentDetailPage.module.scss";
@@ -31,7 +33,9 @@ export function ContentDetailPage({
   relatedTitle = "Читайте также",
 }: ContentDetailPageProps) {
   const shareHref = buildTelegramShareHref(item, basePath);
+  const vkShareHref = buildVkShareHref(item, basePath);
   const headings = buildArticleHeadings(item.contentBlocks);
+  const sidebarCta = item.miniCta || getSidebarCta(item.contentBlocks);
 
   return (
     <main className={styles.page}>
@@ -56,19 +60,21 @@ export function ContentDetailPage({
         </article>
 
         <SmartStickySidebar className={styles.sidebar}>
-          <AuthorSidebarCard contentLabel={contentLabel} item={item} />
-
-          <SidebarPanel title="В этой статье">
+          <SidebarPanel title="Содержание">
             <div className={styles.tocList}>
-              {headings.map((heading) => (
-                <a
-                  className={styles.tocItem}
-                  href={`#${heading.id}`}
-                  key={heading.id}
-                >
-                  {heading.title}
-                </a>
-              ))}
+              {headings.length > 0 ? (
+                headings.map((heading) => (
+                  <a
+                    className={styles.tocItem}
+                    href={`#${heading.id}`}
+                    key={heading.id}
+                  >
+                    {heading.title}
+                  </a>
+                ))
+              ) : (
+                <span className={styles.tocItem}>Материал</span>
+              )}
             </div>
           </SidebarPanel>
 
@@ -82,47 +88,21 @@ export function ContentDetailPage({
               >
                 <FaTelegram aria-hidden="true" />
               </a>
-              <a className={styles.shareButton} href={shareHref}>
-                <FaShareAlt aria-hidden="true" />
+              <a
+                className={styles.shareButton}
+                href={vkShareHref}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <FaVk aria-hidden="true" />
               </a>
             </div>
           </SidebarPanel>
 
-          <div className={styles.sideCta}>
-            <p className={styles.sideCtaTitle}>Нужен такой контент?</p>
-            <p className={styles.sideCtaText}>
-              Подберём промпты, визуал и AI-решение под вашу задачу.
-            </p>
-            <a
-              className={styles.sideCtaButton}
-              href="https://t.me/neuroluv"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Обсудить
-              <FaArrowRight aria-hidden="true" />
-            </a>
-          </div>
+          <AuthorSidebarCard contentLabel={contentLabel} item={item} />
+          {sidebarCta && <SidebarCta block={sidebarCta} />}
         </SmartStickySidebar>
       </div>
-
-      <section className={styles.digest}>
-        <div className={styles.digestText}>
-          <h2 className={styles.digestTitle}>Получайте дайджест Нейролюба</h2>
-          <p className={styles.digestDescription}>
-            Раз в неделю - лучшие новости, статьи, промпты и идеи для AI-контента.
-          </p>
-        </div>
-        <a
-          className={styles.digestButton}
-          href="https://t.me/neuroluv"
-          rel="noreferrer"
-          target="_blank"
-        >
-          Подписаться
-          <FaTelegram aria-hidden="true" />
-        </a>
-      </section>
 
       {related.length > 0 && (
         <section className={styles.related}>
@@ -139,6 +119,29 @@ export function ContentDetailPage({
         </section>
       )}
     </main>
+  );
+}
+
+type NewsCtaBlock = Extract<NewsContentBlock, { type: "cta" }>;
+
+function SidebarCta({ block }: { block: NewsCtaBlock }) {
+  return (
+    <div className={styles.sideCta}>
+      <p className={styles.sideCtaTitle}>{block.title}</p>
+      <p className={styles.sideCtaText}>{block.description}</p>
+      {block.buttons.map((button, index) => (
+        <a
+          className={styles.sideCtaButton}
+          href={button.href}
+          key={`sidebar-cta-${button.id}-${index}`}
+          rel={button.target === "_blank" ? "noreferrer" : undefined}
+          target={button.target}
+        >
+          {button.label}
+          <FaArrowRight aria-hidden="true" />
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -517,7 +520,25 @@ function buildTelegramShareHref(item: NewsDetail, basePath: string): string {
   const path = `${basePath}/${item.slug}`;
   const text = encodeURIComponent(item.title);
 
-  return `https://t.me/share/url?url=${encodeURIComponent(path)}&text=${text}`;
+  return `https://t.me/share/url?url=${encodeURIComponent(`${SITE_URL}${path}`)}&text=${text}`;
+}
+
+function buildVkShareHref(item: NewsDetail, basePath: string): string {
+  const path = `${basePath}/${item.slug}`;
+  const params = new URLSearchParams({
+    title: item.title,
+    url: `${SITE_URL}${path}`,
+  });
+
+  if (item.description) {
+    params.set("description", item.description);
+  }
+
+  return `https://vk.com/share.php?${params.toString()}`;
+}
+
+function getSidebarCta(blocks: NewsContentBlock[]): NewsCtaBlock | null {
+  return blocks.find((block): block is NewsCtaBlock => block.type === "cta") || null;
 }
 
 function buildArticleHeadings(blocks: NewsContentBlock[]): ArticleHeading[] {

@@ -441,6 +441,23 @@ $sticky-sidebar-top: 112;
 		color: $color-ink-muted;
 	}
 
+	a {
+		color: $color-cyan;
+		font-weight: 700;
+		text-decoration: underline;
+		text-decoration-thickness: rem(1);
+		text-underline-offset: rem(4);
+		transition: color 160ms ease;
+
+		&:hover {
+			color: $color-blue;
+		}
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+	}
+
 	> div {
 		display: flex;
 		flex-direction: column;

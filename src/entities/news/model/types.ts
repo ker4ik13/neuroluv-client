@@ -133,6 +133,7 @@ export type NewsContentBlock =
 
 export type NewsDetail = NewsItem & {
   contentBlocks: NewsContentBlock[];
+  miniCta: Extract<NewsContentBlock, { type: "cta" }> | null;
 };
 
 export type NewsPageData = {

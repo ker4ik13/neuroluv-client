@@ -311,6 +311,23 @@ $sticky-sidebar-top: 112;
 		font-weight: 700;
 	}
 
+	a {
+		color: $color-cyan;
+		font-weight: 700;
+		text-decoration: underline;
+		text-decoration-thickness: rem(1);
+		text-underline-offset: rem(4);
+		transition: color 160ms ease;
+
+		&:hover {
+			color: $color-blue;
+		}
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+	}
+
 	ul,
 	ol {
 		display: flex;
@@ -835,8 +852,13 @@ $sticky-sidebar-top: 112;
 	align-items: center;
 	justify-content: center;
 	color: $color-white;
-	background: $color-ink;
+	background: $color-cyan;
 	border-radius: 50%;
+	transition: background-color 160ms ease;
+
+	&:hover {
+		background: $color-ink-soft;
+	}
 
 	svg {
 		width: rem(18);
