@@ -10,6 +10,7 @@ import type {
   PromptItem,
 } from "@/entities/prompt";
 import { SITE_URL } from "@/shared/config/site";
+import { CopyContentBox } from "@/shared/ui/copy-content-box";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import { CopyPromptButton } from "./CopyPromptButton";
@@ -31,6 +32,9 @@ type PromptHeading = {
 export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
   const shareHref = buildTelegramShareHref(item);
   const vkShareHref = buildVkShareHref(item);
+  const promptSourceBlock = item.contentBlocks.find(
+    (block) => block.type === "html" && block.content === item.promptText,
+  );
   const contentBlocks = item.contentBlocks.filter(
     (block) => !(block.type === "html" && block.content === item.promptText),
   );
@@ -91,6 +95,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
             <PromptComposer
               modelLabel={item.neuralNetwork?.title}
               promptText={item.promptText}
+              title={promptSourceBlock?.title}
             />
           </section>
 
@@ -216,15 +221,18 @@ function ContentBlockView({
 }) {
   if (block.type === "html") {
     return (
-      <section
-        className={styles.htmlBlock}
-        dangerouslySetInnerHTML={{
-          __html: addHeadingIdsToHtml(
-            block.content,
-            getBlockHeadings(headings, block.id),
-          ),
-        }}
-      />
+      <section className={styles.promptBox}>
+        <CopyContentBox copyText={block.content} title={block.title || "Текст"}>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: addHeadingIdsToHtml(
+                block.content,
+                getBlockHeadings(headings, block.id),
+              ),
+            }}
+          />
+        </CopyContentBox>
+      </section>
     );
   }
 

@@ -1,0 +1,133 @@
+@use "../../../styles/functions" as *;
+@use "../../../styles/mixins" as *;
+@use "../../../styles/vars" as *;
+
+.box {
+	display: flex;
+	flex-direction: column;
+	gap: rem(16);
+}
+
+.head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: rem(16);
+
+	h3 {
+		@include heading-font(900);
+
+		margin: 0;
+		color: $color-ink;
+		font-size: rem(24);
+		line-height: 1.1;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}
+
+.button {
+	@include body-font(800);
+
+	display: inline-flex;
+	min-height: rem(40);
+	align-items: center;
+	justify-content: center;
+	gap: rem(10);
+	padding: rem(10) rem(14);
+	color: $color-white;
+	font-size: rem(14);
+	line-height: 1;
+	background: $color-cyan;
+	border: 0;
+	border-radius: rem(12);
+	cursor: pointer;
+	transition:
+		background-color 160ms ease,
+		transform 160ms ease;
+
+	&:hover {
+		background: $color-blue;
+		transform: translateY(rem(-1));
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+
+	svg {
+		width: rem(18);
+		height: rem(18);
+		flex: 0 0 rem(18);
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		width: 100%;
+	}
+}
+
+.content {
+	@include body-font(500);
+
+	display: flex;
+	flex-direction: column;
+	gap: rem(18);
+	padding: rem(20);
+	color: #d7e7ef;
+	font-size: rem(15);
+	line-height: rem(23);
+	background: $color-ink-soft;
+	border-radius: rem(14);
+
+	:where(h2, h3, p, ul, ol, blockquote) {
+		margin: 0;
+	}
+
+	:where(h2, h3) {
+		@include heading-font(800);
+
+		color: $color-white;
+		font-size: rem(18);
+		line-height: 1.15;
+	}
+
+	:where(p, li, blockquote) {
+		color: #d7e7ef;
+		overflow-wrap: anywhere;
+	}
+
+	:where(ul, ol) {
+		display: flex;
+		flex-direction: column;
+		gap: rem(8);
+		padding-left: rem(20);
+	}
+
+	a {
+		color: $color-cyan;
+		font-weight: 700;
+		text-decoration: underline;
+		text-decoration-thickness: rem(1);
+		text-underline-offset: rem(4);
+		transition: color 160ms ease;
+
+		&:hover {
+			color: $color-white;
+		}
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+	}
+
+	strong {
+		font-weight: 800;
+	}
+
+	p + p {
+		margin-top: rem(10);
+	}
+}

@@ -2,15 +2,21 @@
 
 import { useMemo, useState } from "react";
 
-import { CopyPromptButton } from "./CopyPromptButton";
+import { CopyContentBox } from "@/shared/ui/copy-content-box";
+
 import styles from "./PromptDetailPage.module.scss";
 
 type PromptComposerProps = {
   modelLabel?: string;
   promptText: string;
+  title?: string | null;
 };
 
-export function PromptComposer({ modelLabel, promptText }: PromptComposerProps) {
+export function PromptComposer({
+  modelLabel,
+  promptText,
+  title,
+}: PromptComposerProps) {
   const variables = useMemo(() => extractPromptVariables(promptText), [promptText]);
   const [values, setValues] = useState<Record<string, string>>({});
   const resolvedPrompt = useMemo(
@@ -20,18 +26,19 @@ export function PromptComposer({ modelLabel, promptText }: PromptComposerProps) 
 
   return (
     <>
-      <div className={styles.promptBoxHead}>
-        <h2>Промпт</h2>
-        <CopyPromptButton text={resolvedPrompt} />
-      </div>
-      <div className={styles.promptText}>
+      <CopyContentBox
+        copyLabel="Скопировать промпт"
+        copyText={resolvedPrompt}
+        title={title || "Промпт"}
+      >
         {modelLabel && <strong className={styles.promptModel}>{modelLabel}</strong>}
-        <p>{resolvedPrompt}</p>
-      </div>
+        <p className={styles.promptText}>{resolvedPrompt}</p>
+      </CopyContentBox>
       {variables.length > 0 && (
         <div className={styles.promptVariables}>
           <h3>Переменные для замены</h3>
-          <div className={styles.promptVariableFields}>
+          <span dangerouslySetInnerHTML={{ __html: "<!--noindex-->" }} />
+          <div className={styles.promptVariableFields} data-nosnippet="true">
             {variables.map((variable) => {
               const value = values[variable] || "";
               const width = Math.min(
@@ -56,6 +63,7 @@ export function PromptComposer({ modelLabel, promptText }: PromptComposerProps) 
               );
             })}
           </div>
+          <span dangerouslySetInnerHTML={{ __html: "<!--/noindex-->" }} />
         </div>
       )}
     </>

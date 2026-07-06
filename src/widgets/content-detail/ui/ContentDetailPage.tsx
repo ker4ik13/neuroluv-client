@@ -6,6 +6,7 @@ import { FaVk } from "react-icons/fa6";
 
 import type { NewsContentBlock, NewsDetail, NewsItem } from "@/entities/news";
 import { SITE_URL } from "@/shared/config/site";
+import { CopyContentBox } from "@/shared/ui/copy-content-box";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./ContentDetailPage.module.scss";
@@ -248,12 +249,18 @@ function ContentBlockView({
 }) {
   if (block.type === "html") {
     return (
-      <section
-        className={styles.htmlBlock}
-        dangerouslySetInnerHTML={{
-          __html: addHeadingIdsToHtml(block.content, getBlockHeadings(headings, block.id)),
-        }}
-      />
+      <section className={styles.copyHtmlBlock}>
+        <CopyContentBox copyText={block.content} title={block.title || "Текст"}>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: addHeadingIdsToHtml(
+                block.content,
+                getBlockHeadings(headings, block.id),
+              ),
+            }}
+          />
+        </CopyContentBox>
+      </section>
     );
   }
 

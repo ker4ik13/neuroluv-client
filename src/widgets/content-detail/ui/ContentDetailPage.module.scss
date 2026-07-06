@@ -345,6 +345,10 @@ $sticky-sidebar-top: 112;
 	}
 }
 
+.copyHtmlBlock {
+	scroll-margin-top: rem(130);
+}
+
 .quoteBlock,
 .ctaBlock {
 	display: flex;
