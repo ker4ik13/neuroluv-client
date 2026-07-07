@@ -2,9 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { ReactNode, Ref } from "react";
-import { useEffect, useRef, useTransition } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaEye, FaTelegram } from "react-icons/fa";
 
 import type {
@@ -17,6 +16,7 @@ import {
   ContentListControls,
   type ContentListSortOption,
 } from "@/shared/ui/content-list-controls";
+import { removePaginationParamFromAddressBar } from "@/shared/lib/url/remove-pagination-param";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
@@ -27,7 +27,6 @@ type NewsPageProps = {
   activeTag: string | null;
   activeTopic: string | null;
   config?: ContentListPageConfig;
-  currentPage: number;
   data: NewsPageData;
   sort: NewsSortOrder;
 };
@@ -41,8 +40,6 @@ export type ContentListPageConfig = {
   itemLabel: string;
   latestTitle: string;
 };
-
-const PAGINATION_STEP = 30;
 
 const DEFAULT_CONFIG: ContentListPageConfig = {
   basePath: "/news",
@@ -60,31 +57,42 @@ export function NewsPage({
   activeTag,
   activeTopic,
   config = DEFAULT_CONFIG,
-  currentPage,
   data,
   sort,
 }: NewsPageProps) {
-  const router = useRouter();
-  const [isPaginationPending, startPaginationTransition] = useTransition();
-  const pageAnchorRef = useRef<HTMLAnchorElement>(null);
-  const shouldRestorePaginationScrollRef = useRef(currentPage > 1);
+  const [localData, setLocalData] = useState(data);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPaginationPending, setIsPaginationPending] = useState(false);
+  const isPaginationLoadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const featuredNews = data.news[0] || null;
-  const gridNews = data.news.slice(1);
-  const pageStartIndex = currentPage > 1 ? (currentPage - 1) * PAGINATION_STEP : -1;
+  const featuredNews = localData.news[0] || null;
+  const gridNews = localData.news.slice(1);
+
+  useEffect(removePaginationParamFromAddressBar, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
-    if (!sentinel || !data.hasMore) {
+    if (!sentinel || !localData.hasMore) {
       return;
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting && !isPaginationPending) {
-          startPaginationTransition(() => {
-            router.replace(buildPaginationHref(currentPage + 1), { scroll: false });
+        if (entry?.isIntersecting && !isPaginationLoadingRef.current) {
+          void loadNextNewsPage({
+            activeQuery,
+            activeTag,
+            activeTopic,
+            basePath: config.basePath,
+            currentPage,
+            onComplete: (nextData) => {
+              setLocalData(nextData);
+              setCurrentPage((page) => page + 1);
+            },
+            setIsPending: setIsPaginationPending,
+            sort,
+            statusRef: isPaginationLoadingRef,
           });
         }
       },
@@ -94,20 +102,15 @@ export function NewsPage({
     observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [currentPage, data.hasMore, isPaginationPending, router]);
-
-  useEffect(() => {
-    if (!shouldRestorePaginationScrollRef.current || !pageAnchorRef.current) {
-      return;
-    }
-
-    shouldRestorePaginationScrollRef.current = false;
-
-    requestAnimationFrame(() => {
-      pageAnchorRef.current?.scrollIntoView({ block: "start" });
-      window.scrollBy({ top: -130 });
-    });
-  }, [data.news.length]);
+  }, [
+    activeQuery,
+    activeTag,
+    activeTopic,
+    config.basePath,
+    currentPage,
+    localData.hasMore,
+    sort,
+  ]);
 
   return (
     <div className={styles.page}>
@@ -142,7 +145,6 @@ export function NewsPage({
           {featuredNews ? (
             <>
               <FeaturedNewsCard
-                anchorRef={pageStartIndex === 0 ? pageAnchorRef : undefined}
                 item={featuredNews}
                 label={config.itemLabel}
               />
@@ -151,9 +153,6 @@ export function NewsPage({
                 <div className={styles.grid}>
                   {gridNews.map((item, index) => (
                     <NewsCard
-                      anchorRef={
-                        index + 1 === pageStartIndex ? pageAnchorRef : undefined
-                      }
                       item={item}
                       key={`news-card-${item.id}-${index}`}
                       label={config.itemLabel}
@@ -193,28 +192,16 @@ export function NewsPage({
           activeTopic={activeTopic}
           basePath={config.basePath}
           latestTitle={config.latestTitle}
-          news={data.sidebarNews}
+          news={localData.sidebarNews}
           sort={sort}
-          tags={data.tags}
-          topics={data.topics}
+          tags={localData.tags}
+          topics={localData.topics}
         />
       </div>
 
       <ScrollTopButton />
     </div>
   );
-}
-
-function buildPaginationHref(page: number): string {
-  const url = new URL(window.location.href);
-
-  if (page <= 1) {
-    url.searchParams.delete("page");
-  } else {
-    url.searchParams.set("page", String(page));
-  }
-
-  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function FilterBar({
@@ -276,16 +263,14 @@ function FilterBar({
 }
 
 function FeaturedNewsCard({
-  anchorRef,
   item,
   label,
 }: {
-  anchorRef?: Ref<HTMLAnchorElement>;
   item: NewsItem;
   label: string;
 }) {
   return (
-    <Link className={styles.featuredCard} href={item.href} ref={anchorRef}>
+    <Link className={styles.featuredCard} href={item.href}>
       <NewsImage className={styles.featuredImage} image={item.image} priority />
       <span className={styles.featuredOverlay} />
       <span className={styles.featuredContent}>
@@ -303,16 +288,14 @@ function FeaturedNewsCard({
 }
 
 function NewsCard({
-  anchorRef,
   item,
   label,
 }: {
-  anchorRef?: Ref<HTMLAnchorElement>;
   item: NewsItem;
   label: string;
 }) {
   return (
-    <Link className={styles.card} href={item.href} ref={anchorRef}>
+    <Link className={styles.card} href={item.href}>
       <NewsImage className={styles.cardImage} image={item.image} />
       <span className={styles.cardBody}>
         <TopicBadge item={item} label={label} />
@@ -592,4 +575,91 @@ function buildNewsHref({
   const query = params.toString();
 
   return query ? `${basePath}?${query}` : basePath;
+}
+
+async function loadNextNewsPage({
+  activeQuery,
+  activeTag,
+  activeTopic,
+  basePath,
+  currentPage,
+  onComplete,
+  setIsPending,
+  sort,
+  statusRef,
+}: {
+  activeQuery: string | null;
+  activeTag: string | null;
+  activeTopic: string | null;
+  basePath: string;
+  currentPage: number;
+  onComplete: (data: NewsPageData) => void;
+  setIsPending: (value: boolean) => void;
+  sort: NewsSortOrder;
+  statusRef: { current: boolean };
+}) {
+  statusRef.current = true;
+  setIsPending(true);
+
+  try {
+    const response = await fetch(
+      buildNewsApiHref({
+        basePath,
+        page: currentPage + 1,
+        q: activeQuery,
+        sort,
+        tag: activeTag,
+        topic: activeTopic,
+      }),
+    );
+
+    if (!response.ok) {
+      return;
+    }
+
+    onComplete((await response.json()) as NewsPageData);
+  } finally {
+    statusRef.current = false;
+    setIsPending(false);
+  }
+}
+
+function buildNewsApiHref({
+  basePath,
+  page,
+  q,
+  sort,
+  tag,
+  topic,
+}: {
+  basePath: string;
+  page: number;
+  q?: string | null;
+  sort: NewsSortOrder;
+  tag?: string | null;
+  topic?: string | null;
+}): string {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+
+  if (q) {
+    params.set("q", q);
+  }
+
+  if (sort === "old") {
+    params.set("sort", "old");
+  }
+
+  if (topic) {
+    params.set("topic", topic);
+  }
+
+  if (tag) {
+    params.set("tag", tag);
+  }
+
+  const endpoint = basePath === "/articles" ? "/api/articles" : "/api/news";
+
+  return `${endpoint}?${params.toString()}`;
 }

@@ -2,9 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { ReactNode, Ref } from "react";
-import { useEffect, useRef, useTransition } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaArrowRight, FaMagic, FaTelegram } from "react-icons/fa";
 
 import type {
@@ -17,6 +16,7 @@ import {
   type ContentListFilter,
   type ContentListSortOption,
 } from "@/shared/ui/content-list-controls";
+import { removePaginationParamFromAddressBar } from "@/shared/lib/url/remove-pagination-param";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
@@ -28,7 +28,6 @@ type PromptsPageProps = {
   activeQuery: string | null;
   activeTag: string | null;
   activeType: string | null;
-  currentPage: number;
   data: PromptsPageData;
   heroDescription?: string;
   heroTitle?: string;
@@ -44,47 +43,55 @@ type PromptFilterParams = {
   type?: string | null;
 };
 
-const PAGINATION_STEP = 30;
-
 export function PromptsPage({
   activeGoal,
   activeNetwork,
   activeQuery,
   activeTag,
   activeType,
-  currentPage,
   data,
   heroDescription = "800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.",
   heroTitle = "Идеи, промпты и референсы для AI-контента",
   sort,
 }: PromptsPageProps) {
-  const router = useRouter();
-  const [isPaginationPending, startPaginationTransition] = useTransition();
-  const pageAnchorRef = useRef<HTMLAnchorElement>(null);
-  const shouldRestorePaginationScrollRef = useRef(currentPage > 1);
+  const [localData, setLocalData] = useState(data);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPaginationPending, setIsPaginationPending] = useState(false);
+  const isPaginationLoadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const pageStartIndex = currentPage > 1 ? (currentPage - 1) * PAGINATION_STEP : -1;
-  const activeParams = {
-    goal: activeGoal,
-    network: activeNetwork,
-    q: activeQuery,
-    sort,
-    tag: activeTag,
-    type: activeType,
-  };
+  const activeParams = useMemo(
+    () => ({
+      goal: activeGoal,
+      network: activeNetwork,
+      q: activeQuery,
+      sort,
+      tag: activeTag,
+      type: activeType,
+    }),
+    [activeGoal, activeNetwork, activeQuery, activeTag, activeType, sort],
+  );
+
+  useEffect(removePaginationParamFromAddressBar, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
-    if (!sentinel || !data.hasMore) {
+    if (!sentinel || !localData.hasMore) {
       return;
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting && !isPaginationPending) {
-          startPaginationTransition(() => {
-            router.replace(buildPaginationHref(currentPage + 1), { scroll: false });
+        if (entry?.isIntersecting && !isPaginationLoadingRef.current) {
+          void loadNextPromptsPage({
+            activeParams,
+            currentPage,
+            onComplete: (nextData) => {
+              setLocalData(nextData);
+              setCurrentPage((page) => page + 1);
+            },
+            setIsPending: setIsPaginationPending,
+            statusRef: isPaginationLoadingRef,
           });
         }
       },
@@ -94,20 +101,7 @@ export function PromptsPage({
     observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [currentPage, data.hasMore, isPaginationPending, router]);
-
-  useEffect(() => {
-    if (!shouldRestorePaginationScrollRef.current || !pageAnchorRef.current) {
-      return;
-    }
-
-    shouldRestorePaginationScrollRef.current = false;
-
-    requestAnimationFrame(() => {
-      pageAnchorRef.current?.scrollIntoView({ block: "start" });
-      window.scrollBy({ top: -130 });
-    });
-  }, [data.prompts.length]);
+  }, [activeParams, currentPage, localData.hasMore]);
 
   return (
     <main className={styles.page}>
@@ -141,14 +135,13 @@ export function PromptsPage({
         <div className={styles.main}>
           <SearchAndFilters
             activeParams={activeParams}
-            data={data}
+            data={localData}
           />
 
-          {data.prompts.length > 0 ? (
+          {localData.prompts.length > 0 ? (
             <div className={styles.cards}>
-              {data.prompts.map((prompt, index) => (
+              {localData.prompts.map((prompt, index) => (
                 <PromptCard
-                  anchorRef={index === pageStartIndex ? pageAnchorRef : undefined}
                   key={`prompt-${prompt.id}-${index}`}
                   prompt={prompt}
                 />
@@ -179,16 +172,16 @@ export function PromptsPage({
           </div>
         </div>
 
-        <PromptsSidebar activeParams={activeParams} data={data} />
+        <PromptsSidebar activeParams={activeParams} data={localData} />
       </div>
 
-      {data.sidebarPrompts.length > 0 && (
+      {localData.sidebarPrompts.length > 0 && (
         <section className={styles.collections}>
           <div className={styles.sectionHead}>
             <h2>Подборки</h2>
           </div>
           <div className={styles.collectionGrid}>
-            {data.goals.slice(0, 4).map((goal) => (
+            {localData.goals.slice(0, 4).map((goal) => (
               <Link
                 className={styles.collectionCard}
                 href={buildPromptsHref({ goal: goal.slug })}
@@ -275,18 +268,6 @@ function SearchAndFilters({
   );
 }
 
-function buildPaginationHref(page: number): string {
-  const url = new URL(window.location.href);
-
-  if (page <= 1) {
-    url.searchParams.delete("page");
-  } else {
-    url.searchParams.set("page", String(page));
-  }
-
-  return `${url.pathname}${url.search}${url.hash}`;
-}
-
 function getPromptsCountWord(count: number): string {
   const absoluteCount = Math.abs(count);
   const lastTwoDigits = absoluteCount % 100;
@@ -308,16 +289,14 @@ function getPromptsCountWord(count: number): string {
 }
 
 function PromptCard({
-  anchorRef,
   prompt,
 }: {
-  anchorRef?: Ref<HTMLAnchorElement>;
   prompt: PromptItem;
 }) {
   const type = prompt.types[0];
 
   return (
-    <Link className={styles.card} href={prompt.href} ref={anchorRef}>
+    <Link className={styles.card} href={prompt.href}>
       <span className={styles.cardImage}>
         {prompt.image ? (
           <Image
@@ -510,4 +489,69 @@ function buildPromptsHref(params: PromptFilterParams = {}): string {
   const query = searchParams.toString();
 
   return query ? `/prompts?${query}` : "/prompts";
+}
+
+async function loadNextPromptsPage({
+  activeParams,
+  currentPage,
+  onComplete,
+  setIsPending,
+  statusRef,
+}: {
+  activeParams: PromptFilterParams;
+  currentPage: number;
+  onComplete: (data: PromptsPageData) => void;
+  setIsPending: (value: boolean) => void;
+  statusRef: { current: boolean };
+}) {
+  statusRef.current = true;
+  setIsPending(true);
+
+  try {
+    const response = await fetch(buildPromptsApiHref(activeParams, currentPage + 1));
+
+    if (!response.ok) {
+      return;
+    }
+
+    onComplete((await response.json()) as PromptsPageData);
+  } finally {
+    statusRef.current = false;
+    setIsPending(false);
+  }
+}
+
+function buildPromptsApiHref(
+  params: PromptFilterParams,
+  page: number,
+): string {
+  const searchParams = new URLSearchParams();
+
+  searchParams.set("page", String(page));
+
+  if (params.q) {
+    searchParams.set("q", params.q);
+  }
+
+  if (params.type) {
+    searchParams.set("type", params.type);
+  }
+
+  if (params.tag) {
+    searchParams.set("tag", params.tag);
+  }
+
+  if (params.network) {
+    searchParams.set("network", params.network);
+  }
+
+  if (params.goal) {
+    searchParams.set("goal", params.goal);
+  }
+
+  if (params.sort && params.sort !== "fresh") {
+    searchParams.set("sort", params.sort);
+  }
+
+  return `/api/prompts?${searchParams.toString()}`;
 }

@@ -6,7 +6,7 @@ import { getNewsPageData } from "@/shared/api/directus/news";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
-import { buildPathWithSearch } from "@/shared/lib/url/search-path";
+import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
 import { NewsPage, type ContentListPageConfig } from "@/widgets/news-page";
 import { PageBlocks } from "@/widgets/page-blocks";
 
@@ -42,7 +42,7 @@ type NewsRouteProps = {
 export async function generateMetadata({
   searchParams,
 }: NewsRouteProps): Promise<Metadata> {
-  const params = await searchParams;
+  const params = omitSearchParams(await searchParams, ["page"]);
   const currentPath = buildPathWithSearch("/news", params);
   const exactSeo =
     currentPath === "/news" ? null : await getPageSeoByPath(currentPath);
@@ -59,8 +59,7 @@ export async function generateMetadata({
 }
 
 export default async function NewsRoute({ searchParams }: NewsRouteProps) {
-  const params = await searchParams;
-  const paginationPage = normalizePage(params?.page);
+  const params = omitSearchParams(await searchParams, ["page"]);
   const sort = params?.sort === "old" ? "old" : "fresh";
   const q = normalizeQueryParam(params?.q);
   const topic = normalizeQueryParam(params?.topic);
@@ -69,11 +68,11 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
   let blocks: PageBlock[] = [];
   let heroTitle = NEWS_PAGE_CONFIG.heroTitle;
   let heroDescription = NEWS_PAGE_CONFIG.heroDescription;
+  const currentPath = buildPathWithSearch("/news", params);
 
   try {
-    const currentPath = buildPathWithSearch("/news", params);
     const [newsData, exactPage, basePage] = await Promise.all([
-      getNewsPageData({ page: paginationPage, q, sort, tag, topic }),
+      getNewsPageData({ q, sort, tag, topic }),
       currentPath === "/news" ? Promise.resolve(null) : getPageBySlug(currentPath),
       getPageBySlug("/news"),
     ]);
@@ -98,23 +97,13 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
         activeTag={tag}
         activeTopic={topic}
         config={{ ...NEWS_PAGE_CONFIG, heroDescription, heroTitle }}
-        currentPage={paginationPage}
         data={data}
+        key={currentPath}
         sort={sort}
       />
       <PageBlocks blocks={blocks} />
     </>
   );
-}
-
-function normalizePage(value: string | undefined): number {
-  const page = Number(value);
-
-  if (!Number.isFinite(page) || page < 1) {
-    return 1;
-  }
-
-  return Math.floor(page);
 }
 
 function normalizeQueryParam(value: string | undefined): string | null {

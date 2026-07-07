@@ -6,7 +6,7 @@ import { getArticlesPageData } from "@/shared/api/directus/articles";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
-import { buildPathWithSearch } from "@/shared/lib/url/search-path";
+import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
 import { NewsPage } from "@/widgets/news-page";
 import { PageBlocks } from "@/widgets/page-blocks";
 
@@ -42,7 +42,7 @@ type ArticlesRouteProps = {
 export async function generateMetadata({
   searchParams,
 }: ArticlesRouteProps): Promise<Metadata> {
-  const params = await searchParams;
+  const params = omitSearchParams(await searchParams, ["page"]);
   const currentPath = buildPathWithSearch("/articles", params);
   const exactSeo =
     currentPath === "/articles" ? null : await getPageSeoByPath(currentPath);
@@ -59,8 +59,7 @@ export async function generateMetadata({
 }
 
 export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps) {
-  const params = await searchParams;
-  const paginationPage = normalizePage(params?.page);
+  const params = omitSearchParams(await searchParams, ["page"]);
   const sort = params?.sort === "old" ? "old" : "fresh";
   const q = normalizeQueryParam(params?.q);
   const topic = normalizeQueryParam(params?.topic);
@@ -69,11 +68,11 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
   let blocks: PageBlock[] = [];
   let heroTitle = ARTICLES_PAGE_CONFIG.heroTitle;
   let heroDescription = ARTICLES_PAGE_CONFIG.heroDescription;
+  const currentPath = buildPathWithSearch("/articles", params);
 
   try {
-    const currentPath = buildPathWithSearch("/articles", params);
     const [articlesData, exactPage, basePage] = await Promise.all([
-      getArticlesPageData({ page: paginationPage, q, sort, tag, topic }),
+      getArticlesPageData({ q, sort, tag, topic }),
       currentPath === "/articles"
         ? Promise.resolve(null)
         : getPageBySlug(currentPath),
@@ -100,23 +99,13 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
         activeTag={tag}
         activeTopic={topic}
         config={{ ...ARTICLES_PAGE_CONFIG, heroDescription, heroTitle }}
-        currentPage={paginationPage}
         data={data}
+        key={currentPath}
         sort={sort}
       />
       <PageBlocks blocks={blocks} />
     </>
   );
-}
-
-function normalizePage(value: string | undefined): number {
-  const page = Number(value);
-
-  if (!Number.isFinite(page) || page < 1) {
-    return 1;
-  }
-
-  return Math.floor(page);
 }
 
 function normalizeQueryParam(value: string | undefined): string | null {

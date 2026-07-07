@@ -28,3 +28,14 @@ export function buildPathWithSearch(
 
   return query ? `${pathname}?${query}` : pathname;
 }
+
+export function omitSearchParams<T extends RouteSearchParams>(
+  searchParams: T | null | undefined,
+  keysToOmit: string[],
+): Partial<T> {
+  const omitSet = new Set(keysToOmit);
+
+  return Object.fromEntries(
+    Object.entries(searchParams || {}).filter(([key]) => !omitSet.has(key)),
+  ) as Partial<T>;
+}

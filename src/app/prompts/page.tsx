@@ -6,7 +6,7 @@ import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPromptsPageData } from "@/shared/api/directus/prompts";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
-import { buildPathWithSearch } from "@/shared/lib/url/search-path";
+import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
 import { PageBlocks } from "@/widgets/page-blocks";
 import { PromptsPage } from "@/widgets/prompts-page";
 
@@ -40,7 +40,7 @@ type PromptsRouteProps = {
 export async function generateMetadata({
   searchParams,
 }: PromptsRouteProps): Promise<Metadata> {
-  const params = await searchParams;
+  const params = omitSearchParams(await searchParams, ["page"]);
   const currentPath = buildPathWithSearch("/prompts", params);
   const exactSeo =
     currentPath === "/prompts" ? null : await getPageSeoByPath(currentPath);
@@ -57,8 +57,7 @@ export async function generateMetadata({
 }
 
 export default async function PromptsRoute({ searchParams }: PromptsRouteProps) {
-  const params = await searchParams;
-  const paginationPage = normalizePage(params?.page);
+  const params = omitSearchParams(await searchParams, ["page"]);
   const sort = normalizeSort(params?.sort);
   const type = normalizeQueryParam(params?.type);
   const tag = normalizeQueryParam(params?.tag);
@@ -69,11 +68,11 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
   let blocks: PageBlock[] = [];
   let heroTitle = DEFAULT_HERO_TITLE;
   let heroDescription = DEFAULT_HERO_DESCRIPTION;
+  const currentPath = buildPathWithSearch("/prompts", params);
 
   try {
-    const currentPath = buildPathWithSearch("/prompts", params);
     const [promptsData, exactPage, basePage] = await Promise.all([
-      getPromptsPageData({ goal, network, page: paginationPage, q, sort, tag, type }),
+      getPromptsPageData({ goal, network, q, sort, tag, type }),
       currentPath === "/prompts"
         ? Promise.resolve(null)
         : getPageBySlug(currentPath),
@@ -101,25 +100,15 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
         activeQuery={q}
         activeTag={tag}
         activeType={type}
-        currentPage={paginationPage}
         data={data}
         heroDescription={heroDescription}
         heroTitle={heroTitle}
+        key={currentPath}
         sort={sort}
       />
       <PageBlocks blocks={blocks} />
     </>
   );
-}
-
-function normalizePage(value: string | undefined): number {
-  const page = Number(value);
-
-  if (!Number.isFinite(page) || page < 1) {
-    return 1;
-  }
-
-  return Math.floor(page);
 }
 
 function normalizeSort(value: string | undefined): PromptSortOrder {
