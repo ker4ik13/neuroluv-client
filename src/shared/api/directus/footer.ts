@@ -22,23 +22,6 @@ type DirectusFile = {
   height: number | null;
 };
 
-type DirectusNavigationItem = {
-  id: number;
-  sort: number | null;
-  label: string | null;
-  url: string | null;
-  page_slug: string | null;
-  anchor: string | null;
-  target: "_self" | "_blank" | null;
-  is_active: boolean | null;
-};
-
-type DirectusFooterMenu = {
-  id: number;
-  is_active: boolean | null;
-  items?: DirectusNavigationItem[];
-};
-
 type DirectusSiteSettingsFooter = {
   site_name: string | null;
   short_name: string | null;
@@ -47,7 +30,6 @@ type DirectusSiteSettingsFooter = {
   developer_label: string | null;
   developer_url: string | null;
   logo: DirectusFile | string | null;
-  footer_navigation: DirectusFooterMenu | null;
 };
 
 type DirectusSocialLink = {
@@ -58,21 +40,14 @@ type DirectusSocialLink = {
   icon: DirectusIcon | null;
 };
 
-type DirectusService = {
+type DirectusFooterLink = {
   id: number;
   sort: number | null;
-  title: string | null;
-  slug: string | null;
-  card_title: string | null;
-  status: "published" | "draft" | "archived" | string | null;
-};
-
-type DirectusPromptType = {
-  id: number;
-  sort: number | null;
-  title: string | null;
-  slug: string | null;
+  label: string | null;
+  url: string | null;
+  target: "_self" | "_blank" | null;
   is_active: boolean | null;
+  column: "sections" | "prompts" | "services" | "useful" | string | null;
 };
 
 const FOOTER_SETTINGS_FIELDS = [
@@ -87,16 +62,6 @@ const FOOTER_SETTINGS_FIELDS = [
   "logo.type",
   "logo.width",
   "logo.height",
-  "footer_navigation.id",
-  "footer_navigation.is_active",
-  "footer_navigation.items.id",
-  "footer_navigation.items.sort",
-  "footer_navigation.items.label",
-  "footer_navigation.items.url",
-  "footer_navigation.items.page_slug",
-  "footer_navigation.items.anchor",
-  "footer_navigation.items.target",
-  "footer_navigation.items.is_active",
 ].join(",");
 
 const SOCIAL_FIELDS = [
@@ -110,44 +75,15 @@ const SOCIAL_FIELDS = [
   "icon.is_active",
 ].join(",");
 
-const SERVICES_FIELDS = ["id", "sort", "title", "slug", "card_title", "status"].join(
-  ",",
-);
-
-const PROMPT_TYPES_FIELDS = ["id", "sort", "title", "slug", "is_active"].join(",");
-
-const FALLBACK_USEFUL_LINKS: FooterLink[] = [
-  {
-    id: "useful-ai-guides",
-    label: "Гайды по ИИ",
-    href: "/articles",
-    target: "_self",
-  },
-  {
-    id: "useful-ai-content",
-    label: "Нейросети для контента",
-    href: "/articles",
-    target: "_self",
-  },
-  {
-    id: "useful-ai-business",
-    label: "AI для бизнеса",
-    href: "/services",
-    target: "_self",
-  },
-  {
-    id: "useful-cases",
-    label: "Кейсы и разборы",
-    href: "/gallery",
-    target: "_self",
-  },
-  {
-    id: "useful-contact",
-    label: "Связаться с нами",
-    href: "https://t.me/neuroluv",
-    target: "_blank",
-  },
-];
+const FOOTER_LINK_FIELDS = [
+  "id",
+  "sort",
+  "label",
+  "url",
+  "target",
+  "is_active",
+  "column",
+].join(",");
 
 const LEGAL_LINKS: FooterLink[] = [
   {
@@ -165,7 +101,7 @@ const LEGAL_LINKS: FooterLink[] = [
 ];
 
 export async function getFooterData(): Promise<FooterData> {
-  const [settings, socialLinks, services, promptTypes] = await Promise.all([
+  const [settings, socialLinks, footerLinks] = await Promise.all([
     directusRequest<DirectusSiteSettingsFooter>(
       `/items/site_settings?fields=${FOOTER_SETTINGS_FIELDS}`,
       { next: { revalidate: 60 } },
@@ -174,12 +110,8 @@ export async function getFooterData(): Promise<FooterData> {
       `/items/social_links?filter[is_active][_eq]=true&filter[show_in_footer][_eq]=true&sort=sort&fields=${SOCIAL_FIELDS}`,
       { next: { revalidate: 60 } },
     ),
-    directusRequest<DirectusService[]>(
-      `/items/services?filter[status][_eq]=published&sort=sort&limit=5&fields=${SERVICES_FIELDS}`,
-      { next: { revalidate: 60 } },
-    ),
-    directusRequest<DirectusPromptType[]>(
-      `/items/prompt_types?filter[is_active][_eq]=true&sort=sort&limit=5&fields=${PROMPT_TYPES_FIELDS}`,
+    directusRequest<DirectusFooterLink[]>(
+      `/items/footer_links?filter[is_active][_eq]=true&sort=sort&fields=${FOOTER_LINK_FIELDS}`,
       { next: { revalidate: 60 } },
     ),
   ]);
@@ -195,22 +127,22 @@ export async function getFooterData(): Promise<FooterData> {
       {
         id: "sections",
         title: "Разделы",
-        links: normalizeFooterNavigation(settings.footer_navigation?.items || []),
+        links: normalizeFooterLinks(footerLinks, "sections") || [],
       },
       {
         id: "prompts",
         title: "Промпты",
-        links: normalizePromptTypeLinks(promptTypes),
+        links: normalizeFooterLinks(footerLinks, "prompts") || [],
       },
       {
         id: "services",
         title: "Услуги",
-        links: normalizeServiceLinks(services),
+        links: normalizeFooterLinks(footerLinks, "services") || [],
       },
       {
         id: "useful",
         title: "Полезное",
-        links: FALLBACK_USEFUL_LINKS,
+        links: normalizeFooterLinks(footerLinks, "useful") || [],
       },
     ].filter((column) => column.links.length > 0),
     copyrightText:
@@ -219,6 +151,25 @@ export async function getFooterData(): Promise<FooterData> {
     developerUrl: settings.developer_url,
     legalLinks: LEGAL_LINKS,
   };
+}
+
+function normalizeFooterLinks(
+  links: DirectusFooterLink[],
+  column: DirectusFooterLink["column"],
+): FooterLink[] | null {
+  const normalizedLinks = links
+    .filter((link) => link.is_active !== false)
+    .filter((link) => link.column === column)
+    .filter((link) => link.label && link.url)
+    .sort(sortByDirectusSort)
+    .map((link) => ({
+      id: `footer-link-${link.id}`,
+      label: link.label || "",
+      href: link.url || "/",
+      target: link.target || "_self",
+    }));
+
+  return normalizedLinks.length > 0 ? normalizedLinks : null;
 }
 
 function normalizeLogo(logo: DirectusFile | string | null): NavigationLogo | null {
@@ -245,43 +196,6 @@ function normalizeLogo(logo: DirectusFile | string | null): NavigationLogo | nul
     width: file.width,
     height: file.height,
   };
-}
-
-function normalizeFooterNavigation(items: DirectusNavigationItem[]): FooterLink[] {
-  return items
-    .filter((item) => item.is_active !== false && item.label)
-    .sort(sortByDirectusSort)
-    .map((item) => ({
-      id: `section-${item.id}`,
-      label: item.label || "",
-      href: buildItemHref(item),
-      target: item.target || "_self",
-    }));
-}
-
-function normalizePromptTypeLinks(types: DirectusPromptType[]): FooterLink[] {
-  return types
-    .filter((type) => type.is_active !== false && type.title && type.slug)
-    .sort(sortByDirectusSort)
-    .map((type) => ({
-      id: `prompt-type-${type.id}`,
-      label: type.title || "",
-      href: `/prompts?type=${type.slug}`,
-      target: "_self" as const,
-    }));
-}
-
-function normalizeServiceLinks(services: DirectusService[]): FooterLink[] {
-  return services
-    .filter((service) => service.status === "published" && service.slug)
-    .sort(sortByDirectusSort)
-    .map((service) => ({
-      id: `service-${service.id}`,
-      label: service.card_title || service.title || "",
-      href: `/services/${service.slug}`,
-      target: "_self" as const,
-    }))
-    .filter((link) => link.label);
 }
 
 function normalizeSocialLink(link: DirectusSocialLink): SocialLink | null {
@@ -312,18 +226,6 @@ function normalizeIcon(icon: DirectusIcon | null): NavigationIcon | null {
     code: icon.code,
     library: icon.library || "custom",
   };
-}
-
-function buildItemHref(item: DirectusNavigationItem): string {
-  const baseHref = item.url || (item.page_slug ? `/${item.page_slug}` : "/");
-
-  if (!item.anchor) {
-    return baseHref;
-  }
-
-  const anchor = item.anchor.startsWith("#") ? item.anchor : `#${item.anchor}`;
-
-  return baseHref === "/" ? anchor : `${baseHref}${anchor}`;
 }
 
 function sortByDirectusSort(
