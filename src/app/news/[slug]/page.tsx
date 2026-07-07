@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getNewsDetailPageData } from "@/shared/api/directus/news";
+import {
+  buildBreadcrumbJsonLd,
+  buildNewsArticleJsonLd,
+  buildWebPageJsonLd,
+} from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { ContentDetailPage } from "@/widgets/content-detail";
 import { PageBlocks } from "@/widgets/page-blocks";
 
@@ -54,6 +60,22 @@ export default async function NewsDetailRoute({ params }: NewsDetailRouteProps) 
 
   return (
     <>
+      <JsonLd
+        data={[
+          buildWebPageJsonLd({
+            description: data.item.description,
+            image: data.item.image,
+            title: data.item.title,
+            url: data.item.href,
+          }),
+          buildNewsArticleJsonLd(data.item),
+          buildBreadcrumbJsonLd([
+            { name: "Главная", url: "/" },
+            { name: "Новости", url: "/news" },
+            { name: data.item.title, url: data.item.href },
+          ]),
+        ]}
+      />
       <ContentDetailPage item={data.item} related={data.related} />
       <PageBlocks blocks={data.blocks} />
     </>

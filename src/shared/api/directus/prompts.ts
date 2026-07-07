@@ -737,6 +737,7 @@ function normalizePromptItem(item: DirectusPromptItem): PromptItem | null {
     tags: normalizeTags(item.tags || []),
     author: normalizeAuthor(item.author),
     publishedAt: item.published_at,
+    updatedAt: item.updated_at,
     viewsCount: item.views_count || 0,
     seo: normalizeDirectusSeo(item, item.title, item.description || ""),
   };

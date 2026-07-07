@@ -32,6 +32,7 @@ export type NewsItem = {
   image: NewsImage | null;
   publishedAt: string | null;
   publishedAtLabel: string;
+  updatedAt: string | null;
   readTime: number | null;
   viewsCount: number | null;
   author: NewsAuthor | null;

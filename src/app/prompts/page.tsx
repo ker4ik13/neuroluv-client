@@ -5,8 +5,10 @@ import type { PageBlock } from "@/entities/page";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPromptsPageData } from "@/shared/api/directus/prompts";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
+import { buildWebPageJsonLd } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { PageBlocks } from "@/widgets/page-blocks";
 import { PromptsPage } from "@/widgets/prompts-page";
 
@@ -94,6 +96,14 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
 
   return (
     <>
+      <JsonLd
+        data={buildWebPageJsonLd({
+          description: heroDescription,
+          title: heroTitle,
+          type: "CollectionPage",
+          url: currentPath,
+        })}
+      />
       <PromptsPage
         activeGoal={goal}
         activeNetwork={network}

@@ -13,6 +13,7 @@ export type SiteSeo = {
   siteDescription: string;
   defaultMetaTitle: string;
   defaultMetaDescription: string;
+  logo: SeoAsset | null;
   favicon: SeoAsset | null;
   defaultOgImage: SeoAsset | null;
 };

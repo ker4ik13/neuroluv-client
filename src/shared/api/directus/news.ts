@@ -188,6 +188,7 @@ type DirectusNewsItem = {
   mini_description: string | null;
   image: DirectusFile | string | null;
   published_at: string | null;
+  updated_at: string | null;
   readtime: number | null;
   author: DirectusAuthor | string | null;
   topic: DirectusTaxonomy | number | null;
@@ -205,6 +206,7 @@ const NEWS_FIELDS = [
   "description",
   "mini_description",
   "published_at",
+  "updated_at",
   "readtime",
   "image.id",
   "image.title",
@@ -528,6 +530,7 @@ function normalizeNewsItem(item: DirectusNewsItem): NewsItem | null {
     image: normalizeImage(item.image, "Новость"),
     publishedAt: item.published_at,
     publishedAtLabel: formatDate(item.published_at),
+    updatedAt: item.updated_at,
     readTime: item.readtime,
     viewsCount: null,
     author: normalizeAuthor(item.author),

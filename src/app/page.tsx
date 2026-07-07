@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 
 import { getHomePage } from "@/shared/api/directus/pages";
 import { getPageSeoBySlug } from "@/shared/api/directus/seo";
+import { buildPageJsonLd } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { PageBlocks } from "@/widgets/page-blocks";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,5 +27,15 @@ export default async function Home() {
     return null;
   }
 
-  return <PageBlocks blocks={page.blocks} />;
+  return (
+    <>
+      <JsonLd
+        data={buildPageJsonLd(page, {
+          title: "Главная",
+          url: "/",
+        })}
+      />
+      <PageBlocks blocks={page.blocks} />
+    </>
+  );
 }

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
 import { getSiteSeo } from "@/shared/api/directus/seo";
+import { buildSiteJsonLd } from "@/shared/lib/seo/json-ld";
 import { buildSiteMetadata } from "@/shared/lib/seo/metadata";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { YandexMetrika } from "@/shared/ui/yandex-metrika";
 import { Footer } from "@/widgets/footer";
 import { Header } from "@/widgets/header";
@@ -14,14 +16,17 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildSiteMetadata(seo);
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const seo = await getSiteSeo();
+
   return (
     <html lang="ru">
       <body>
+        <JsonLd data={buildSiteJsonLd(seo)} />
         <Header />
         <main>{children}</main>
         <Footer />

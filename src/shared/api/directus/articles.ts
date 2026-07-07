@@ -549,6 +549,7 @@ function normalizeArticleItem(item: DirectusArticleItem): NewsItem | null {
     image: normalizeImage(item.image, item.title) || findCoverImage(item.content_blocks || []),
     publishedAt: item.created_at,
     publishedAtLabel: formatDate(item.created_at),
+    updatedAt: item.updated_at,
     readTime: item.readtime,
     author: normalizeAuthor(item.author),
     topic: normalizeTopics(item.topics || [])[0] || null,

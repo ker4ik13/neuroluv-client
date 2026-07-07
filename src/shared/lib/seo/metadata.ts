@@ -46,6 +46,12 @@ export function buildSiteMetadata(seo: SiteSeo): Metadata {
       locale: "ru_RU",
       type: "website",
     },
+    twitter: {
+      card: "summary",
+      title: seo.defaultMetaTitle,
+      description: seo.defaultMetaDescription,
+      images: buildTwitterImages(seo.defaultOgImage),
+    },
   };
 }
 
@@ -82,6 +88,7 @@ export function buildPageMetadata(
     seo?.ogDescription || description,
     variables,
   );
+  const image = seo?.ogImage || options.fallbackImage || null;
   const canonical = resolveCanonicalUrl(
     seo?.canonicalUrl || options.canonicalUrl || options.canonicalPath,
     variables,
@@ -107,11 +114,18 @@ export function buildPageMetadata(
     openGraph: {
       title: ogTitle || undefined,
       description: ogDescription || undefined,
-      images: buildOpenGraphImages(seo?.ogImage || options.fallbackImage || null),
+      images: buildOpenGraphImages(image),
+      locale: "ru_RU",
+      type: options.openGraphType || "website",
       url: canonical,
       ...(author ? { authors: [author] } : {}),
-      ...(options.openGraphType ? { type: options.openGraphType } : {}),
       ...(options.publishedTime ? { publishedTime: options.publishedTime } : {}),
+    },
+    twitter: {
+      card: "summary",
+      title: ogTitle || title || undefined,
+      description: ogDescription || description || undefined,
+      images: buildTwitterImages(image),
     },
   };
 }
@@ -153,6 +167,14 @@ function buildOpenGraphImages(image: SeoAsset | null): NonNullable<
       type: image.type || undefined,
     },
   ];
+}
+
+function buildTwitterImages(image: SeoAsset | null): string[] | undefined {
+  if (!image) {
+    return undefined;
+  }
+
+  return [image.url];
 }
 
 export function resolveSeoTemplate(

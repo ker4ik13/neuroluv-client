@@ -5,8 +5,10 @@ import type { PageBlock } from "@/entities/page";
 import { getArticlesPageData } from "@/shared/api/directus/articles";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
+import { buildWebPageJsonLd } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { NewsPage } from "@/widgets/news-page";
 import { PageBlocks } from "@/widgets/page-blocks";
 
@@ -94,6 +96,14 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
 
   return (
     <>
+      <JsonLd
+        data={buildWebPageJsonLd({
+          description: heroDescription,
+          title: heroTitle,
+          type: "CollectionPage",
+          url: currentPath,
+        })}
+      />
       <NewsPage
         activeQuery={q}
         activeTag={tag}

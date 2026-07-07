@@ -300,7 +300,7 @@ function PromptCard({
       <span className={styles.cardImage}>
         {prompt.image ? (
           <Image
-            alt={prompt.image.title}
+            alt={getPromptImageAlt(prompt.image.title, prompt.title)}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 290px"
             src={prompt.image.url}
@@ -489,6 +489,10 @@ function buildPromptsHref(params: PromptFilterParams = {}): string {
   const query = searchParams.toString();
 
   return query ? `/prompts?${query}` : "/prompts";
+}
+
+function getPromptImageAlt(imageTitle: string, fallback: string): string {
+  return imageTitle.trim() || fallback;
 }
 
 async function loadNextPromptsPage({

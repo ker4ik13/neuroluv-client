@@ -16,6 +16,7 @@ type DirectusSiteSettingsSeo = {
   site_description: string | null;
   default_meta_title: string | null;
   default_meta_description: string | null;
+  logo: DirectusFile | string | null;
   favicon: DirectusFile | string | null;
   default_og_image: DirectusFile | string | null;
 };
@@ -39,6 +40,11 @@ const SITE_SEO_FIELDS = [
   "site_description",
   "default_meta_title",
   "default_meta_description",
+  "logo.id",
+  "logo.title",
+  "logo.type",
+  "logo.width",
+  "logo.height",
   "favicon.id",
   "favicon.title",
   "favicon.type",
@@ -57,6 +63,7 @@ const FALLBACK_SITE_SEO: SiteSeo = {
   siteDescription: "",
   defaultMetaTitle: "Нейролюб",
   defaultMetaDescription: "",
+  logo: null,
   favicon: null,
   defaultOgImage: null,
 };
@@ -103,6 +110,7 @@ export async function getSiteSeo(): Promise<SiteSeo> {
     siteDescription,
     defaultMetaTitle: settings.default_meta_title || siteName,
     defaultMetaDescription,
+    logo: normalizeAsset(settings.logo, "Логотип"),
     favicon: normalizeAsset(settings.favicon, "Фавикон"),
     defaultOgImage: normalizeAsset(settings.default_og_image, "Open Graph"),
   };

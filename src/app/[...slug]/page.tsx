@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoBySlug } from "@/shared/api/directus/seo";
+import { buildPageJsonLd } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { PageBlocks } from "@/widgets/page-blocks";
 
 type DynamicPageProps = {
@@ -40,7 +42,17 @@ export default async function DynamicPage({ params }: DynamicPageProps) {
     notFound();
   }
 
-  return <PageBlocks blocks={page.blocks} />;
+  return (
+    <>
+      <JsonLd
+        data={buildPageJsonLd(page, {
+          title: page.title,
+          url: pageSlug,
+        })}
+      />
+      <PageBlocks blocks={page.blocks} />
+    </>
+  );
 }
 
 async function getPageSlug(params: DynamicPageProps["params"]): Promise<string> {

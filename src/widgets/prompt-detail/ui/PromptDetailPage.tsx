@@ -199,7 +199,7 @@ function PromptHeroVisual({ item }: { item: PromptDetail }) {
         ) : (
           <Image
             priority
-            alt={item.image.title}
+            alt={getImageAlt(item.image.title, item.title)}
             fill
             sizes="(max-width: 1024px) 100vw, 420px"
             src={item.image.url}
@@ -290,7 +290,7 @@ function ContentBlockView({
       <figure className={styles.imageBlock}>
         <span className={styles.imageWrap}>
           <Image
-            alt={block.image.title}
+            alt={getImageAlt(block.image.title, block.title || block.caption || "Изображение промпта")}
             fill
             sizes="(max-width: 1024px) 100vw, 840px"
             src={block.image.url}
@@ -356,7 +356,7 @@ function ContentBlockView({
                 {card.image && (
                   <span className={styles.contentCardImage}>
                     <Image
-                      alt={card.image.title}
+                      alt={getImageAlt(card.image.title, card.title || card.description)}
                       fill
                       sizes="(max-width: 768px) 100vw, 260px"
                       src={card.image.url}
@@ -459,7 +459,7 @@ function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
       <span className={styles.relatedImage}>
         {prompt.image ? (
           <Image
-            alt={prompt.image.title}
+            alt={getImageAlt(prompt.image.title, prompt.title)}
             fill
             sizes="(max-width: 768px) 100vw, 386px"
             src={prompt.image.url}
@@ -495,6 +495,10 @@ function buildVkShareHref(item: PromptDetail): string {
   }
 
   return `https://vk.com/share.php?${params.toString()}`;
+}
+
+function getImageAlt(imageTitle: string, fallback: string): string {
+  return imageTitle.trim() || fallback;
 }
 
 function buildPromptHeadings(

@@ -129,6 +129,7 @@ export type PromptItem = {
   tags: PromptTaxonomy[];
   author: PromptAuthor | null;
   publishedAt: string | null;
+  updatedAt: string | null;
   viewsCount: number;
   seo: PageSeo | null;
 };
