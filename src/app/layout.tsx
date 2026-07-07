@@ -25,6 +25,22 @@ export default async function RootLayout({
 
   return (
     <html lang="ru">
+      <head>
+        {seo.favicon && (
+          <>
+            <link
+              href={seo.favicon.url}
+              rel="shortcut icon"
+              type={seo.favicon.type || undefined}
+            />
+            <link
+              href={seo.favicon.url}
+              rel="apple-touch-icon"
+              type={seo.favicon.type || undefined}
+            />
+          </>
+        )}
+      </head>
       <body>
         <JsonLd data={buildSiteJsonLd(seo)} />
         <Header />
