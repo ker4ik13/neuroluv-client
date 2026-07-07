@@ -26,20 +26,10 @@ export default async function RootLayout({
   return (
     <html lang="ru">
       <head>
-        {seo.favicon && (
-          <>
-            <link
-              href={seo.favicon.url}
-              rel="shortcut icon"
-              type={seo.favicon.type || undefined}
-            />
-            <link
-              href={seo.favicon.url}
-              rel="apple-touch-icon"
-              type={seo.favicon.type || undefined}
-            />
-          </>
-        )}
+        <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+        <link href="/favicon.svg" rel="shortcut icon" type="image/svg+xml" />
+        <link href="/favicon.svg" rel="apple-touch-icon" type="image/svg+xml" />
+        <link href="/manifest.webmanifest" rel="manifest" />
       </head>
       <body>
         <JsonLd data={buildSiteJsonLd(seo)} />

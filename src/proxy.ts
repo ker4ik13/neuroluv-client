@@ -33,6 +33,12 @@ type RedirectsCache = {
 let redirectsCache: RedirectsCache | null = null;
 
 export async function proxy(request: NextRequest) {
+  const duplicateSlashesTarget = buildDuplicateSlashesTarget(request);
+
+  if (duplicateSlashesTarget) {
+    return NextResponse.redirect(duplicateSlashesTarget, 301);
+  }
+
   const pathname = normalizePath(request.nextUrl.pathname);
   const redirects = await getRedirectRules();
   const redirect = redirects.find((rule) => rule.fromPath === pathname);
@@ -52,7 +58,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)",
+    "/((?!_next/static|_next/image|api|favicon.ico|favicon.svg|robots.txt|sitemap.xml|manifest.webmanifest|.*\\.(?:avif|css|gif|ico|jpeg|jpg|js|json|map|mp3|mp4|otf|pdf|png|svg|ttf|txt|webm|webmanifest|woff|woff2|xml)$).*)",
   ],
 };
 
@@ -160,6 +166,17 @@ function normalizeTargetPath(path: string): string {
 
 function isAbsoluteUrl(url: string): boolean {
   return /^https?:\/\//i.test(url);
+}
+
+function buildDuplicateSlashesTarget(request: NextRequest): URL | null {
+  if (!/\/{2,}/.test(request.nextUrl.pathname)) {
+    return null;
+  }
+
+  const target = request.nextUrl.clone();
+  target.pathname = target.pathname.replace(/\/{2,}/g, "/") || "/";
+
+  return target;
 }
 
 function isSameUrl(source: URL, target: URL): boolean {
