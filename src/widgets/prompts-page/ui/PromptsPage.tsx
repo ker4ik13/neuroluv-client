@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaArrowRight, FaMagic, FaTelegram } from "react-icons/fa";
+import { FaArrowRight, FaBars, FaMagic, FaTelegram } from "react-icons/fa";
 
 import type {
   PromptItem,
@@ -17,25 +17,32 @@ import {
   type ContentListSortOption,
 } from "@/shared/ui/content-list-controls";
 import { removePaginationParamFromAddressBar } from "@/shared/lib/url/remove-pagination-param";
+import { Noindex } from "@/shared/ui/noindex";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./PromptsPage.module.scss";
 
 type PromptsPageProps = {
+  activeCollection?: string | null;
   activeGoal: string | null;
+  activeKind?: string | null;
   activeNetwork: string | null;
   activeQuery: string | null;
   activeTag: string | null;
   activeType: string | null;
+  basePath?: string;
   data: PromptsPageData;
   heroDescription?: string;
   heroTitle?: string;
+  resetHref?: string;
   sort: PromptSortOrder;
 };
 
 type PromptFilterParams = {
+  collection?: string | null;
   goal?: string | null;
+  kind?: string | null;
   network?: string | null;
   q?: string | null;
   sort?: PromptSortOrder;
@@ -44,14 +51,18 @@ type PromptFilterParams = {
 };
 
 export function PromptsPage({
+  activeCollection = null,
   activeGoal,
+  activeKind = null,
   activeNetwork,
   activeQuery,
   activeTag,
   activeType,
+  basePath = "/prompts",
   data,
   heroDescription = "800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.",
   heroTitle = "Идеи, промпты и референсы для AI-контента",
+  resetHref = "/prompts",
   sort,
 }: PromptsPageProps) {
   const [localData, setLocalData] = useState(data);
@@ -62,13 +73,24 @@ export function PromptsPage({
   const activeParams = useMemo(
     () => ({
       goal: activeGoal,
+      collection: activeCollection,
+      kind: activeKind,
       network: activeNetwork,
       q: activeQuery,
       sort,
       tag: activeTag,
       type: activeType,
     }),
-    [activeGoal, activeNetwork, activeQuery, activeTag, activeType, sort],
+    [
+      activeCollection,
+      activeGoal,
+      activeKind,
+      activeNetwork,
+      activeQuery,
+      activeTag,
+      activeType,
+      sort,
+    ],
   );
 
   useEffect(removePaginationParamFromAddressBar, []);
@@ -135,7 +157,9 @@ export function PromptsPage({
         <div className={styles.main}>
           <SearchAndFilters
             activeParams={activeParams}
+            basePath={basePath}
             data={localData}
+            resetHref={resetHref}
           />
 
           {localData.prompts.length > 0 ? (
@@ -203,14 +227,20 @@ export function PromptsPage({
 
 function SearchAndFilters({
   activeParams,
+  basePath,
   data,
+  resetHref,
 }: {
   activeParams: PromptFilterParams;
+  basePath: string;
   data: PromptsPageData;
+  resetHref: string;
 }) {
   const currentSort = activeParams.sort || "fresh";
   const hasActiveFilters = Boolean(
-    activeParams.goal ||
+    activeParams.collection ||
+      activeParams.goal ||
+      activeParams.kind ||
       activeParams.network ||
       activeParams.q ||
       activeParams.tag ||
@@ -221,15 +251,29 @@ function SearchAndFilters({
   const filters: ContentListFilter[] = [
     {
       id: "all",
-      href: buildPromptsHref({ ...activeParams, type: null }),
-      isActive: !activeParams.type,
+      href: buildPromptsHref({
+        q: activeParams.q,
+        sort: activeParams.sort,
+      }),
+      isActive: !(
+        activeParams.collection ||
+        activeParams.goal ||
+        activeParams.kind ||
+        activeParams.network ||
+        activeParams.tag ||
+        activeParams.type
+      ),
       label: "Все",
     },
-    ...data.types.map((type) => ({
-      id: `type-${type.id}`,
-      href: buildPromptsHref({ ...activeParams, type: type.slug }),
-      isActive: activeParams.type === type.slug,
-      label: type.title,
+    ...data.contentKinds.map((kind) => ({
+      id: `kind-${kind.id}`,
+      href: buildPromptsHref({
+        kind: kind.slug,
+        q: activeParams.q,
+        sort: activeParams.sort,
+      }),
+      isActive: activeParams.kind === kind.slug,
+      label: kind.title,
     })),
   ];
   const sortOptions: ContentListSortOption[] = [
@@ -249,16 +293,25 @@ function SearchAndFilters({
 
   return (
     <ContentListControls
-      action="/prompts"
+      action={basePath}
       filters={filters}
+      hasActiveExternalFilters={Boolean(
+        activeParams.collection ||
+          activeParams.goal ||
+          activeParams.kind ||
+          activeParams.network ||
+          activeParams.tag ||
+          activeParams.type,
+      )}
       hiddenInputs={{
-        goal: activeParams.goal,
-        network: activeParams.network,
         sort: currentSort !== "fresh" ? currentSort : null,
-        tag: activeParams.tag,
-        type: activeParams.type,
       }}
-      resetHref="/prompts"
+      leadingLink={{
+        href: "/prompts-menu",
+        icon: <FaBars aria-hidden="true" />,
+        label: "Каталог",
+      }}
+      resetHref={resetHref}
       resultLabel={resultLabel}
       searchDefaultValue={activeParams.q}
       searchLabel="Поиск по промптам"
@@ -293,7 +346,7 @@ function PromptCard({
 }: {
   prompt: PromptItem;
 }) {
-  const type = prompt.types[0];
+  const type = prompt.contentKind || prompt.types[0];
 
   return (
     <Link className={styles.card} href={prompt.href}>
@@ -336,80 +389,111 @@ function PromptsSidebar({
   activeParams: PromptFilterParams;
   data: PromptsPageData;
 }) {
-  return (
-    <SmartStickySidebar className={styles.sidebar}>
-      <SidebarPanel title="Категории">
-        <div className={styles.categoryList}>
-          {data.goals.slice(0, 8).map((goal) => (
-            <SidebarCountLink
-              active={activeParams.goal === goal.slug}
-              count={goal.count || 0}
-              href={buildPromptsHref({
-                ...activeParams,
-                goal: activeParams.goal === goal.slug ? null : goal.slug,
-              })}
-              key={`sidebar-goal-${goal.id}`}
-              title={goal.title}
-            />
-          ))}
-        </div>
-      </SidebarPanel>
-
-      <SidebarPanel title="По нейросети">
-        <div className={styles.networkCloud}>
-          {data.neuralNetworks.map((network) => (
-            <Link
-              className={`${styles.networkChip} ${
-                activeParams.network === network.slug ? styles.networkChipActive : ""
-              }`}
-              href={buildPromptsHref({
-                ...activeParams,
-                network:
-                  activeParams.network === network.slug ? null : network.slug,
-              })}
-              key={`network-${network.id}`}
-            >
-              <span />
-              {network.title}
-            </Link>
-          ))}
-        </div>
-      </SidebarPanel>
-
-      <SidebarPanel title="Популярные теги">
-        <div className={styles.tagCloud}>
-          {data.tags.slice(0, 18).map((tag) => (
-            <Link
-              className={`${styles.tagChip} ${
-                activeParams.tag === tag.slug ? styles.tagChipActive : ""
-              }`}
-              href={buildPromptsHref({
-                ...activeParams,
-                tag: activeParams.tag === tag.slug ? null : tag.slug,
-              })}
-              key={`tag-${tag.id}`}
-            >
-              #{tag.title}
-            </Link>
-          ))}
-        </div>
-      </SidebarPanel>
-
-      <div className={styles.telegramCard}>
-        <div className={styles.telegramHead}>
-          <span>
-            <FaTelegram aria-hidden="true" />
-          </span>
-          <strong>Подпишись на Telegram</strong>
-        </div>
-        <p>6000+ подписчиков. Лучшие промпты каждую неделю.</p>
-        <a href="https://t.me/neuroluv" rel="noreferrer" target="_blank">
-          Подписаться
-          <FaArrowRight aria-hidden="true" />
-        </a>
-      </div>
-    </SmartStickySidebar>
+  const filterableGoals = data.goals
+    .filter((goal) => goal.isFilterable === true && (goal.count || 0) > 0)
+    .sort(compareTaxonomiesByCount);
+  const filterableTags = data.tags.filter(
+    (tag) => tag.isFilterable === true && (tag.count || 0) > 0,
   );
+
+  return (
+    <Noindex>
+      <SmartStickySidebar className={styles.sidebar}>
+        {filterableGoals.length > 0 && (
+          <SidebarPanel title="Цель промпта">
+            <div className={styles.categoryList}>
+              {filterableGoals.map((goal) => (
+                <SidebarCountLink
+                  active={activeParams.goal === goal.slug}
+                  count={goal.count || 0}
+                  href={buildPromptsHref({
+                    q: activeParams.q,
+                    sort: activeParams.sort,
+                    goal: activeParams.goal === goal.slug ? null : goal.slug,
+                  })}
+                  key={`sidebar-goal-${goal.id}`}
+                  title={goal.title}
+                />
+              ))}
+            </div>
+          </SidebarPanel>
+        )}
+
+        <SidebarPanel title="Нейросети">
+          <div className={styles.networkCloud}>
+            {data.neuralNetworks.map((network) => (
+              <Link
+                className={`${styles.networkChip} ${
+                  activeParams.network === network.slug
+                    ? styles.networkChipActive
+                    : ""
+                }`}
+                href={buildPromptsHref({
+                  q: activeParams.q,
+                  sort: activeParams.sort,
+                  network:
+                    activeParams.network === network.slug ? null : network.slug,
+                })}
+                key={`network-${network.id}`}
+              >
+                <span />
+                {network.title}
+              </Link>
+            ))}
+          </div>
+        </SidebarPanel>
+
+        {filterableTags.length > 0 && (
+          <SidebarPanel title="Популярные теги">
+            <div className={styles.tagCloud}>
+              {filterableTags.map((tag) => (
+                <Link
+                  className={`${styles.tagChip} ${
+                    activeParams.tag === tag.slug ? styles.tagChipActive : ""
+                  }`}
+                  href={buildPromptsHref({
+                    q: activeParams.q,
+                    sort: activeParams.sort,
+                    tag: activeParams.tag === tag.slug ? null : tag.slug,
+                  })}
+                  key={`tag-${tag.id}`}
+                >
+                  #{tag.title}
+                </Link>
+              ))}
+            </div>
+          </SidebarPanel>
+        )}
+
+        <div className={styles.telegramCard}>
+          <div className={styles.telegramHead}>
+            <span>
+              <FaTelegram aria-hidden="true" />
+            </span>
+            <strong>Подпишись на Telegram</strong>
+          </div>
+          <p>6000+ подписчиков. Лучшие промпты каждую неделю.</p>
+          <a href="https://t.me/neuroluv" rel="noreferrer" target="_blank">
+            Подписаться
+            <FaArrowRight aria-hidden="true" />
+          </a>
+        </div>
+      </SmartStickySidebar>
+    </Noindex>
+  );
+}
+
+function compareTaxonomiesByCount(
+  first: { count?: number; title: string },
+  second: { count?: number; title: string },
+): number {
+  const countDifference = (second.count || 0) - (first.count || 0);
+
+  if (countDifference !== 0) {
+    return countDifference;
+  }
+
+  return first.title.localeCompare(second.title, "ru");
 }
 
 function SidebarPanel({
@@ -461,25 +545,10 @@ function EmptyState() {
 
 function buildPromptsHref(params: PromptFilterParams = {}): string {
   const searchParams = new URLSearchParams();
+  const pathname = getPromptsCatalogPath(params);
 
   if (params.q) {
     searchParams.set("q", params.q);
-  }
-
-  if (params.type) {
-    searchParams.set("type", params.type);
-  }
-
-  if (params.tag) {
-    searchParams.set("tag", params.tag);
-  }
-
-  if (params.network) {
-    searchParams.set("network", params.network);
-  }
-
-  if (params.goal) {
-    searchParams.set("goal", params.goal);
   }
 
   if (params.sort && params.sort !== "fresh") {
@@ -488,7 +557,31 @@ function buildPromptsHref(params: PromptFilterParams = {}): string {
 
   const query = searchParams.toString();
 
-  return query ? `/prompts?${query}` : "/prompts";
+  return query ? `${pathname}?${query}` : pathname;
+}
+
+function getPromptsCatalogPath(params: PromptFilterParams): string {
+  if (params.collection) {
+    return `/prompts-menu/collection-${params.collection}`;
+  }
+
+  if (params.kind) {
+    return `/prompts-menu/kind-${params.kind}`;
+  }
+
+  if (params.tag) {
+    return `/prompts-menu/tag-${params.tag}`;
+  }
+
+  if (params.network) {
+    return `/prompts-menu/network-${params.network}`;
+  }
+
+  if (params.goal) {
+    return `/prompts-menu/goal-${params.goal}`;
+  }
+
+  return "/prompts";
 }
 
 function getPromptImageAlt(imageTitle: string, fallback: string): string {
@@ -539,6 +632,14 @@ function buildPromptsApiHref(
 
   if (params.type) {
     searchParams.set("type", params.type);
+  }
+
+  if (params.collection) {
+    searchParams.set("collection", params.collection);
+  }
+
+  if (params.kind) {
+    searchParams.set("kind", params.kind);
   }
 
   if (params.tag) {

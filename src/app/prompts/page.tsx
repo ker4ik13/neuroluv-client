@@ -18,6 +18,8 @@ const EMPTY_PROMPTS_DATA: PromptsPageData = {
   sidebarPrompts: [],
   totalCount: 0,
   types: [],
+  contentKinds: [],
+  formats: [],
   tags: [],
   goals: [],
   neuralNetworks: [],
@@ -30,6 +32,7 @@ const DEFAULT_HERO_DESCRIPTION =
 type PromptsRouteProps = {
   searchParams?: Promise<{
     goal?: string;
+    kind?: string;
     network?: string;
     page?: string;
     q?: string;
@@ -43,14 +46,18 @@ export async function generateMetadata({
   searchParams,
 }: PromptsRouteProps): Promise<Metadata> {
   const params = omitSearchParams(await searchParams, ["page"]);
+  const hasNonIndexableQuery = Boolean(params?.q || params?.sort);
   const currentPath = buildPathWithSearch("/prompts", params);
   const exactSeo =
-    currentPath === "/prompts" ? null : await getPageSeoByPath(currentPath);
+    currentPath === "/prompts" || hasNonIndexableQuery
+      ? null
+      : await getPageSeoByPath(currentPath);
   const seo = exactSeo || (await getPageSeoByPath("/prompts"));
 
   return buildPageMetadata(seo, {
     canonicalPath: exactSeo ? currentPath : "/prompts",
     fallbackTitle: "Промпты | {SITE_NAME}",
+    noindex: hasNonIndexableQuery,
     variables: {
       TITLE: "Промпты",
       URL: currentPath,
@@ -62,6 +69,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
   const params = omitSearchParams(await searchParams, ["page"]);
   const sort = normalizeSort(params?.sort);
   const type = normalizeQueryParam(params?.type);
+  const kind = normalizeQueryParam(params?.kind);
   const tag = normalizeQueryParam(params?.tag);
   const network = normalizeQueryParam(params?.network);
   const goal = normalizeQueryParam(params?.goal);
@@ -74,7 +82,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
 
   try {
     const [promptsData, exactPage, basePage] = await Promise.all([
-      getPromptsPageData({ goal, network, q, sort, tag, type }),
+      getPromptsPageData({ goal, kind, network, q, sort, tag, type }),
       currentPath === "/prompts"
         ? Promise.resolve(null)
         : getPageBySlug(currentPath),
@@ -106,6 +114,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
       />
       <PromptsPage
         activeGoal={goal}
+        activeKind={kind}
         activeNetwork={network}
         activeQuery={q}
         activeTag={tag}

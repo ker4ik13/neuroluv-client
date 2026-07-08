@@ -44,7 +44,9 @@ type ArticlesRouteProps = {
 export async function generateMetadata({
   searchParams,
 }: ArticlesRouteProps): Promise<Metadata> {
-  const params = omitSearchParams(await searchParams, ["page"]);
+  const params = normalizeExclusiveFilters(
+    omitSearchParams(await searchParams, ["page"]),
+  );
   const currentPath = buildPathWithSearch("/articles", params);
   const exactSeo =
     currentPath === "/articles" ? null : await getPageSeoByPath(currentPath);
@@ -61,7 +63,9 @@ export async function generateMetadata({
 }
 
 export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps) {
-  const params = omitSearchParams(await searchParams, ["page"]);
+  const params = normalizeExclusiveFilters(
+    omitSearchParams(await searchParams, ["page"]),
+  );
   const sort = params?.sort === "old" ? "old" : "fresh";
   const q = normalizeQueryParam(params?.q);
   const topic = normalizeQueryParam(params?.topic);
@@ -124,4 +128,17 @@ function normalizeQueryParam(value: string | undefined): string | null {
   }
 
   return value;
+}
+
+function normalizeExclusiveFilters<T extends { tag?: string; topic?: string }>(
+  params: Partial<T>,
+): Partial<T> {
+  if (!params.topic) {
+    return params;
+  }
+
+  return {
+    ...params,
+    tag: undefined,
+  };
 }

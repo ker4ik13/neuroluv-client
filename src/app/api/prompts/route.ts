@@ -8,7 +8,9 @@ export async function GET(request: Request) {
 
   try {
     const data = await getPromptsPageData({
+      collection: getQueryParam(searchParams, "collection"),
       goal: getQueryParam(searchParams, "goal"),
+      kind: getQueryParam(searchParams, "kind"),
       network: getQueryParam(searchParams, "network"),
       page: normalizePage(searchParams.get("page")),
       q: getQueryParam(searchParams, "q"),

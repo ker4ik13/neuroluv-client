@@ -5,12 +5,16 @@ import type {
   PromptContentCard,
   PromptContentListItem,
   PromptContentStep,
+  PromptCollectionItem,
+  PromptCollectionsPageData,
   PromptDetail,
   PromptDetailPageData,
   PromptImage,
   PromptItem,
+  PromptsMenuPageData,
   PromptsPageData,
   PromptSortOrder,
+  PromptTagGroup,
   PromptTaxonomy,
 } from "@/entities/prompt";
 import type { PageBlock } from "@/entities/page";
@@ -42,6 +46,12 @@ type DirectusTaxonomy = {
   slug: string | null;
   description: string | null;
   is_active: boolean | null;
+  is_filterable?: boolean | null;
+  seo_noindex?: boolean | null;
+};
+
+type DirectusPromptFormat = DirectusTaxonomy & {
+  code: string | null;
 };
 
 type DirectusNeuralNetwork = {
@@ -51,6 +61,7 @@ type DirectusNeuralNetwork = {
   slug: string | null;
   description: string | null;
   is_active: boolean | null;
+  seo_noindex: boolean | null;
 };
 
 type DirectusAuthor = {
@@ -68,6 +79,15 @@ type DirectusPromptTagJunction = {
 type DirectusPromptTypeJunction = {
   sort: number | null;
   prompt_types_id: DirectusTaxonomy | number | null;
+};
+
+type DirectusPromptTagContentKindJunction = {
+  sort: number | null;
+  prompt_content_kinds_id: DirectusTaxonomy | number | null;
+};
+
+type DirectusPromptTag = DirectusTaxonomy & {
+  content_kinds?: DirectusPromptTagContentKindJunction[];
 };
 
 type DirectusPromptImageJunction = {
@@ -204,6 +224,9 @@ type DirectusPromptItem = {
   description: string | null;
   neural_network: DirectusNeuralNetwork | number | null;
   format: string | null;
+  content_kind: string | null;
+  content_kind_ref: DirectusTaxonomy | number | null;
+  format_ref: DirectusPromptFormat | number | null;
   difficulty: string | null;
   author: DirectusAuthor | string | null;
   published_at: string | null;
@@ -227,10 +250,53 @@ type DirectusPromptGoalCount = DirectusAggregateCount & {
   goal?: number | string | DirectusTaxonomy | null;
 };
 
+type DirectusPromptKindCount = DirectusAggregateCount & {
+  content_kind?: string | null;
+};
+
+type DirectusPromptNetworkCount = DirectusAggregateCount & {
+  neural_network?: number | string | DirectusNeuralNetwork | null;
+};
+
+type DirectusPromptCollectionCount = DirectusAggregateCount & {
+  prompt_collections_id?: number | string | DirectusPromptCollection | null;
+};
+
+type DirectusPromptTagCount = DirectusAggregateCount & {
+  prompt_tags_id?: number | string | DirectusTaxonomy | null;
+};
+
+type DirectusPromptCollectionPromptJunction = {
+  prompts_id: number | DirectusPromptItem | null;
+};
+
+type DirectusPromptCollection = {
+  id: number;
+  sort: number | null;
+  status: "published" | "draft" | "archived" | string | null;
+  is_active: boolean | null;
+  title: string | null;
+  slug: string | null;
+  description: string | null;
+  cover: DirectusFile | string | null;
+  published_at: string | null;
+  updated_at: string | null;
+  seo_noindex: boolean | null;
+};
+
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: "Легко",
   medium: "Средне",
   hard: "Сложно",
+};
+
+const PROMPT_CONTENT_KIND_LABELS: Record<string, string> = {
+  audio: "Аудио / голос",
+  code: "Код",
+  design: "Дизайн / баннеры",
+  photo: "Фото",
+  text: "Текст",
+  video: "Видео",
 };
 
 const PROMPT_FIELDS = [
@@ -241,6 +307,20 @@ const PROMPT_FIELDS = [
   "slug",
   "description",
   "format",
+  "content_kind",
+  "content_kind_ref.id",
+  "content_kind_ref.sort",
+  "content_kind_ref.title",
+  "content_kind_ref.slug",
+  "content_kind_ref.description",
+  "content_kind_ref.is_active",
+  "format_ref.id",
+  "format_ref.sort",
+  "format_ref.title",
+  "format_ref.slug",
+  "format_ref.description",
+  "format_ref.is_active",
+  "format_ref.code",
   "difficulty",
   "published_at",
   "updated_at",
@@ -271,12 +351,6 @@ const PROMPT_FIELDS = [
   "tags.prompt_tags_id.title",
   "tags.prompt_tags_id.slug",
   "tags.prompt_tags_id.is_active",
-  "types.sort",
-  "types.prompt_types_id.id",
-  "types.prompt_types_id.sort",
-  "types.prompt_types_id.title",
-  "types.prompt_types_id.slug",
-  "types.prompt_types_id.is_active",
   "images.sort",
   "images.directus_files_id.id",
   "images.directus_files_id.title",
@@ -370,7 +444,20 @@ const TAXONOMY_FIELDS = [
   "sort",
   "title",
   "slug",
+  "description",
   "is_active",
+  "seo_noindex",
+].join(",");
+
+const PROMPT_TAG_FIELDS = [
+  TAXONOMY_FIELDS,
+  "is_filterable",
+  "content_kinds.sort",
+  "content_kinds.prompt_content_kinds_id.id",
+  "content_kinds.prompt_content_kinds_id.sort",
+  "content_kinds.prompt_content_kinds_id.title",
+  "content_kinds.prompt_content_kinds_id.slug",
+  "content_kinds.prompt_content_kinds_id.is_active",
 ].join(",");
 
 const NETWORK_FIELDS = [
@@ -380,6 +467,25 @@ const NETWORK_FIELDS = [
   "slug",
   "description",
   "is_active",
+  "seo_noindex",
+].join(",");
+
+const PROMPT_COLLECTION_FIELDS = [
+  "id",
+  "sort",
+  "status",
+  "is_active",
+  "title",
+  "slug",
+  "description",
+  "cover.id",
+  "cover.title",
+  "cover.type",
+  "cover.width",
+  "cover.height",
+  "published_at",
+  "updated_at",
+  "seo_noindex",
 ].join(",");
 
 type PromptDetailPageDataWithBlocks = PromptDetailPageData & {
@@ -387,9 +493,12 @@ type PromptDetailPageDataWithBlocks = PromptDetailPageData & {
 };
 
 const PAGE_SIZE = 30;
+const PROMPT_COLLECTIONS_PAGE_SIZE = 12;
 
 export type GetPromptsPageDataParams = {
+  collection?: string | null;
   goal?: string | null;
+  kind?: string | null;
   network?: string | null;
   page?: number;
   q?: string | null;
@@ -398,8 +507,23 @@ export type GetPromptsPageDataParams = {
   type?: string | null;
 };
 
+export type PromptMenuFilterType =
+  | "collection"
+  | "goal"
+  | "kind"
+  | "network"
+  | "tag";
+
+export type PromptMenuFilterSeo = {
+  description: string;
+  seoNoindex: boolean;
+  title: string;
+};
+
 export async function getPromptsPageData({
+  collection,
   goal,
+  kind,
   network,
   page = 1,
   q,
@@ -407,6 +531,9 @@ export async function getPromptsPageData({
   tag,
   type,
 }: GetPromptsPageDataParams = {}): Promise<PromptsPageData> {
+  const collectionPromptIds = collection
+    ? await getPromptIdsByCollectionSlug(collection)
+    : null;
   const requestedLimit = getListLimit(page);
   const promptsParams = new URLSearchParams({
     fields: PROMPT_FIELDS,
@@ -415,7 +542,15 @@ export async function getPromptsPageData({
   });
 
   applyPublishedFilter(promptsParams);
-  applyPromptFilters(promptsParams, { goal, network, q, tag, type });
+  applyPromptFilters(promptsParams, {
+    collectionPromptIds,
+    goal,
+    kind,
+    network,
+    q,
+    tag,
+    type,
+  });
 
   const sidebarPromptsParams = new URLSearchParams({
     fields: PROMPT_FIELDS,
@@ -424,21 +559,40 @@ export async function getPromptsPageData({
   });
   const totalParams = new URLSearchParams();
   const goalCountsParams = new URLSearchParams();
+  const kindCountsParams = new URLSearchParams();
+  const tagCountsParams = new URLSearchParams();
 
   totalParams.set("aggregate[count]", "id");
   goalCountsParams.set("aggregate[count]", "id");
   goalCountsParams.set("groupBy[]", "goal");
+  kindCountsParams.set("aggregate[count]", "id");
+  kindCountsParams.set("groupBy[]", "content_kind");
+  tagCountsParams.set("aggregate[count]", "id");
+  tagCountsParams.set("groupBy[]", "prompt_tags_id");
+  tagCountsParams.set("filter[prompts_id][status][_eq]", "published");
   applyPublishedFilter(sidebarPromptsParams);
   applyPublishedFilter(totalParams);
   applyPublishedFilter(goalCountsParams);
-  applyPromptFilters(totalParams, { goal, network, q, tag, type });
+  applyPublishedFilter(kindCountsParams);
+  applyPromptFilters(totalParams, {
+    collectionPromptIds,
+    goal,
+    kind,
+    network,
+    q,
+    tag,
+    type,
+  });
 
   const [
     prompts,
     sidebarPrompts,
     totalRows,
     goalCountRows,
-    types,
+    kindCountRows,
+    tagCountRows,
+    contentKinds,
+    formats,
     tags,
     goals,
     neuralNetworks,
@@ -460,34 +614,61 @@ export async function getPromptsPageData({
         `/items/prompts?${goalCountsParams.toString()}`,
         { next: { revalidate: 60 } },
       ),
-      directusRequest<DirectusTaxonomy[]>(
-        `/items/prompt_types?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+      directusRequest<DirectusPromptKindCount[]>(
+        `/items/prompts?${kindCountsParams.toString()}`,
         { next: { revalidate: 60 } },
       ),
-      directusRequest<DirectusTaxonomy[]>(
-        `/items/prompt_tags?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+      optionalDirectusRequest<DirectusPromptTagCount[]>(
+        `/items/prompts_tags?${tagCountsParams.toString()}`,
+        [],
         { next: { revalidate: 60 } },
       ),
-      directusRequest<DirectusTaxonomy[]>(
-        `/items/prompt_goals?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+      optionalDirectusRequest<DirectusTaxonomy[]>(
+        `/items/prompt_content_kinds?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+        [],
         { next: { revalidate: 60 } },
       ),
-      directusRequest<DirectusNeuralNetwork[]>(
+      optionalDirectusRequest<DirectusPromptFormat[]>(
+        `/items/prompt_formats?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS},code`,
+        [],
+        { next: { revalidate: 60 } },
+      ),
+      optionalDirectusRequest<DirectusTaxonomy[]>(
+        `/items/prompt_tags?filter[is_active][_eq]=true&filter[is_filterable][_eq]=true&sort=sort&fields=${PROMPT_TAG_FIELDS}`,
+        [],
+        { next: { revalidate: 60 } },
+      ),
+      optionalDirectusRequest<DirectusTaxonomy[]>(
+        `/items/prompt_goals?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS},is_filterable`,
+        [],
+        { next: { revalidate: 60 } },
+      ),
+      optionalDirectusRequest<DirectusNeuralNetwork[]>(
         `/items/neural_networks?filter[is_active][_eq]=true&sort=sort&fields=${NETWORK_FIELDS}`,
+        [],
         { next: { revalidate: 60 } },
       ),
     ]);
 
   const normalizedPrompts = prompts.map(normalizePromptItem).filter(isPromptItem);
   const goalCounts = normalizeGoalCounts(goalCountRows);
+  const kindCounts = normalizeKindCounts(kindCountRows);
+  const tagCounts = normalizeTagCounts(tagCountRows);
 
   return {
     hasMore: normalizedPrompts.length > requestedLimit,
     prompts: normalizedPrompts.slice(0, requestedLimit),
     sidebarPrompts: sidebarPrompts.map(normalizePromptItem).filter(isPromptItem),
     totalCount: normalizeAggregateCount(totalRows),
-    types: types.map(normalizeTaxonomy).filter(isTaxonomy),
-    tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
+    types: [],
+    contentKinds: contentKinds
+      .map((item) => normalizeTaxonomyWithSlugCount(item, kindCounts))
+      .filter(isTaxonomy),
+    formats: formats.map(normalizeTaxonomy).filter(isTaxonomy),
+    tags: tags
+      .map((item) => normalizeTaxonomyWithCount(item, tagCounts))
+      .filter(isTaxonomy)
+      .filter((item) => (item.count || 0) > 0),
     goals: goals
       .map((item) => normalizeTaxonomyWithCount(item, goalCounts))
       .filter(isTaxonomy),
@@ -495,10 +676,246 @@ export async function getPromptsPageData({
   };
 }
 
+export async function getPromptsMenuPageData(): Promise<PromptsMenuPageData> {
+  const goalCountsParams = new URLSearchParams();
+  const kindCountsParams = new URLSearchParams();
+  const networkCountsParams = new URLSearchParams();
+  const tagCountsParams = new URLSearchParams();
+
+  goalCountsParams.set("aggregate[count]", "id");
+  goalCountsParams.set("groupBy[]", "goal");
+  kindCountsParams.set("aggregate[count]", "id");
+  kindCountsParams.set("groupBy[]", "content_kind");
+  networkCountsParams.set("aggregate[count]", "id");
+  networkCountsParams.set("groupBy[]", "neural_network");
+  tagCountsParams.set("aggregate[count]", "id");
+  tagCountsParams.set("groupBy[]", "prompt_tags_id");
+  tagCountsParams.set("filter[prompts_id][status][_eq]", "published");
+  applyPublishedFilter(goalCountsParams);
+  applyPublishedFilter(kindCountsParams);
+  applyPublishedFilter(networkCountsParams);
+
+  const [
+    contentKinds,
+    kindCountRows,
+    neuralNetworks,
+    networkCountRows,
+    goals,
+    goalCountRows,
+    tags,
+    tagCountRows,
+    collectionsPage,
+  ] = await Promise.all([
+    optionalDirectusRequest<DirectusTaxonomy[]>(
+      `/items/prompt_content_kinds?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+      [],
+      { next: { revalidate: 60 } },
+    ),
+    directusRequest<DirectusPromptKindCount[]>(
+      `/items/prompts?${kindCountsParams.toString()}`,
+      { next: { revalidate: 60 } },
+    ),
+    optionalDirectusRequest<DirectusNeuralNetwork[]>(
+      `/items/neural_networks?filter[is_active][_eq]=true&sort=sort&fields=${NETWORK_FIELDS}`,
+      [],
+      { next: { revalidate: 60 } },
+    ),
+    directusRequest<DirectusPromptNetworkCount[]>(
+      `/items/prompts?${networkCountsParams.toString()}`,
+      { next: { revalidate: 60 } },
+    ),
+    optionalDirectusRequest<DirectusTaxonomy[]>(
+      `/items/prompt_goals?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+      [],
+      { next: { revalidate: 60 } },
+    ),
+    directusRequest<DirectusPromptGoalCount[]>(
+      `/items/prompts?${goalCountsParams.toString()}`,
+      { next: { revalidate: 60 } },
+    ),
+    optionalDirectusRequest<DirectusPromptTag[]>(
+      `/items/prompt_tags?filter[is_active][_eq]=true&sort=sort&fields=${PROMPT_TAG_FIELDS}`,
+      [],
+      { next: { revalidate: 60 } },
+    ),
+    optionalDirectusRequest<DirectusPromptTagCount[]>(
+      `/items/prompts_tags?${tagCountsParams.toString()}`,
+      [],
+      { next: { revalidate: 60 } },
+    ),
+    getPromptCollectionsPageData({ page: 1 }),
+  ]);
+
+  const goalCounts = normalizeGoalCounts(goalCountRows);
+  const kindCounts = normalizeKindCounts(kindCountRows);
+  const networkCounts = normalizeNetworkCounts(networkCountRows);
+  const tagCounts = normalizeTagCounts(tagCountRows);
+  const normalizedContentKinds = contentKinds
+    .map((item) => normalizeTaxonomyWithSlugCount(item, kindCounts))
+    .filter(isTaxonomy);
+
+  return {
+    collections: collectionsPage.items,
+    collectionsHasMore: collectionsPage.hasMore,
+    contentKinds: normalizedContentKinds,
+    goals: goals
+      .map((item) => normalizeTaxonomyWithCount(item, goalCounts))
+      .filter(isTaxonomy),
+    neuralNetworks: neuralNetworks
+      .map((item) => normalizeNetworkWithCount(item, networkCounts))
+      .filter(isTaxonomy),
+    tagGroups: normalizeTagGroups(tags, normalizedContentKinds, tagCounts),
+  };
+}
+
+export async function getPromptMenuFilterSeo({
+  type,
+  value,
+}: {
+  type: PromptMenuFilterType;
+  value: string;
+}): Promise<PromptMenuFilterSeo | null> {
+  if (type === "network") {
+    const item = await getPromptMenuFilterItem<DirectusNeuralNetwork>(
+      "neural_networks",
+      value,
+      "name,slug,description,is_active,seo_noindex",
+    );
+
+    if (!item?.name || item.is_active === false) {
+      return null;
+    }
+
+    return {
+      description: item.description || "",
+      seoNoindex: Boolean(item.seo_noindex),
+      title: item.name,
+    };
+  }
+
+  if (type === "collection") {
+    const item = await getPromptMenuFilterItem<DirectusPromptCollection>(
+      "prompt_collections",
+      value,
+      "title,slug,description,status,is_active,seo_noindex",
+    );
+
+    if (!item?.title || item.status !== "published" || item.is_active === false) {
+      return null;
+    }
+
+    return {
+      description: item.description || "",
+      seoNoindex: Boolean(item.seo_noindex),
+      title: item.title,
+    };
+  }
+
+  const collectionByType: Record<
+    Exclude<PromptMenuFilterType, "collection" | "network">,
+    string
+  > = {
+    goal: "prompt_goals",
+    kind: "prompt_content_kinds",
+    tag: "prompt_tags",
+  };
+  const item = await getPromptMenuFilterItem<DirectusTaxonomy>(
+    collectionByType[type],
+    value,
+    `${TAXONOMY_FIELDS},is_filterable`,
+  );
+
+  if (!item?.title || item.is_active === false) {
+    return null;
+  }
+
+  return {
+    description: item.description || "",
+    seoNoindex: Boolean(item.seo_noindex),
+    title: item.title,
+  };
+}
+
+export async function getPromptCollectionsPageData({
+  page = 1,
+}: {
+  page?: number;
+} = {}): Promise<PromptCollectionsPageData> {
+  const limit = PROMPT_COLLECTIONS_PAGE_SIZE;
+  const offset = (Math.max(1, page) - 1) * limit;
+  const collectionsParams = new URLSearchParams({
+    fields: PROMPT_COLLECTION_FIELDS,
+    limit: String(limit + 1),
+    offset: String(offset),
+    sort: "-published_at,-id",
+  });
+  const collectionCountsParams = new URLSearchParams();
+
+  applyPublishedFilter(collectionsParams);
+  collectionsParams.set("filter[is_active][_eq]", "true");
+  collectionCountsParams.set("aggregate[count]", "id");
+  collectionCountsParams.set("groupBy[]", "prompt_collections_id");
+
+  const [collections, collectionCountRows] = await Promise.all([
+    optionalDirectusRequest<DirectusPromptCollection[]>(
+      `/items/prompt_collections?${collectionsParams.toString()}`,
+      [],
+      { next: { revalidate: 60 } },
+    ),
+    optionalDirectusRequest<DirectusPromptCollectionCount[]>(
+      `/items/prompt_collections_prompts?${collectionCountsParams.toString()}`,
+      [],
+      { next: { revalidate: 60 } },
+    ),
+  ]);
+  const collectionCounts = normalizeCollectionCounts(collectionCountRows);
+  const items = collections
+    .map((item) => normalizePromptCollection(item, collectionCounts))
+    .filter(isPromptCollection);
+
+  return {
+    hasMore: items.length > limit,
+    items: items.slice(0, limit),
+  };
+}
+
+async function getPromptMenuFilterItem<T>(
+  collection: string,
+  slug: string,
+  fields: string,
+): Promise<T | null> {
+  const params = new URLSearchParams({
+    fields,
+    limit: "1",
+  });
+
+  params.set("filter[slug][_eq]", slug);
+
+  const items = await optionalDirectusRequest<T[]>(
+    `/items/${collection}?${params.toString()}`,
+    [],
+    { next: { revalidate: 60 } },
+  );
+
+  return items[0] || null;
+}
+
 function normalizeAggregateCount(rows: DirectusAggregateCount[]): number {
   const count = Number(rows[0]?.count?.id || 0);
 
   return Number.isFinite(count) ? count : 0;
+}
+
+async function optionalDirectusRequest<T>(
+  path: string,
+  fallback: T,
+  options: { next?: NextFetchRequestConfig } = {},
+): Promise<T> {
+  try {
+    return await directusRequest<T>(path, options);
+  } catch {
+    return fallback;
+  }
 }
 
 function normalizeGoalCounts(rows: DirectusPromptGoalCount[]): Map<number, number> {
@@ -523,6 +940,189 @@ function normalizeGoalCounts(rows: DirectusPromptGoalCount[]): Map<number, numbe
   return counts;
 }
 
+function normalizeKindCounts(rows: DirectusPromptKindCount[]): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  rows.forEach((row) => {
+    if (!row.content_kind) {
+      return;
+    }
+
+    const count = Number(row.count?.id || 0);
+
+    if (Number.isFinite(count)) {
+      counts.set(row.content_kind, count);
+    }
+  });
+
+  return counts;
+}
+
+function normalizeNetworkCounts(
+  rows: DirectusPromptNetworkCount[],
+): Map<number, number> {
+  const counts = new Map<number, number>();
+
+  rows.forEach((row) => {
+    if (!row.neural_network) {
+      return;
+    }
+
+    const networkId =
+      typeof row.neural_network === "object" && row.neural_network !== null
+        ? row.neural_network.id
+        : Number(row.neural_network);
+    const count = Number(row.count?.id || 0);
+
+    if (Number.isFinite(networkId) && Number.isFinite(count)) {
+      counts.set(networkId, count);
+    }
+  });
+
+  return counts;
+}
+
+function normalizeCollectionCounts(
+  rows: DirectusPromptCollectionCount[],
+): Map<number, number> {
+  const counts = new Map<number, number>();
+
+  rows.forEach((row) => {
+    if (!row.prompt_collections_id) {
+      return;
+    }
+
+    const collectionId =
+      typeof row.prompt_collections_id === "object" &&
+      row.prompt_collections_id !== null
+        ? row.prompt_collections_id.id
+        : Number(row.prompt_collections_id);
+    const count = Number(row.count?.id || 0);
+
+    if (Number.isFinite(collectionId) && Number.isFinite(count)) {
+      counts.set(collectionId, count);
+    }
+  });
+
+  return counts;
+}
+
+function normalizeTagCounts(rows: DirectusPromptTagCount[]): Map<number, number> {
+  const counts = new Map<number, number>();
+
+  rows.forEach((row) => {
+    if (!row.prompt_tags_id) {
+      return;
+    }
+
+    const tagId =
+      typeof row.prompt_tags_id === "object" && row.prompt_tags_id !== null
+        ? row.prompt_tags_id.id
+        : Number(row.prompt_tags_id);
+    const count = Number(row.count?.id || 0);
+
+    if (Number.isFinite(tagId) && Number.isFinite(count)) {
+      counts.set(tagId, count);
+    }
+  });
+
+  return counts;
+}
+
+function normalizeTagGroups(
+  tags: DirectusPromptTag[],
+  contentKinds: PromptTaxonomy[],
+  counts: Map<number, number>,
+): PromptTagGroup[] {
+  const groups = new Map<
+    string,
+    {
+      kind: PromptTaxonomy;
+      tags: Map<string, PromptTaxonomy>;
+    }
+  >();
+
+  contentKinds.forEach((kind) => {
+    groups.set(kind.slug, {
+      kind,
+      tags: new Map(),
+    });
+  });
+
+  tags.forEach((tag) => {
+    const normalizedTag = normalizeTaxonomyWithCount(tag, counts);
+
+    if (!normalizedTag || (normalizedTag.count || 0) <= 0) {
+      return;
+    }
+
+    tag.content_kinds
+      ?.map((junction) => normalizeTaxonomy(junction.prompt_content_kinds_id))
+      .filter(isTaxonomy)
+      .forEach((kind) => {
+        const group = groups.get(kind.slug);
+
+        if (!group) {
+          return;
+        }
+
+        group.tags.set(normalizedTag.slug, normalizedTag);
+      });
+  });
+
+  return [...groups.values()]
+    .map((group) => ({
+      kind: group.kind,
+      tags: [...group.tags.values()].sort(compareTaxonomiesByCount),
+    }))
+    .filter((group) => group.tags.length > 0);
+}
+
+function compareTaxonomiesByCount(
+  first: PromptTaxonomy,
+  second: PromptTaxonomy,
+): number {
+  const countDifference = (second.count || 0) - (first.count || 0);
+
+  if (countDifference !== 0) {
+    return countDifference;
+  }
+
+  return first.title.localeCompare(second.title, "ru");
+}
+
+function normalizeNetworkWithCount(
+  network: DirectusNeuralNetwork,
+  counts: Map<number, number>,
+): PromptTaxonomy | null {
+  const normalized = normalizeNetwork(network);
+
+  if (!normalized) {
+    return null;
+  }
+
+  return {
+    ...normalized,
+    count: counts.get(normalized.id) || 0,
+  };
+}
+
+function normalizeTaxonomyWithSlugCount(
+  taxonomy: DirectusTaxonomy,
+  counts: Map<string, number>,
+): PromptTaxonomy | null {
+  const normalized = normalizeTaxonomy(taxonomy);
+
+  if (!normalized) {
+    return null;
+  }
+
+  return {
+    ...normalized,
+    count: counts.get(normalized.slug) || 0,
+  };
+}
+
 function normalizeTaxonomyWithCount(
   taxonomy: DirectusTaxonomy,
   counts: Map<number, number>,
@@ -541,6 +1141,29 @@ function normalizeTaxonomyWithCount(
 
 function getListLimit(page: number): number {
   return Math.max(1, page) * PAGE_SIZE;
+}
+
+async function getPromptIdsByCollectionSlug(slug: string): Promise<number[]> {
+  const params = new URLSearchParams({
+    fields: "prompts_id",
+    limit: "-1",
+  });
+
+  params.set("filter[prompt_collections_id][slug][_eq]", slug);
+
+  const rows = await optionalDirectusRequest<DirectusPromptCollectionPromptJunction[]>(
+    `/items/prompt_collections_prompts?${params.toString()}`,
+    [],
+    { next: { revalidate: 60 } },
+  );
+
+  return rows
+    .map((row) =>
+      typeof row.prompts_id === "object" && row.prompts_id !== null
+        ? row.prompts_id.id
+        : Number(row.prompts_id),
+    )
+    .filter((id) => Number.isFinite(id));
 }
 
 export async function getPromptBySlug(slug: string): Promise<PromptDetail | null> {
@@ -573,8 +1196,8 @@ export async function getRelatedPrompts(
   applyPublishedFilter(params);
   params.set("filter[id][_neq]", String(current.id));
 
-  if (current.types[0]) {
-    params.set("filter[types][prompt_types_id][slug][_eq]", current.types[0].slug);
+  if (current.contentKind) {
+    params.set("filter[content_kind][_eq]", current.contentKind.slug);
   } else if (current.goal) {
     params.set("filter[goal][slug][_eq]", current.goal.slug);
   }
@@ -674,10 +1297,20 @@ function applyPublishedFilter(params: URLSearchParams) {
 
 function applyPromptFilters(
   params: URLSearchParams,
-  filters: Omit<GetPromptsPageDataParams, "sort">,
+  filters: Omit<GetPromptsPageDataParams, "collection" | "sort"> & {
+    collectionPromptIds?: number[] | null;
+  },
 ) {
-  if (filters.type) {
-    params.set("filter[types][prompt_types_id][slug][_eq]", filters.type);
+  if (filters.collectionPromptIds) {
+    if (filters.collectionPromptIds.length === 0) {
+      params.set("filter[id][_eq]", "-1");
+    } else {
+      params.set("filter[id][_in]", filters.collectionPromptIds.join(","));
+    }
+  }
+
+  if (filters.kind) {
+    params.set("filter[content_kind][_eq]", filters.kind);
   }
 
   if (filters.tag) {
@@ -729,7 +1362,9 @@ function normalizePromptItem(item: DirectusPromptItem): PromptItem | null {
     image: images[0] || null,
     images,
     neuralNetwork: normalizeNetwork(item.neural_network),
-    format: item.format,
+    contentKind: normalizePromptContentKind(item),
+    format: getPromptFormatLabel(item),
+    formatRef: normalizeTaxonomy(item.format_ref),
     difficulty: item.difficulty,
     difficultyLabel,
     goal: normalizeTaxonomy(item.goal),
@@ -741,6 +1376,62 @@ function normalizePromptItem(item: DirectusPromptItem): PromptItem | null {
     viewsCount: item.views_count || 0,
     seo: normalizeDirectusSeo(item, item.title, item.description || ""),
   };
+}
+
+function normalizePromptCollection(
+  item: DirectusPromptCollection,
+  counts: Map<number, number>,
+): PromptCollectionItem | null {
+  if (
+    !item.title ||
+    !item.slug ||
+    item.status !== "published" ||
+    item.is_active === false
+  ) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    description: item.description || null,
+    href: `/prompts-menu/collection-${item.slug}`,
+    cover: normalizeImage(item.cover, item.title),
+    count: counts.get(item.id) || 0,
+    publishedAt: item.published_at,
+    seoNoindex: Boolean(item.seo_noindex),
+  };
+}
+
+function normalizePromptContentKind(item: DirectusPromptItem): PromptTaxonomy | null {
+  const relation = normalizeTaxonomy(item.content_kind_ref);
+
+  if (relation) {
+    return relation;
+  }
+
+  if (!item.content_kind) {
+    return null;
+  }
+
+  return {
+    description: "",
+    id:
+      typeof item.content_kind_ref === "number"
+        ? item.content_kind_ref
+        : 0,
+    slug: item.content_kind,
+    title: PROMPT_CONTENT_KIND_LABELS[item.content_kind] || item.content_kind,
+  };
+}
+
+function getPromptFormatLabel(item: DirectusPromptItem): string | null {
+  if (item.format_ref && typeof item.format_ref === "object") {
+    return item.format_ref.code || item.format_ref.title || item.format;
+  }
+
+  return item.format;
 }
 
 function normalizePromptDetail(
@@ -1134,6 +1825,8 @@ function normalizeTaxonomy(
     title: item.title,
     slug: item.slug,
     description: item.description || "",
+    isFilterable: item.is_filterable === true,
+    seoNoindex: Boolean(item.seo_noindex),
   };
 }
 
@@ -1153,6 +1846,7 @@ function normalizeNetwork(
     title: item.name,
     slug: item.slug,
     description: item.description || "",
+    seoNoindex: Boolean(item.seo_noindex),
   };
 }
 
@@ -1161,6 +1855,12 @@ function isTaxonomy(item: PromptTaxonomy | null): item is PromptTaxonomy {
 }
 
 function isPromptItem(item: PromptItem | null): item is PromptItem {
+  return item !== null;
+}
+
+function isPromptCollection(
+  item: PromptCollectionItem | null,
+): item is PromptCollectionItem {
   return item !== null;
 }
 

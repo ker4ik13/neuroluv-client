@@ -5,14 +5,15 @@ import { getNewsPageData } from "@/shared/api/directus/news";
 
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
+  const topic = getQueryParam(searchParams, "topic");
 
   try {
     const data = await getNewsPageData({
       page: normalizePage(searchParams.get("page")),
       q: getQueryParam(searchParams, "q"),
       sort: normalizeSort(searchParams.get("sort")),
-      tag: getQueryParam(searchParams, "tag"),
-      topic: getQueryParam(searchParams, "topic"),
+      tag: topic ? null : getQueryParam(searchParams, "tag"),
+      topic,
     });
 
     return NextResponse.json(data);

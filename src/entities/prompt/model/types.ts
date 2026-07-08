@@ -15,6 +15,8 @@ export type PromptTaxonomy = {
   slug: string;
   description: string;
   count?: number;
+  isFilterable?: boolean;
+  seoNoindex?: boolean;
 };
 
 export type PromptAuthor = {
@@ -121,7 +123,9 @@ export type PromptItem = {
   image: PromptImage | null;
   images: PromptImage[];
   neuralNetwork: PromptTaxonomy | null;
+  contentKind: PromptTaxonomy | null;
   format: string | null;
+  formatRef: PromptTaxonomy | null;
   difficulty: string | null;
   difficultyLabel: string | null;
   goal: PromptTaxonomy | null;
@@ -147,9 +151,42 @@ export type PromptsPageData = {
   sidebarPrompts: PromptItem[];
   totalCount: number;
   types: PromptTaxonomy[];
+  contentKinds: PromptTaxonomy[];
+  formats: PromptTaxonomy[];
   tags: PromptTaxonomy[];
   goals: PromptTaxonomy[];
   neuralNetworks: PromptTaxonomy[];
+};
+
+export type PromptCollectionItem = {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  href: string;
+  cover: PromptImage | null;
+  count: number;
+  publishedAt: string | null;
+  seoNoindex?: boolean;
+};
+
+export type PromptCollectionsPageData = {
+  hasMore: boolean;
+  items: PromptCollectionItem[];
+};
+
+export type PromptTagGroup = {
+  kind: PromptTaxonomy;
+  tags: PromptTaxonomy[];
+};
+
+export type PromptsMenuPageData = {
+  collections: PromptCollectionItem[];
+  collectionsHasMore: boolean;
+  contentKinds: PromptTaxonomy[];
+  goals: PromptTaxonomy[];
+  neuralNetworks: PromptTaxonomy[];
+  tagGroups: PromptTagGroup[];
 };
 
 export type PromptDetailPageData = {

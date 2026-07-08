@@ -18,6 +18,7 @@ type BuildPageMetadataOptions = {
 	fallbackDescription?: string | null;
 	fallbackImage?: SeoAsset | null;
 	fallbackTitle?: string | null;
+	noindex?: boolean;
 	openGraphType?: 'article' | 'website';
 	publishedTime?: string | null;
 	variables?: SeoTemplateVariables;
@@ -105,10 +106,15 @@ export function buildPageMetadata(
 		keywords: seo?.keywords.map((keyword) =>
 			resolveSeoTemplate(keyword, variables),
 		),
-		robots: seo
+		robots: options.noindex
 			? {
-					index: !seo.noindex,
-					follow: !seo.nofollow,
+					index: false,
+					follow: true,
+				}
+			: seo
+				? {
+						index: !seo.noindex,
+						follow: !seo.nofollow,
 				}
 			: undefined,
 		alternates: canonical

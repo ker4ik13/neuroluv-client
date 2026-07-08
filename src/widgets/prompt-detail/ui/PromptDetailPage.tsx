@@ -11,6 +11,7 @@ import type {
 } from "@/entities/prompt";
 import { SITE_URL } from "@/shared/config/site";
 import { CopyContentBox } from "@/shared/ui/copy-content-box";
+import { Noindex } from "@/shared/ui/noindex";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import { CopyPromptButton } from "./CopyPromptButton";
@@ -46,8 +47,10 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <div className={styles.badges}>
-            {item.types[0] && (
-              <span className={styles.badgePrimary}>{item.types[0].title}</span>
+            {(item.contentKind || item.types[0]) && (
+              <span className={styles.badgePrimary}>
+                {(item.contentKind || item.types[0])?.title}
+              </span>
             )}
             {item.neuralNetwork && (
               <span className={styles.badgeMuted}>{item.neuralNetwork.title}</span>
@@ -112,31 +115,33 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
           )}
         </article>
 
-        <SmartStickySidebar className={styles.sidebar}>
-          <SidebarPanel title="Содержание">
-            <div className={styles.toc}>
-              {headings.map((heading) => (
-                <a href={`#${heading.id}`} key={heading.id}>
-                  {heading.title}
+        <Noindex>
+          <SmartStickySidebar className={styles.sidebar}>
+            <SidebarPanel title="Содержание">
+              <div className={styles.toc}>
+                {headings.map((heading) => (
+                  <a href={`#${heading.id}`} key={heading.id}>
+                    {heading.title}
+                  </a>
+                ))}
+              </div>
+            </SidebarPanel>
+
+            <SidebarPanel title="Поделиться">
+              <div className={styles.shareRow}>
+                <a href={shareHref} rel="noreferrer" target="_blank">
+                  <FaTelegram aria-hidden="true" />
                 </a>
-              ))}
-            </div>
-          </SidebarPanel>
+                <a href={vkShareHref} rel="noreferrer" target="_blank">
+                  <FaVk aria-hidden="true" />
+                </a>
+              </div>
+            </SidebarPanel>
 
-          <SidebarPanel title="Поделиться">
-            <div className={styles.shareRow}>
-              <a href={shareHref} rel="noreferrer" target="_blank">
-                <FaTelegram aria-hidden="true" />
-              </a>
-              <a href={vkShareHref} rel="noreferrer" target="_blank">
-                <FaVk aria-hidden="true" />
-              </a>
-            </div>
-          </SidebarPanel>
-
-          <AuthorCard item={item} />
-          {sidebarCta && <SidebarCta block={sidebarCta} />}
-        </SmartStickySidebar>
+            <AuthorCard item={item} />
+            {sidebarCta && <SidebarCta block={sidebarCta} />}
+          </SmartStickySidebar>
+        </Noindex>
       </div>
 
       {related.length > 0 && (
@@ -206,7 +211,7 @@ function PromptHeroVisual({ item }: { item: PromptDetail }) {
           />
         )
       ) : (
-        <span>{item.types[0]?.title || "AI"}</span>
+        <span>{item.contentKind?.title || item.types[0]?.title || "AI"}</span>
       )}
     </div>
   );
@@ -465,11 +470,13 @@ function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
             src={prompt.image.url}
           />
         ) : (
-          <span>{prompt.types[0]?.title || "Фото"}</span>
+          <span>{prompt.contentKind?.title || prompt.types[0]?.title || "Фото"}</span>
         )}
       </span>
       <span className={styles.relatedBadges}>
-        {prompt.types[0] && <small>{prompt.types[0].title}</small>}
+        {(prompt.contentKind || prompt.types[0]) && (
+          <small>{(prompt.contentKind || prompt.types[0])?.title}</small>
+        )}
         {prompt.neuralNetwork && <small>{prompt.neuralNetwork.title}</small>}
       </span>
       <strong>{prompt.title}</strong>

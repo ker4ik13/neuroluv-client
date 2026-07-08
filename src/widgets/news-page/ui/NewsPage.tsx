@@ -17,6 +17,7 @@ import {
   type ContentListSortOption,
 } from "@/shared/ui/content-list-controls";
 import { removePaginationParamFromAddressBar } from "@/shared/lib/url/remove-pagination-param";
+import { Noindex } from "@/shared/ui/noindex";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
@@ -402,6 +403,7 @@ function NewsSidebar({
   const visibleTags = tags.slice(0, 18);
 
   return (
+    <Noindex>
     <SmartStickySidebar className={styles.sidebar}>
       {latestNews.length > 0 && (
         <SidebarPanel title={latestTitle}>
@@ -436,7 +438,7 @@ function NewsSidebar({
                     basePath,
                     q: activeQuery,
                     sort,
-                    tag: activeTag,
+                    tag: null,
                     topic: isActive ? null : topic.slug,
                   })}
                   key={`sidebar-topic-${topic.id}`}
@@ -464,7 +466,7 @@ function NewsSidebar({
                     q: activeQuery,
                     sort,
                     tag: isActive ? null : tag.slug,
-                    topic: activeTopic,
+                    topic: null,
                   })}
                   key={`sidebar-tag-${tag.id}`}
                 >
@@ -492,6 +494,7 @@ function NewsSidebar({
         </a>
       </div>
     </SmartStickySidebar>
+    </Noindex>
   );
 }
 
@@ -566,9 +569,7 @@ function buildNewsHref({
 
   if (topic) {
     params.set("topic", topic);
-  }
-
-  if (tag) {
+  } else if (tag) {
     params.set("tag", tag);
   }
 
@@ -653,9 +654,7 @@ function buildNewsApiHref({
 
   if (topic) {
     params.set("topic", topic);
-  }
-
-  if (tag) {
+  } else if (tag) {
     params.set("tag", tag);
   }
 

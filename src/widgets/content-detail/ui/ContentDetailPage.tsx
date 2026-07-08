@@ -7,6 +7,7 @@ import { FaVk } from "react-icons/fa6";
 import type { NewsContentBlock, NewsDetail, NewsItem } from "@/entities/news";
 import { SITE_URL } from "@/shared/config/site";
 import { CopyContentBox } from "@/shared/ui/copy-content-box";
+import { Noindex } from "@/shared/ui/noindex";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import styles from "./ContentDetailPage.module.scss";
@@ -60,49 +61,51 @@ export function ContentDetailPage({
           )}
         </article>
 
-        <SmartStickySidebar className={styles.sidebar}>
-          <SidebarPanel title="Содержание">
-            <div className={styles.tocList}>
-              {headings.length > 0 ? (
-                headings.map((heading) => (
-                  <a
-                    className={styles.tocItem}
-                    href={`#${heading.id}`}
-                    key={heading.id}
-                  >
-                    {heading.title}
-                  </a>
-                ))
-              ) : (
-                <span className={styles.tocItem}>Материал</span>
-              )}
-            </div>
-          </SidebarPanel>
+        <Noindex>
+          <SmartStickySidebar className={styles.sidebar}>
+            <SidebarPanel title="Содержание">
+              <div className={styles.tocList}>
+                {headings.length > 0 ? (
+                  headings.map((heading) => (
+                    <a
+                      className={styles.tocItem}
+                      href={`#${heading.id}`}
+                      key={heading.id}
+                    >
+                      {heading.title}
+                    </a>
+                  ))
+                ) : (
+                  <span className={styles.tocItem}>Материал</span>
+                )}
+              </div>
+            </SidebarPanel>
 
-          <SidebarPanel title="Поделиться">
-            <div className={styles.shareButtons}>
-              <a
-                className={styles.shareButton}
-                href={shareHref}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <FaTelegram aria-hidden="true" />
-              </a>
-              <a
-                className={styles.shareButton}
-                href={vkShareHref}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <FaVk aria-hidden="true" />
-              </a>
-            </div>
-          </SidebarPanel>
+            <SidebarPanel title="Поделиться">
+              <div className={styles.shareButtons}>
+                <a
+                  className={styles.shareButton}
+                  href={shareHref}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <FaTelegram aria-hidden="true" />
+                </a>
+                <a
+                  className={styles.shareButton}
+                  href={vkShareHref}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <FaVk aria-hidden="true" />
+                </a>
+              </div>
+            </SidebarPanel>
 
-          <AuthorSidebarCard contentLabel={contentLabel} item={item} />
-          {sidebarCta && <SidebarCta block={sidebarCta} />}
-        </SmartStickySidebar>
+            <AuthorSidebarCard contentLabel={contentLabel} item={item} />
+            {sidebarCta && <SidebarCta block={sidebarCta} />}
+          </SmartStickySidebar>
+        </Noindex>
       </div>
 
       {related.length > 0 && (

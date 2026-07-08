@@ -357,6 +357,7 @@ export async function getNewsPageData({
   tag,
   topic,
 }: GetNewsPageDataParams = {}): Promise<NewsPageData> {
+  const activeTag = topic ? null : tag;
   const requestedLimit = getListLimit(page);
   const newsParams = new URLSearchParams({
     fields: NEWS_FIELDS,
@@ -370,8 +371,8 @@ export async function getNewsPageData({
     newsParams.set("filter[topic][slug][_eq]", topic);
   }
 
-  if (tag) {
-    newsParams.set("filter[tags][news_tags_id][slug][_eq]", tag);
+  if (activeTag) {
+    newsParams.set("filter[tags][news_tags_id][slug][_eq]", activeTag);
   }
 
   if (q) {

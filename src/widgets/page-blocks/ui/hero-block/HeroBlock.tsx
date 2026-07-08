@@ -18,29 +18,29 @@ export function HeroBlock({ block }: HeroBlockProps) {
           {block.eyebrow && <p className={styles.eyebrow}>{block.eyebrow}</p>}
           <h1 className={styles.title}>{block.title}</h1>
 
-          <div className={styles.bottom}>
+          {block.description && (
             <p className={styles.description}>{block.description}</p>
+          )}
 
-            {block.link && (
-              <a
-                className={styles.telegram}
-                href={normalizeExternalLink(block.link)}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <FaTelegram aria-hidden="true" className={styles.telegramIcon} />
-                <span>{block.link}</span>
-              </a>
-            )}
+          {block.link && (
+            <a
+              className={styles.telegram}
+              href={normalizeExternalLink(block.link)}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <FaTelegram aria-hidden="true" className={styles.telegramIcon} />
+              <span>{block.link}</span>
+            </a>
+          )}
 
-            {block.buttons.length > 0 && (
-              <div className={styles.actions}>
-                {block.buttons.map((button, index) => (
-                  <HeroButton button={button} key={`hero-button-${button.id}-${index}`} />
-                ))}
-              </div>
-            )}
-          </div>
+          {block.buttons.length > 0 && (
+            <div className={styles.actions}>
+              {block.buttons.map((button, index) => (
+                <HeroButton button={button} key={`hero-button-${button.id}-${index}`} />
+              ))}
+            </div>
+          )}
         </div>
 
         {block.image && (
@@ -59,9 +59,12 @@ export function HeroBlock({ block }: HeroBlockProps) {
 }
 
 function HeroButton({ button }: { button: PageHeroButton }) {
-  const className = `${styles.button} ${
-    button.variant === "secondary" ? styles.buttonSecondary : styles.buttonPrimary
-  }`;
+  const variantClassNames = {
+    outline: styles.buttonOutline,
+    primary: styles.buttonPrimary,
+    secondary: styles.buttonSecondary,
+  };
+  const className = `${styles.button} ${variantClassNames[button.variant]}`;
 
   return (
     <Link
