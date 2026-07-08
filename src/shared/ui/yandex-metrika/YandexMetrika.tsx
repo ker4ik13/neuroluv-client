@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 import { YANDEX_METRIKA_ID } from "@/shared/config/analytics";
 
 export function YandexMetrika() {
@@ -9,8 +7,9 @@ export function YandexMetrika() {
 
   return (
     <>
-      <Script id="yandex-metrika" strategy="afterInteractive">
-        {`
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
           (function(m,e,t,r,i,k,a){
             m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
             m[i].l=1*new Date();
@@ -26,8 +25,10 @@ export function YandexMetrika() {
             accurateTrackBounce: true,
             webvisor: true
           });
-        `}
-      </Script>
+        `,
+        }}
+        id="yandex-metrika"
+      />
       <noscript>
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
