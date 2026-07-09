@@ -11,6 +11,7 @@ export type ContentHeading = {
   title: string;
   blockId: number;
   localIndex: number;
+  source: "block-title" | "html";
 };
 
 type ContentBlocksProps = {
@@ -72,27 +73,29 @@ export function buildContentHeadings(blocks: NewsContentBlock[]): ContentHeading
   const headings: ContentHeading[] = [];
 
   blocks.forEach((block) => {
-    if (block.type === "html") {
-      extractHtmlHeadings(block.content).forEach((title, localIndex) => {
+    const blockTitle = getContentBlockTitle(block);
+
+    if (blockTitle) {
+      headings.push({
+        id: createUniqueHeadingId(blockTitle, usedIds),
+        title: blockTitle,
+        blockId: block.id,
+        localIndex: 0,
+        source: "block-title",
+      });
+    }
+
+    const htmlContent = getHtmlContent(block);
+
+    if (htmlContent) {
+      extractHtmlHeadings(htmlContent).forEach((title, localIndex) => {
         headings.push({
           id: createUniqueHeadingId(title, usedIds),
           title,
           blockId: block.id,
           localIndex,
+          source: "html",
         });
-      });
-
-      return;
-    }
-
-    const title = getContentBlockTitle(block);
-
-    if (title) {
-      headings.push({
-        id: createUniqueHeadingId(title, usedIds),
-        title,
-        blockId: block.id,
-        localIndex: 0,
       });
     }
   });
@@ -115,7 +118,7 @@ function ContentBlockView({
             dangerouslySetInnerHTML={{
               __html: addHeadingIdsToHtml(
                 block.content,
-                getBlockHeadings(headings, block.id),
+                getHtmlHeadings(headings, block.id),
               ),
             }}
           />
@@ -132,7 +135,7 @@ function ContentBlockView({
           dangerouslySetInnerHTML={{
             __html: addHeadingIdsToHtml(
               block.content,
-              getBlockHeadings(headings, block.id),
+              getHtmlHeadings(headings, block.id),
             ),
           }}
         />
@@ -314,7 +317,7 @@ function ContentBlockView({
 }
 
 function extractHtmlHeadings(html: string): string[] {
-  return [...html.matchAll(/<h[2-3][^>]*>([\s\S]*?)<\/h[2-3]>/gi)]
+  return [...html.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)]
     .map((match) => stripHtml(match[1] || "").trim())
     .filter(Boolean);
 }
@@ -323,7 +326,7 @@ function addHeadingIdsToHtml(html: string, headings: ContentHeading[]): string {
   let index = 0;
 
   return html.replace(
-    /<(h[2-3])([^>]*)>([\s\S]*?)<\/\1>/gi,
+    /<(h2)([^>]*)>([\s\S]*?)<\/\1>/gi,
     (match, tag: string, attributes: string, content: string) => {
       const heading = headings[index];
       index += 1;
@@ -354,18 +357,30 @@ function getContentBlockTitle(block: NewsContentBlock): string | null {
   return null;
 }
 
-function getBlockHeadings(
+function getHtmlContent(block: NewsContentBlock): string | null {
+  if (block.type === "html" || block.type === "text") {
+    return block.content;
+  }
+
+  return null;
+}
+
+function getHtmlHeadings(
   headings: ContentHeading[],
   blockId: number,
 ): ContentHeading[] {
-  return headings.filter((heading) => heading.blockId === blockId);
+  return headings.filter(
+    (heading) => heading.blockId === blockId && heading.source === "html",
+  );
 }
 
 function getBlockHeadingId(
   headings: ContentHeading[],
   blockId: number,
 ): string | undefined {
-  return headings.find((heading) => heading.blockId === blockId)?.id;
+  return headings.find(
+    (heading) => heading.blockId === blockId && heading.source === "block-title",
+  )?.id;
 }
 
 function createUniqueHeadingId(
