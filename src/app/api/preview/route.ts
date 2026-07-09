@@ -6,6 +6,7 @@ import {
   DIRECTUS_PREVIEW_SECRET,
   DIRECTUS_PREVIEW_TOKEN,
 } from "@/shared/config/directus";
+import { SITE_URL } from "@/shared/config/site";
 import { canReadDirectusItemStatus } from "@/shared/lib/preview/directus-preview";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,10 @@ export async function GET(request: NextRequest) {
   const mode = await draftMode();
   mode.enable();
 
-  const redirectUrl = new URL(getPreviewPath(collection, record.slug), request.url);
+  const redirectUrl = new URL(
+    getPreviewPath(collection, record.slug),
+    getPreviewBaseUrl(request),
+  );
   const response = NextResponse.redirect(redirectUrl);
 
   response.headers.set("Cache-Control", "no-store, max-age=0");
@@ -108,6 +112,14 @@ async function getPreviewRecord({
   } catch {
     return null;
   }
+}
+
+function getPreviewBaseUrl(request: NextRequest): string {
+  if (SITE_URL !== "http://localhost:3000") {
+    return SITE_URL;
+  }
+
+  return request.nextUrl.origin;
 }
 
 function getPreviewPath(collection: PreviewCollection, slug: string): string {
