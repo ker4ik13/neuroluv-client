@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import type { PagePromptCard, PagePromptsBlock } from "@/entities/page";
+import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 
 import styles from "./PromptsBlock.module.scss";
 
@@ -52,15 +52,13 @@ function PromptCard({ prompt }: { prompt: PagePromptCard }) {
   return (
     <Link className={styles.card} href={prompt.href}>
       {prompt.image && (
-        <span className={styles.imageWrap}>
-          <Image
-            alt={prompt.image.title}
-            className={styles.image}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            src={prompt.image.url}
-          />
-        </span>
+        <PromptCardMedia
+          alt={prompt.image.title || prompt.title}
+          autoPlay={prompt.autoplay}
+          className={styles.imageWrap}
+          image={prompt.image}
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        />
       )}
 
       <span className={styles.cardContent}>

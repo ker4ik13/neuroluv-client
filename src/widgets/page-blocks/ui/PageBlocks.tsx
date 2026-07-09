@@ -11,6 +11,7 @@ import { TableBlock } from "@/widgets/page-blocks/ui/table-block/TableBlock";
 import { TaskGridBlock } from "@/widgets/page-blocks/ui/task-grid-block/TaskGridBlock";
 import { TaskExamplesBlock } from "@/widgets/page-blocks/ui/task-examples-block/TaskExamplesBlock";
 import { UseCasesBlock } from "@/widgets/page-blocks/ui/use-cases-block/UseCasesBlock";
+import { ZeroBlock } from "@/widgets/page-blocks/ui/zero-block/ZeroBlock";
 
 type PageBlocksProps = {
   blocks: PageBlock[];
@@ -49,6 +50,7 @@ const blockRenderers = {
   miniCta: (block: Extract<PageBlock, { type: "miniCta" }>) => (
     <MiniCtaBlock block={block} />
   ),
+  zero: (block: Extract<PageBlock, { type: "zero" }>) => <ZeroBlock block={block} />,
 };
 
 export function PageBlocks({ blocks }: PageBlocksProps) {
@@ -110,6 +112,10 @@ function PageBlockItem({ block }: { block: PageBlock }) {
 
   if (block.type === "miniCta") {
     return blockRenderers.miniCta(block);
+  }
+
+  if (block.type === "zero") {
+    return blockRenderers.zero(block);
   }
 
   return null;

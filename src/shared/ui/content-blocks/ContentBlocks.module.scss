@@ -1,0 +1,492 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+@use '../../../styles/vars' as *;
+
+.toc {
+	display: flex;
+	flex-direction: column;
+	gap: rem(14);
+	padding: rem(20);
+	background: $color-surface;
+	border-radius: rem(18);
+
+	h2 {
+		@include heading-font(800);
+
+		margin: 0;
+		color: $color-ink;
+		font-size: rem(22);
+		line-height: 1.1;
+		text-transform: uppercase;
+	}
+}
+
+.tocList {
+	display: flex;
+	flex-direction: column;
+	gap: rem(8);
+}
+
+.tocItem {
+	@include body-font(500);
+
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	padding: rem(2) 0;
+	color: $color-ink-muted;
+	font-size: rem(16);
+	line-height: 1.35;
+	text-decoration: none;
+	transition: color 160ms ease;
+
+	&:hover {
+		color: $color-cyan;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.textBlock {
+	display: flex;
+	flex-direction: column;
+	gap: rem(20);
+
+	:where(h2, h3, p, ul, ol, blockquote) {
+		margin: 0;
+	}
+
+	h2 {
+		@include heading-font(900);
+
+		scroll-margin-top: rem(120);
+		color: $color-ink;
+		font-size: rem(40);
+		line-height: rem(42);
+
+		@media (max-width: em($breakpoint-tablet)) {
+			font-size: rem(30);
+			line-height: 1.1;
+		}
+	}
+
+	h3 {
+		@include heading-font(800);
+
+		scroll-margin-top: rem(120);
+		color: $color-ink;
+		font-size: rem(28);
+		line-height: 1.15;
+	}
+
+	p,
+	li {
+		@include body-font(400);
+
+		color: $color-ink;
+		font-size: rem(19);
+		line-height: rem(31);
+
+		@media (max-width: em($breakpoint-tablet)) {
+			font-size: rem(17);
+			line-height: 1.55;
+		}
+	}
+
+	strong {
+		font-weight: 700;
+	}
+
+	a {
+		color: $color-cyan;
+		font-weight: 700;
+		text-decoration: underline;
+		text-decoration-thickness: rem(1);
+		text-underline-offset: rem(4);
+		transition: color 160ms ease;
+
+		&:hover {
+			color: $color-blue;
+		}
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+	}
+
+	ul,
+	ol {
+		display: flex;
+		flex-direction: column;
+		gap: rem(10);
+		padding-left: rem(22);
+	}
+
+	> div {
+		display: flex;
+		flex-direction: column;
+		gap: rem(20);
+	}
+}
+
+.copyHtmlBlock {
+	scroll-margin-top: rem(130);
+}
+
+.quoteBlock,
+.ctaBlock {
+	display: flex;
+	flex-direction: column;
+	gap: rem(12);
+	padding: rem(24);
+	color: $color-white;
+	background: #132838;
+	border-radius: rem(16);
+}
+
+.quoteBlock {
+	position: relative;
+	overflow: hidden;
+	gap: rem(18);
+	padding: rem(30) rem(32) rem(30) rem(88);
+	background: $color-ink-soft;
+	border-radius: rem(24);
+
+	&::before {
+		@include heading-font(900);
+
+		position: absolute;
+		top: rem(30);
+		left: rem(30);
+		display: flex;
+		width: rem(42);
+		height: rem(42);
+		align-items: center;
+		justify-content: center;
+		color: $color-white;
+		font-size: rem(42);
+		line-height: 1;
+		border-radius: rem(14);
+		content: '\201c';
+	}
+
+	h2 {
+		@include heading-font(800);
+
+		color: $color-white;
+		font-size: rem(24);
+		line-height: 1.1;
+	}
+
+	p {
+		@include body-font(700);
+
+		color: #e5f0f5;
+		font-size: rem(22);
+		line-height: 1.4;
+	}
+
+	footer {
+		display: flex;
+		align-items: center;
+		gap: rem(10);
+		margin-top: 0;
+
+		&::before {
+			display: block;
+			width: rem(28);
+			height: rem(2);
+			background: $color-cyan;
+			border-radius: rem(10);
+			content: '';
+		}
+	}
+
+	cite {
+		@include body-font(500);
+
+		color: #c7dbe5;
+		font-size: rem(15);
+		font-style: normal;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		padding: rem(24);
+
+		&::before {
+			position: static;
+			margin-bottom: rem(2);
+		}
+
+		p {
+			font-size: rem(19);
+		}
+	}
+}
+
+.listBlock,
+.cardsBlock,
+.stepsBlock {
+	display: flex;
+	flex-direction: column;
+	gap: rem(18);
+
+	h2 {
+		@include heading-font(800);
+
+		scroll-margin-top: rem(120);
+		color: $color-ink;
+		font-size: rem(30);
+		line-height: 1.1;
+	}
+}
+
+.listItems {
+	display: flex;
+	flex-direction: column;
+	gap: rem(12);
+}
+
+.listItem {
+	padding: rem(18);
+	background: $color-surface;
+	border-radius: rem(16);
+}
+
+.listItemTitle {
+	@include body-font(700);
+
+	color: $color-ink;
+	font-size: rem(18);
+	line-height: 1.2;
+}
+
+.listItemText {
+	@include body-font(400);
+
+	margin-top: rem(6);
+	color: $color-ink-muted;
+	font-size: rem(16);
+	line-height: 1.35;
+}
+
+.imageBlock,
+.videoBlock {
+	display: flex;
+	flex-direction: column;
+	gap: rem(10);
+}
+
+.videoBlock {
+	h2 {
+		@include heading-font(800);
+
+		scroll-margin-top: rem(120);
+		color: $color-ink;
+		font-size: rem(30);
+		line-height: 1.1;
+	}
+
+	video {
+		display: block;
+		width: 100%;
+		max-height: rem(520);
+		background: $color-ink-soft;
+		border-radius: rem(24);
+	}
+
+	a {
+		@include body-font(700);
+
+		display: inline-flex;
+		width: fit-content;
+		align-items: center;
+		justify-content: center;
+		padding: rem(14) rem(20);
+		color: $color-white;
+		font-size: rem(16);
+		background: $color-cyan;
+		border-radius: rem(14);
+	}
+}
+
+.imageWrap {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: rem(340);
+	overflow: hidden;
+	background: $color-surface;
+	border-radius: rem(24);
+
+	img {
+		object-fit: cover;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		height: auto;
+		aspect-ratio: 16 / 10;
+		border-radius: rem(18);
+	}
+}
+
+.imageBlock figcaption,
+.videoBlock figcaption {
+	@include body-font(400);
+
+	color: $color-ink-muted;
+	font-size: rem(14);
+	line-height: 1.35;
+}
+
+.ctaBlock {
+	align-items: flex-start;
+	background: #132838;
+
+	h2 {
+		@include heading-font(800);
+
+		scroll-margin-top: rem(120);
+		color: $color-white;
+		font-size: rem(28);
+		line-height: 1.1;
+	}
+
+	p {
+		@include body-font(400);
+
+		margin-top: rem(8);
+		color: #c7dbe5;
+		font-size: rem(17);
+		line-height: 1.4;
+	}
+}
+
+.ctaButtons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(12);
+}
+
+.ctaButton {
+	@include body-font(700);
+
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: rem(12) rem(18);
+	color: $color-white;
+	font-size: rem(16);
+	line-height: 1;
+	background: $color-cyan;
+	border: rem(1) solid $color-cyan;
+	border-radius: rem(14);
+}
+
+.ctaButtonOutline {
+	color: $color-white;
+	background: transparent;
+	border-color: rgba($color-white, 0.35);
+}
+
+.contentCards {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(16);
+}
+
+.contentCard {
+	display: flex;
+	min-width: rem(220);
+	flex: 1 1 calc((100% - rem(32)) / 3);
+	flex-direction: column;
+	overflow: hidden;
+	color: $color-white;
+	background: $color-ink;
+	border-radius: rem(18);
+}
+
+.contentCardImage {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: rem(130);
+	background: rgba($color-white, 0.18);
+
+	img {
+		object-fit: cover;
+	}
+}
+
+.contentCardText {
+	display: flex;
+	flex-direction: column;
+	gap: rem(8);
+	padding: rem(16);
+
+	span {
+		@include body-font(700);
+
+		color: $color-white;
+		font-size: rem(18);
+		line-height: 1.15;
+	}
+
+	small {
+		@include body-font(400);
+
+		color: rgba($color-white, 0.82);
+		font-size: rem(14);
+		line-height: 1.35;
+	}
+}
+
+.stepsList {
+	display: flex;
+	flex-direction: column;
+	gap: rem(12);
+}
+
+.stepItem {
+	display: flex;
+	align-items: flex-start;
+	gap: rem(16);
+	padding: rem(16);
+	background: $color-surface;
+	border-radius: rem(16);
+
+	> span {
+		@include body-font(800);
+
+		display: inline-flex;
+		width: rem(42);
+		height: rem(42);
+		flex: 0 0 rem(42);
+		align-items: center;
+		justify-content: center;
+		color: $color-white;
+		font-size: rem(18);
+		background: $color-blue;
+		border-radius: 50%;
+	}
+
+	p {
+		@include body-font(700);
+
+		color: $color-ink;
+		font-size: rem(18);
+		line-height: 1.2;
+	}
+
+	small {
+		@include body-font(400);
+
+		display: block;
+		margin-top: rem(5);
+		color: $color-ink-muted;
+		font-size: rem(15);
+		line-height: 1.35;
+	}
+}

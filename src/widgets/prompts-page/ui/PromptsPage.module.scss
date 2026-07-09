@@ -441,7 +441,11 @@ $sticky-sidebar-top: 112;
 		position: absolute;
 		inset: rem(-28);
 		z-index: -1;
-		background: radial-gradient(circle, rgba($color-cyan, 0.55), transparent 68%);
+		background: radial-gradient(
+			circle,
+			rgba($color-cyan, 0.55),
+			transparent 68%
+		);
 		content: '';
 		filter: blur(rem(16));
 	}

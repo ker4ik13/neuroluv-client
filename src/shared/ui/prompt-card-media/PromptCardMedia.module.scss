@@ -1,0 +1,35 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/vars' as *;
+
+.media {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.playBadge {
+	position: absolute;
+	right: rem(14);
+	bottom: rem(14);
+	z-index: 2;
+	display: inline-flex;
+	width: rem(42);
+	height: rem(42);
+	align-items: center;
+	justify-content: center;
+	color: $color-white;
+	background: rgba($color-ink, 0.82);
+	border: rem(1) solid rgba($color-white, 0.28);
+	border-radius: 50%;
+	box-shadow: 0 rem(8) rem(18) rgba(0, 0, 0, 0.22);
+	pointer-events: none;
+
+	svg {
+		width: rem(15);
+		height: rem(15);
+		margin-left: rem(2);
+	}
+}

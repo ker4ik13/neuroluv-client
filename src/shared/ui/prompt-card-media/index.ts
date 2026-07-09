@@ -1,0 +1,1 @@
+export { PromptCardMedia } from "./PromptCardMedia";

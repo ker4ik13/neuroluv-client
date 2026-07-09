@@ -26,4 +26,5 @@ export type {
   PageTaskExamplesCard,
   PageUseCaseCard,
   PageUseCasesBlock,
+  PageZeroBlock,
 } from "./types";

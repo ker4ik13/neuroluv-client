@@ -7,8 +7,10 @@ type DirectusResponse<T> = {
   data: T;
 };
 
-type DirectusRequestOptions = {
+export type DirectusRequestOptions = {
+  cache?: RequestCache;
   next?: NextFetchRequestConfig;
+  token?: string | null;
 };
 
 export class DirectusApiError extends Error {
@@ -25,9 +27,10 @@ export async function directusRequest<T>(
   path: string,
   options: DirectusRequestOptions = {},
 ): Promise<T> {
-  const headers = DIRECTUS_TOKEN
+  const authToken = options.token ?? DIRECTUS_TOKEN;
+  const headers = authToken
     ? {
-        Authorization: `Bearer ${DIRECTUS_TOKEN}`,
+        Authorization: `Bearer ${authToken}`,
       }
     : undefined;
 
@@ -36,6 +39,7 @@ export async function directusRequest<T>(
   for (let attempt = 0; attempt <= DIRECTUS_RETRY_ATTEMPTS; attempt += 1) {
     try {
       const response = await fetch(`${DIRECTUS_URL}${path}`, {
+        cache: options.cache,
         headers,
         next: options.next,
       });

@@ -122,6 +122,7 @@ export type PromptItem = {
   description: string;
   image: PromptImage | null;
   images: PromptImage[];
+  autoplay: boolean;
   neuralNetwork: PromptTaxonomy | null;
   contentKind: PromptTaxonomy | null;
   format: string | null;

@@ -23,6 +23,10 @@ export function PromptComposer({
     () => applyPromptVariables(promptText, values),
     [promptText, values],
   );
+  const promptParts = useMemo(
+    () => buildPromptParts(promptText, values),
+    [promptText, values],
+  );
 
   return (
     <>
@@ -32,7 +36,20 @@ export function PromptComposer({
         title={title || "Промпт"}
       >
         {modelLabel && <strong className={styles.promptModel}>{modelLabel}</strong>}
-        <p className={styles.promptText}>{resolvedPrompt}</p>
+        <p className={styles.promptText}>
+          {promptParts.map((part, index) =>
+            part.isReplacement ? (
+              <mark
+                className={styles.promptReplacement}
+                key={`prompt-part-${index}`}
+              >
+                {part.text}
+              </mark>
+            ) : (
+              <span key={`prompt-part-${index}`}>{part.text}</span>
+            ),
+          )}
+        </p>
       </CopyContentBox>
       {variables.length > 0 && (
         <div className={styles.promptVariables}>
@@ -83,4 +100,42 @@ function applyPromptVariables(
 
     return value || variable;
   });
+}
+
+function buildPromptParts(
+  prompt: string,
+  values: Record<string, string>,
+): Array<{ isReplacement: boolean; text: string }> {
+  const parts: Array<{ isReplacement: boolean; text: string }> = [];
+  const variablePattern = /\[[^[\]\n]{1,80}\]/g;
+  let lastIndex = 0;
+
+  for (const match of prompt.matchAll(variablePattern)) {
+    const variable = match[0];
+    const index = match.index || 0;
+    const value = values[variable]?.trim();
+
+    if (index > lastIndex) {
+      parts.push({
+        isReplacement: false,
+        text: prompt.slice(lastIndex, index),
+      });
+    }
+
+    parts.push({
+      isReplacement: Boolean(value),
+      text: value || variable,
+    });
+
+    lastIndex = index + variable.length;
+  }
+
+  if (lastIndex < prompt.length) {
+    parts.push({
+      isReplacement: false,
+      text: prompt.slice(lastIndex),
+    });
+  }
+
+  return parts;
 }

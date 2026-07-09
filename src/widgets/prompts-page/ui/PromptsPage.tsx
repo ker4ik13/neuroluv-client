@@ -18,6 +18,7 @@ import {
 } from "@/shared/ui/content-list-controls";
 import { removePaginationParamFromAddressBar } from "@/shared/lib/url/remove-pagination-param";
 import { Noindex } from "@/shared/ui/noindex";
+import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
@@ -350,20 +351,21 @@ function PromptCard({
 
   return (
     <Link className={styles.card} href={prompt.href}>
-      <span className={styles.cardImage}>
-        {prompt.image ? (
-          <Image
-            alt={getPromptImageAlt(prompt.image.title, prompt.title)}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 290px"
-            src={prompt.image.url}
-          />
-        ) : (
-          <span className={styles.cardPlaceholder}>
-            {type?.title || prompt.neuralNetwork?.title || "AI"}
-          </span>
-        )}
-      </span>
+      <PromptCardMedia
+        alt={
+          prompt.image
+            ? getPromptImageAlt(prompt.image.title, prompt.title)
+            : prompt.title
+        }
+        autoPlay={prompt.autoplay}
+        className={styles.cardImage}
+        image={prompt.image}
+        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 290px"
+      >
+        <span className={styles.cardPlaceholder}>
+          {type?.title || prompt.neuralNetwork?.title || "AI"}
+        </span>
+      </PromptCardMedia>
 
       <span className={styles.cardBody}>
         <span className={styles.badges}>

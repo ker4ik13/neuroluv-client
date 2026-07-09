@@ -1,6 +1,7 @@
 import type { PageSeo, SeoAsset, SiteSeo } from "@/entities/seo";
 import { directusRequest } from "@/shared/api/directus/client";
 import { buildDirectusAssetUrl } from "@/shared/config/directus";
+import { getDirectusPreviewContext } from "@/shared/lib/preview/directus-preview";
 
 type DirectusFile = {
   id: string;
@@ -117,12 +118,16 @@ export async function getSiteSeo(): Promise<SiteSeo> {
 }
 
 export async function getPageSeoBySlug(slug: string): Promise<PageSeo | null> {
+  const preview = await getDirectusPreviewContext();
   const params = new URLSearchParams({
     fields: DIRECTUS_SEO_FIELDS,
     limit: "1",
   });
 
-  params.set("filter[status][_eq]", "published");
+  if (!preview.enabled) {
+    params.set("filter[status][_eq]", "published");
+  }
+
   params.set("filter[slug][_eq]", slug);
 
   let pages: DirectusPageSeo[];
@@ -130,7 +135,7 @@ export async function getPageSeoBySlug(slug: string): Promise<PageSeo | null> {
   try {
     pages = await directusRequest<DirectusPageSeo[]>(
       `/items/pages?${params.toString()}`,
-      { next: { revalidate: 60 } },
+      preview.requestOptions,
     );
   } catch {
     return null;

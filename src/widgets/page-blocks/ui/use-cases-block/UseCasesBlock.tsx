@@ -48,7 +48,10 @@ export function UseCasesBlock({ block }: UseCasesBlockProps) {
         </div>
 
         {block.useCases.length > 0 && (
-          <div className={styles.cards}>
+          <div
+            className={styles.cards}
+            data-layout={getCardsLayout(block.useCases.length)}
+          >
             {block.useCases.map((card, index) => (
               <UseCaseCard card={card} key={`use-case-${card.id}-${index}`} />
             ))}
@@ -75,6 +78,18 @@ export function UseCasesBlock({ block }: UseCasesBlockProps) {
       </div>
     </section>
   );
+}
+
+function getCardsLayout(count: number): "one" | "two" | "three" {
+  if (count === 1) {
+    return "one";
+  }
+
+  if (count === 2 || count === 4) {
+    return "two";
+  }
+
+  return "three";
 }
 
 function UseCaseCard({ card }: { card: PageUseCaseCard }) {

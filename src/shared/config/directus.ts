@@ -12,6 +12,12 @@ export const DIRECTUS_TOKEN =
 
 export const DIRECTUS_CODEX_TOKEN = DIRECTUS_TOKEN;
 
+export const DIRECTUS_PREVIEW_TOKEN =
+  process.env.DIRECTUS_PREVIEW_TOKEN || process.env.DIRECTUS_TOKEN || "";
+
+export const DIRECTUS_PREVIEW_SECRET =
+  process.env.DIRECTUS_PREVIEW_SECRET || process.env.PREVIEW_SECRET || "";
+
 type DirectusAssetOptions = {
   transform?: boolean;
   type?: string | null;

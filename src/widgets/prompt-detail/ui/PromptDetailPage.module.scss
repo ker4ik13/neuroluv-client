@@ -293,6 +293,15 @@ $sticky-sidebar-top: 112;
 	overflow-wrap: anywhere;
 }
 
+.promptReplacement {
+	display: inline;
+	padding: 0 rem(3);
+	color: $color-cyan;
+	font-weight: 800;
+	background: rgba($color-cyan, 0.14);
+	border-radius: rem(6);
+}
+
 .promptModel {
 	@include body-font(800);
 

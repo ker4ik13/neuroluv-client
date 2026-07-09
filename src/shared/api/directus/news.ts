@@ -26,6 +26,10 @@ import {
   type DirectusSeoFields,
 } from "@/shared/api/directus/seo";
 import { buildDirectusAssetUrl } from "@/shared/config/directus";
+import {
+  canReadDirectusItemStatus,
+  getDirectusPreviewContext,
+} from "@/shared/lib/preview/directus-preview";
 
 type DirectusFile = {
   id: string;
@@ -408,12 +412,12 @@ export async function getNewsPageData({
     ),
   ]);
 
-  const normalizedNews = news.map(normalizeNewsItem).filter(isNewsItem);
+  const normalizedNews = news.map((item) => normalizeNewsItem(item)).filter(isNewsItem);
 
   return {
     hasMore: normalizedNews.length > requestedLimit,
     news: normalizedNews.slice(0, requestedLimit),
-    sidebarNews: sidebarNews.map(normalizeNewsItem).filter(isNewsItem),
+    sidebarNews: sidebarNews.map((item) => normalizeNewsItem(item)).filter(isNewsItem),
     topics: topics.map(normalizeTaxonomy).filter(isTaxonomy),
     tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
   };
@@ -424,20 +428,24 @@ function getListLimit(page: number): number {
 }
 
 export async function getNewsBySlug(slug: string): Promise<NewsDetail | null> {
+  const preview = await getDirectusPreviewContext();
   const params = new URLSearchParams({
     fields: NEWS_DETAIL_FIELDS,
     limit: "1",
   });
 
-  params.set("filter[status][_eq]", "published");
+  if (!preview.enabled) {
+    params.set("filter[status][_eq]", "published");
+  }
+
   params.set("filter[slug][_eq]", slug);
 
   const news = await directusRequest<DirectusNewsItem[]>(
     `/items/news?${params.toString()}`,
-    { next: { revalidate: 60 } },
+    preview.requestOptions,
   );
 
-  return normalizeNewsDetail(news[0] || null);
+  return normalizeNewsDetail(news[0] || null, preview.enabled);
 }
 
 export async function getRelatedNews(
@@ -458,7 +466,7 @@ export async function getRelatedNews(
     { next: { revalidate: 60 } },
   );
 
-  return news.map(normalizeNewsItem).filter(isNewsItem);
+  return news.map((item) => normalizeNewsItem(item)).filter(isNewsItem);
 }
 
 export async function getNewsDetailPageData(
@@ -483,17 +491,21 @@ export async function getNewsDetailPageData(
 }
 
 async function getNewsPageBlocksBySlug(slug: string): Promise<PageBlock[]> {
+  const preview = await getDirectusPreviewContext();
   const params = new URLSearchParams({
     fields: PAGE_BLOCK_FIELDS,
     limit: "1",
   });
 
-  params.set("filter[status][_eq]", "published");
+  if (!preview.enabled) {
+    params.set("filter[status][_eq]", "published");
+  }
+
   params.set("filter[slug][_eq]", slug);
 
   const news = await directusRequest<{ blocks?: DirectusPageBlock[] }[]>(
     `/items/news?${params.toString()}`,
-    { next: { revalidate: 60 } },
+    preview.requestOptions,
   );
 
   return normalizePageBlocks(news[0]?.blocks || []);
@@ -516,8 +528,15 @@ export async function getNewsSlugs(): Promise<string[]> {
   return news.map((item) => item.slug).filter((slug): slug is string => Boolean(slug));
 }
 
-function normalizeNewsItem(item: DirectusNewsItem): NewsItem | null {
-  if (!item.title || !item.slug || item.status !== "published") {
+function normalizeNewsItem(
+  item: DirectusNewsItem,
+  previewEnabled = false,
+): NewsItem | null {
+  if (
+    !item.title ||
+    !item.slug ||
+    !canReadDirectusItemStatus(item.status, previewEnabled)
+  ) {
     return null;
   }
 
@@ -541,12 +560,15 @@ function normalizeNewsItem(item: DirectusNewsItem): NewsItem | null {
   };
 }
 
-function normalizeNewsDetail(item: DirectusNewsItem | null): NewsDetail | null {
+function normalizeNewsDetail(
+  item: DirectusNewsItem | null,
+  previewEnabled = false,
+): NewsDetail | null {
   if (!item) {
     return null;
   }
 
-  const newsItem = normalizeNewsItem(item);
+  const newsItem = normalizeNewsItem(item, previewEnabled);
 
   if (!newsItem) {
     return null;

@@ -1,4 +1,5 @@
 import type { NavigationIcon } from "@/entities/navigation";
+import type { NewsContentBlock } from "@/entities/news";
 
 export type PageImage = {
   id: string;
@@ -165,6 +166,7 @@ export type PagePromptCard = {
   viewsCount: number;
   neuralNetwork: string | null;
   image: PageImage | null;
+  autoplay: boolean;
 };
 
 export type PagePromptsBlock = {
@@ -219,6 +221,14 @@ export type PageMiniCtaBlock = {
   buttons: PageHeroButton[];
 };
 
+export type PageZeroBlock = {
+  id: number;
+  type: "zero";
+  title: string | null;
+  description: string | null;
+  contentBlocks: NewsContentBlock[];
+};
+
 export type PageBlock =
   | PageHeroBlock
   | PageAboutBlock
@@ -231,7 +241,8 @@ export type PageBlock =
   | PagePromptsBlock
   | PageTaskGridBlock
   | PageBigCtaBlock
-  | PageMiniCtaBlock;
+  | PageMiniCtaBlock
+  | PageZeroBlock;
 
 export type Page = {
   id: number;

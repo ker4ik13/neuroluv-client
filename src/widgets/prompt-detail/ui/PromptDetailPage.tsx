@@ -12,6 +12,7 @@ import type {
 import { SITE_URL } from "@/shared/config/site";
 import { CopyContentBox } from "@/shared/ui/copy-content-box";
 import { Noindex } from "@/shared/ui/noindex";
+import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
 import { CopyPromptButton } from "./CopyPromptButton";
@@ -151,7 +152,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
             <Link href="/prompts">Все промпты</Link>
           </div>
           <div className={styles.relatedGrid}>
-            {related.slice(0, 3).map((prompt, index) => (
+            {related.slice(0, 6).map((prompt, index) => (
               <RelatedPromptCard
                 key={`related-prompt-${prompt.id}-${index}`}
                 prompt={prompt}
@@ -187,8 +188,9 @@ function SidebarCta({ block }: { block: PromptCtaBlock }) {
 }
 
 function PromptHeroVisual({ item }: { item: PromptDetail }) {
+  const isVideo = isVideoPrompt(item);
   const mediaStyle = {
-    "--prompt-media-ratio": getPromptAspectRatio(item.format),
+    "--prompt-media-ratio": getPromptAspectRatio(item.format, isVideo),
   } as CSSProperties;
 
   return (
@@ -196,7 +198,10 @@ function PromptHeroVisual({ item }: { item: PromptDetail }) {
       {item.image ? (
         item.image.type?.startsWith("video/") ? (
           <video
+            autoPlay
             controls
+            loop
+            muted
             playsInline
             preload="metadata"
             src={item.image.url}
@@ -461,18 +466,15 @@ function AuthorCard({ item }: { item: PromptDetail }) {
 function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
   return (
     <Link className={styles.relatedCard} href={prompt.href}>
-      <span className={styles.relatedImage}>
-        {prompt.image ? (
-          <Image
-            alt={getImageAlt(prompt.image.title, prompt.title)}
-            fill
-            sizes="(max-width: 768px) 100vw, 386px"
-            src={prompt.image.url}
-          />
-        ) : (
-          <span>{prompt.contentKind?.title || prompt.types[0]?.title || "Фото"}</span>
-        )}
-      </span>
+      <PromptCardMedia
+        alt={prompt.image ? getImageAlt(prompt.image.title, prompt.title) : prompt.title}
+        autoPlay={prompt.autoplay}
+        className={styles.relatedImage}
+        image={prompt.image}
+        sizes="(max-width: 768px) 100vw, 386px"
+      >
+        <span>{prompt.contentKind?.title || prompt.types[0]?.title || "Фото"}</span>
+      </PromptCardMedia>
       <span className={styles.relatedBadges}>
         {(prompt.contentKind || prompt.types[0]) && (
           <small>{(prompt.contentKind || prompt.types[0])?.title}</small>
@@ -603,7 +605,18 @@ function getContentBlockTitle(block: PromptContentBlock): string | null {
   return null;
 }
 
-function getPromptAspectRatio(format: string | null): string {
+function isVideoPrompt(item: PromptDetail): boolean {
+  return (
+    item.image?.type?.startsWith("video/") === true ||
+    item.contentKind?.slug === "video"
+  );
+}
+
+function getPromptAspectRatio(format: string | null, isVideo: boolean): string {
+  if (isVideo) {
+    return "3 / 4";
+  }
+
   const match = format?.match(/(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)/);
 
   if (!match) {

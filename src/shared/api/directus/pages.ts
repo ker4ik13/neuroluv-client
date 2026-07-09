@@ -27,9 +27,16 @@ import type {
   PageTaskExamplesCard,
   PageUseCaseCard,
   PageUseCasesBlock,
+  PageZeroBlock,
 } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
+import {
+  buildDirectusContentBlockFields,
+  normalizeDirectusContentBlocks,
+  type DirectusContentBlock,
+} from "@/shared/api/directus/content-blocks";
 import { buildDirectusAssetUrl } from "@/shared/config/directus";
+import { getDirectusPreviewContext } from "@/shared/lib/preview/directus-preview";
 
 type DirectusIcon = {
   title: string | null;
@@ -272,6 +279,7 @@ type DirectusPrompt = {
   description: string | null;
   format: string | null;
   difficulty: string | null;
+  autoplay: boolean | null;
   views_count: number | null;
   status: "published" | "draft" | "archived" | string | null;
   neural_network: DirectusPromptNeuralNetwork | number | null;
@@ -348,6 +356,14 @@ type DirectusMiniCtaBlock = {
   buttons?: DirectusHeroButtonJunction[];
 };
 
+type DirectusZeroBlock = {
+  id: number;
+  title: string | null;
+  description: string | null;
+  is_active: boolean | null;
+  content_blocks?: DirectusContentBlock[];
+};
+
 export type DirectusPageBlock = {
   id: number;
   sort: number | null;
@@ -365,6 +381,7 @@ export type DirectusPageBlock = {
     | DirectusTaskGridBlock
     | DirectusBigCtaBlock
     | DirectusMiniCtaBlock
+    | DirectusZeroBlock
     | number
     | string
     | null;
@@ -568,6 +585,7 @@ export const PAGE_FIELDS = [
   "blocks.item:block_prompts.prompts.prompts_id.description",
   "blocks.item:block_prompts.prompts.prompts_id.format",
   "blocks.item:block_prompts.prompts.prompts_id.difficulty",
+  "blocks.item:block_prompts.prompts.prompts_id.autoplay",
   "blocks.item:block_prompts.prompts.prompts_id.views_count",
   "blocks.item:block_prompts.prompts.prompts_id.status",
   "blocks.item:block_prompts.prompts.prompts_id.neural_network.name",
@@ -644,6 +662,18 @@ export const PAGE_FIELDS = [
   "blocks.item:block_mini_cta.buttons.hero_buttons_id.icon.code",
   "blocks.item:block_mini_cta.buttons.hero_buttons_id.icon.library",
   "blocks.item:block_mini_cta.buttons.hero_buttons_id.icon.is_active",
+  "blocks.item:block_zero.id",
+  "blocks.item:block_zero.title",
+  "blocks.item:block_zero.description",
+  "blocks.item:block_zero.is_active",
+].join(",");
+
+const ZERO_BLOCK_FIELDS = [
+  "id",
+  "title",
+  "description",
+  "is_active",
+  ...buildDirectusContentBlockFields("content_blocks"),
 ].join(",");
 
 export const PAGE_BLOCK_FIELDS = PAGE_FIELDS.split(",")
@@ -651,17 +681,21 @@ export const PAGE_BLOCK_FIELDS = PAGE_FIELDS.split(",")
   .join(",");
 
 export async function getPageBySlug(slug: string): Promise<Page | null> {
+  const preview = await getDirectusPreviewContext();
   const params = new URLSearchParams({
     fields: PAGE_FIELDS,
     limit: "1",
   });
 
-  params.set("filter[status][_eq]", "published");
+  if (!preview.enabled) {
+    params.set("filter[status][_eq]", "published");
+  }
+
   params.set("filter[slug][_eq]", slug);
 
   const pages = await directusRequest<DirectusPage[]>(
     `/items/pages?${params.toString()}`,
-    { next: { revalidate: 60 } },
+    preview.requestOptions,
   );
 
   return hydratePageDynamicBlocks(normalizePage(pages[0] || null));
@@ -679,12 +713,15 @@ export async function getHomePage(): Promise<Page | null> {
     limit: "1",
     sort: "sort,id",
   });
+  const preview = await getDirectusPreviewContext();
 
-  params.set("filter[status][_eq]", "published");
+  if (!preview.enabled) {
+    params.set("filter[status][_eq]", "published");
+  }
 
   const pages = await directusRequest<DirectusPage[]>(
     `/items/pages?${params.toString()}`,
-    { next: { revalidate: 60 } },
+    preview.requestOptions,
   );
 
   return hydratePageDynamicBlocks(normalizePage(pages[0] || null));
@@ -777,6 +814,10 @@ function normalizeBlock(block: DirectusPageBlock): PageBlock | null {
     return normalizeMiniCtaBlock(
       block.item as DirectusMiniCtaBlock | number | string | null,
     );
+  }
+
+  if (block.collection === "block_zero") {
+    return normalizeZeroBlock(block.item as DirectusZeroBlock | number | string | null);
   }
 
   return null;
@@ -1138,6 +1179,10 @@ async function hydratePageDynamicBlocks(page: Page | null): Promise<Page | null>
 
   const blocks = await Promise.all(
     page.blocks.map(async (block) => {
+      if (block.type === "zero") {
+        return hydrateZeroBlock(block);
+      }
+
       if (block.type !== "prompts" || block.selectionMode === "manual") {
         return block;
       }
@@ -1153,6 +1198,17 @@ async function hydratePageDynamicBlocks(page: Page | null): Promise<Page | null>
     ...page,
     blocks,
   };
+}
+
+async function hydrateZeroBlock(block: PageZeroBlock): Promise<PageZeroBlock> {
+  const item = await directusRequest<DirectusZeroBlock>(
+    `/items/block_zero/${block.id}?fields=${ZERO_BLOCK_FIELDS}`,
+    { next: { revalidate: 60 } },
+  );
+
+  const hydratedBlock = normalizeZeroBlock(item);
+
+  return hydratedBlock || block;
 }
 
 const PROMPTS_BLOCK_LIMIT = 3;
@@ -1183,6 +1239,7 @@ const PROMPTS_BLOCK_ITEM_FIELDS = [
   "description",
   "format",
   "difficulty",
+  "autoplay",
   "views_count",
   "status",
   "published_at",
@@ -1235,6 +1292,7 @@ function normalizePromptCard(prompt: DirectusPrompt): PagePromptCard {
         ? prompt.neural_network.name
         : null,
     image: normalizePromptImage(prompt.images || []),
+    autoplay: prompt.autoplay === true,
   };
 }
 
@@ -1343,6 +1401,22 @@ function normalizeMiniCtaBlock(
     description: item.description || "",
     image: normalizeImage(item.image, "CTA"),
     buttons: normalizeHeroButtons(item.buttons || []),
+  };
+}
+
+function normalizeZeroBlock(
+  item: DirectusZeroBlock | number | string | null,
+): PageZeroBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    type: "zero",
+    title: item.title,
+    description: item.description,
+    contentBlocks: normalizeDirectusContentBlocks(item.content_blocks || []),
   };
 }
 
