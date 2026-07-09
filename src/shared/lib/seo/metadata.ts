@@ -28,8 +28,8 @@ const DEFAULT_VARIABLES: SeoTemplateVariables = {
 	SITE_NAME: 'Нейролюб',
 };
 
-const STATIC_FAVICON_URL = '/favicon.svg';
-const STATIC_FAVICON_TYPE = 'image/svg+xml';
+const FAVICON_ICO_URL = '/favicon.ico';
+const FAVICON_SVG_URL = '/favicon.svg';
 
 export function buildSiteMetadata(seo: SiteSeo): Metadata {
 	return {
@@ -147,14 +147,35 @@ function buildIcons(): Metadata['icons'] {
 	return {
 		icon: [
 			{
-				url: STATIC_FAVICON_URL,
-				type: STATIC_FAVICON_TYPE,
+				url: FAVICON_ICO_URL,
+				sizes: 'any',
+			},
+			{
+				url: FAVICON_SVG_URL,
+				type: 'image/svg+xml',
+			},
+			{
+				url: '/favicon-32x32.png',
+				sizes: '32x32',
+				type: 'image/png',
+			},
+			{
+				url: '/favicon-16x16.png',
+				sizes: '16x16',
+				type: 'image/png',
 			},
 		],
 		shortcut: [
 			{
-				url: STATIC_FAVICON_URL,
-				type: STATIC_FAVICON_TYPE,
+				url: FAVICON_ICO_URL,
+				sizes: 'any',
+			},
+		],
+		apple: [
+			{
+				url: '/apple-touch-icon.png',
+				sizes: '180x180',
+				type: 'image/png',
 			},
 		],
 	};
