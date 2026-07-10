@@ -30,6 +30,8 @@ const DEFAULT_VARIABLES: SeoTemplateVariables = {
 
 const FAVICON_ICO_URL = '/favicon.ico';
 const FAVICON_SVG_URL = '/favicon.svg';
+const FAVICON_PNG_URL = '/favicon-96x96.png';
+const APPLE_TOUCH_ICON_URL = '/apple-touch-icon.png';
 
 export function buildSiteMetadata(seo: SiteSeo): Metadata {
 	return {
@@ -155,13 +157,8 @@ function buildIcons(): Metadata['icons'] {
 				type: 'image/svg+xml',
 			},
 			{
-				url: '/favicon-32x32.png',
-				sizes: '32x32',
-				type: 'image/png',
-			},
-			{
-				url: '/favicon-16x16.png',
-				sizes: '16x16',
+				url: FAVICON_PNG_URL,
+				sizes: '96x96',
 				type: 'image/png',
 			},
 		],
@@ -173,7 +170,7 @@ function buildIcons(): Metadata['icons'] {
 		],
 		apple: [
 			{
-				url: '/apple-touch-icon.png',
+				url: APPLE_TOUCH_ICON_URL,
 				sizes: '180x180',
 				type: 'image/png',
 			},
