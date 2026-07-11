@@ -40,7 +40,10 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
   const contentBlocks = item.contentBlocks.filter(
     (block) => !(block.type === "html" && block.content === item.promptText),
   );
-  const headings = buildPromptHeadings(item.promptText, contentBlocks);
+  const headings = buildPromptHeadings(
+    item.isPaid ? "" : item.promptText,
+    contentBlocks,
+  );
   const sidebarCta = getSidebarCta(contentBlocks);
 
   return (
@@ -60,7 +63,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
           <h1 className={styles.heroTitle}>{item.title}</h1>
           <p className={styles.heroDescription}>{item.description}</p>
           <div className={styles.heroActions}>
-            <CopyPromptButton text={item.promptText} />
+            {!item.isPaid && <CopyPromptButton text={item.promptText} />}
             <a
               className={styles.adaptButton}
               href="https://t.me/neuroluv"
@@ -95,13 +98,15 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
 
       <div className={styles.layout}>
         <article className={styles.article}>
-          <section className={styles.promptBox} id="prompt">
-            <PromptComposer
-              modelLabel={item.neuralNetwork?.title}
-              promptText={item.promptText}
-              title={promptSourceBlock?.title}
-            />
-          </section>
+          {!item.isPaid && (
+            <section className={styles.promptBox} id="prompt">
+              <PromptComposer
+                modelLabel={item.neuralNetwork?.title}
+                promptText={item.promptText}
+                title={promptSourceBlock?.title}
+              />
+            </section>
+          )}
 
           {contentBlocks.length > 0 && (
             <div className={styles.contentBlocks}>

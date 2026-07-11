@@ -196,7 +196,6 @@ type DirectusArticleItem = {
   description: string | null;
   created_at: string | null;
   updated_at: string | null;
-  views_count: number | null;
   readtime: number | null;
   article_type: string | null;
   image: DirectusFile | string | null;
@@ -216,7 +215,6 @@ const ARTICLE_FIELDS = [
   "description",
   "created_at",
   "updated_at",
-  "views_count",
   "readtime",
   "article_type",
   "image.id",
@@ -574,7 +572,7 @@ function normalizeArticleItem(
     author: normalizeAuthor(item.author),
     topic: normalizeTopics(item.topics || [])[0] || null,
     tags: normalizeTags(item.tags || []),
-    viewsCount: item.views_count,
+    viewsCount: null,
     seo: normalizeDirectusSeo(item, item.title, item.description || ""),
   };
 }

@@ -276,10 +276,13 @@ function RelatedCard({
       <span className={styles.relatedMeta}>
         <span>{item.author?.name || "Нейролюб"}</span>
         <span>
-          {item.viewsCount !== null
-            ? `${item.viewsCount} `
-            : item.publishedAtLabel}
-          <FaEye aria-hidden="true" aria-label="Просмотры" />
+          {item.viewsCount !== null ? (
+            <>
+              {item.viewsCount} <FaEye aria-hidden="true" aria-label="Просмотры" />
+            </>
+          ) : (
+            item.publishedAtLabel
+          )}
         </span>
       </span>
     </Link>

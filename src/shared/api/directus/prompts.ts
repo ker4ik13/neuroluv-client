@@ -232,6 +232,7 @@ type DirectusPromptItem = {
   content_kind_ref: DirectusTaxonomy | number | null;
   format_ref: DirectusPromptFormat | number | null;
   autoplay: boolean | null;
+  is_paid: boolean | null;
   difficulty: string | null;
   author: DirectusAuthor | string | null;
   published_at: string | null;
@@ -329,6 +330,7 @@ const PROMPT_FIELDS = [
   "format_ref.is_active",
   "format_ref.code",
   "autoplay",
+  "is_paid",
   "difficulty",
   "published_at",
   "updated_at",
@@ -1435,6 +1437,7 @@ function normalizePromptItem(
     image: images[0] || null,
     images,
     autoplay: item.autoplay === true,
+    isPaid: item.is_paid === true,
     neuralNetwork: normalizeNetwork(item.neural_network),
     contentKind: normalizePromptContentKind(item),
     format: getPromptFormatLabel(item),

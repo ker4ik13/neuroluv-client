@@ -123,6 +123,7 @@ export type PromptItem = {
   image: PromptImage | null;
   images: PromptImage[];
   autoplay: boolean;
+  isPaid: boolean;
   neuralNetwork: PromptTaxonomy | null;
   contentKind: PromptTaxonomy | null;
   format: string | null;

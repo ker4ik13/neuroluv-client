@@ -293,6 +293,80 @@ $sticky-sidebar-top: 112;
 	overflow-wrap: anywhere;
 }
 
+.promptTextWrap {
+	position: relative;
+}
+
+.promptTextWrapToggleable {
+	@media (max-width: em($breakpoint-tablet)) {
+		cursor: pointer;
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+	}
+}
+
+.promptTextWrapCollapsed {
+	@media (max-width: em($breakpoint-tablet)) {
+		max-height: rem(360);
+		overflow: hidden;
+
+		&::after {
+			position: absolute;
+			inset: auto 0 0;
+			height: rem(128);
+			pointer-events: none;
+			background: linear-gradient(
+				to bottom,
+				rgba($color-ink-soft, 0),
+				rgba($color-ink-soft, 0.84) 58%,
+				$color-ink-soft 100%
+			);
+			content: "";
+			backdrop-filter: blur(rem(3));
+		}
+	}
+}
+
+.promptToggle {
+	@include body-font(700);
+
+	display: none;
+	align-items: center;
+	justify-content: center;
+	gap: rem(10);
+	width: 100%;
+	margin-top: rem(-4);
+	padding: rem(4) 0;
+	color: $color-cyan;
+	font-size: rem(15);
+	line-height: 1.2;
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+
+	svg {
+		width: rem(14);
+		height: rem(14);
+		transition: transform 180ms ease;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		display: inline-flex;
+	}
+}
+
+.promptToggleExpanded {
+	svg {
+		transform: rotate(180deg);
+	}
+}
+
 .promptReplacement {
 	display: inline;
 	padding: 0 rem(3);

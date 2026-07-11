@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FaChevronDown } from "react-icons/fa";
 
 import { CopyContentBox } from "@/shared/ui/copy-content-box";
 
@@ -12,12 +13,19 @@ type PromptComposerProps = {
   title?: string | null;
 };
 
+const MOBILE_PROMPT_COLLAPSE_THRESHOLD = 800;
+
 export function PromptComposer({
   modelLabel,
   promptText,
   title,
 }: PromptComposerProps) {
   const variables = useMemo(() => extractPromptVariables(promptText), [promptText]);
+  const isLongPrompt = useMemo(
+    () => getPromptTextLength(promptText) > MOBILE_PROMPT_COLLAPSE_THRESHOLD,
+    [promptText],
+  );
+  const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const resolvedPrompt = useMemo(
     () => applyPromptVariables(promptText, values),
@@ -27,6 +35,13 @@ export function PromptComposer({
     () => buildPromptParts(promptText, values),
     [promptText, values],
   );
+  const isPromptCollapsed = isLongPrompt && !isPromptExpanded;
+
+  function togglePrompt() {
+    if (isLongPrompt) {
+      setIsPromptExpanded((expanded) => !expanded);
+    }
+  }
 
   return (
     <>
@@ -36,20 +51,51 @@ export function PromptComposer({
         title={title || "Промпт"}
       >
         {modelLabel && <strong className={styles.promptModel}>{modelLabel}</strong>}
-        <p className={styles.promptText}>
-          {promptParts.map((part, index) =>
-            part.isReplacement ? (
-              <mark
-                className={styles.promptReplacement}
-                key={`prompt-part-${index}`}
-              >
-                {part.text}
-              </mark>
-            ) : (
-              <span key={`prompt-part-${index}`}>{part.text}</span>
-            ),
-          )}
-        </p>
+        <div
+          aria-controls={isLongPrompt ? "prompt-text" : undefined}
+          aria-expanded={isLongPrompt ? isPromptExpanded : undefined}
+          className={`${styles.promptTextWrap} ${
+            isLongPrompt ? styles.promptTextWrapToggleable : ""
+          } ${isPromptCollapsed ? styles.promptTextWrapCollapsed : ""}`}
+          onClick={togglePrompt}
+          onKeyDown={(event) => {
+            if (isLongPrompt && (event.key === "Enter" || event.key === " ")) {
+              event.preventDefault();
+              togglePrompt();
+            }
+          }}
+          role={isLongPrompt ? "button" : undefined}
+          tabIndex={isLongPrompt ? 0 : undefined}
+        >
+          <p className={styles.promptText} id={isLongPrompt ? "prompt-text" : undefined}>
+            {promptParts.map((part, index) =>
+              part.isReplacement ? (
+                <mark
+                  className={styles.promptReplacement}
+                  key={`prompt-part-${index}`}
+                >
+                  {part.text}
+                </mark>
+              ) : (
+                <span key={`prompt-part-${index}`}>{part.text}</span>
+              ),
+            )}
+          </p>
+        </div>
+        {isLongPrompt && (
+          <button
+            aria-controls="prompt-text"
+            aria-expanded={isPromptExpanded}
+            className={`${styles.promptToggle} ${
+              isPromptExpanded ? styles.promptToggleExpanded : ""
+            }`}
+            onClick={togglePrompt}
+            type="button"
+          >
+            {isPromptExpanded ? "Свернуть промпт" : "Показать весь промпт"}
+            <FaChevronDown aria-hidden="true" />
+          </button>
+        )}
       </CopyContentBox>
       {variables.length > 0 && (
         <div className={styles.promptVariables}>
@@ -85,6 +131,10 @@ export function PromptComposer({
       )}
     </>
   );
+}
+
+function getPromptTextLength(prompt: string): number {
+  return prompt.replace(/<[^>]*>/g, "").trim().length;
 }
 
 function extractPromptVariables(prompt: string): string[] {

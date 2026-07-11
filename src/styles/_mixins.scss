@@ -2,9 +2,19 @@
 @use "vars" as *;
 
 @mixin heading-font($weight: 700) {
+  $mobile-weight: $weight;
+
+  @if $weight > 700 {
+    $mobile-weight: 700;
+  }
+
   font-family: $font-heading;
   font-weight: $weight;
   letter-spacing: 0;
+
+  @media (max-width: em($breakpoint-tablet)) {
+    font-weight: $mobile-weight;
+  }
 }
 
 @mixin body-font($weight: 400) {
