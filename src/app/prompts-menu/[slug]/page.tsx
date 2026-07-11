@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import type { PromptsPageData, PromptSortOrder, PromptTaxonomy } from "@/entities/prompt";
+import type { PromptsPageData, PromptSortOrder } from "@/entities/prompt";
 import type { PageBlock } from "@/entities/page";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import {
@@ -63,12 +63,16 @@ export async function generateMetadata({
     }),
   ]);
 
+  if (!filterSeo) {
+    notFound();
+  }
+
   return buildPageMetadata(seo, {
     canonicalPath: filter.path,
     fallbackTitle: "{TITLE} | {SITE_NAME}",
     noindex: hasNonIndexableQuery || Boolean(filterSeo?.seoNoindex),
     variables: {
-      TITLE: filterSeo?.title || getFallbackTitle(filter),
+      TITLE: filterSeo.title,
       URL: filter.path,
     },
   });
@@ -84,37 +88,39 @@ export default async function PromptsMenuFilterRoute({
     notFound();
   }
 
+  const filterSeo = await getPromptMenuFilterSeo({
+    type: filter.type,
+    value: filter.value,
+  });
+
+  if (!filterSeo) {
+    notFound();
+  }
+
   const query = await searchParams;
   const sort = normalizeSort(query?.sort);
   const q = normalizeQueryParam(query?.q);
   let data = EMPTY_PROMPTS_DATA;
   let blocks: PageBlock[] = [];
-  let heroTitle = getFallbackTitle(filter);
-  let heroDescription = "Подборка промптов по выбранному фильтру.";
+  let heroTitle = filterSeo.title;
+  let heroDescription = filterSeo.description || "Подборка промптов по выбранному фильтру.";
 
   try {
-    const [promptsData, page, filterSeo] = await Promise.all([
+    const [promptsData, page] = await Promise.all([
       getPromptsPageData({
         ...getFilterParams(filter),
         q,
         sort,
       }),
       getPageBySlug(filter.path),
-      getPromptMenuFilterSeo({
-        type: filter.type,
-        value: filter.value,
-      }),
     ]);
-    const currentTaxonomy = findCurrentTaxonomy(promptsData, filter);
 
     data = promptsData;
     blocks = page?.blocks || [];
-    heroTitle =
-      page?.h1 || filterSeo?.title || currentTaxonomy?.title || heroTitle;
+    heroTitle = page?.h1 || filterSeo.title;
     heroDescription =
       page?.h1Description ||
-      filterSeo?.description ||
-      currentTaxonomy?.description ||
+      filterSeo.description ||
       heroDescription;
   } catch {
     data = EMPTY_PROMPTS_DATA;
@@ -176,41 +182,6 @@ function getFilterParams(filter: PromptsMenuFilter) {
   }
 
   return { goal: filter.value };
-}
-
-function findCurrentTaxonomy(
-  data: PromptsPageData,
-  filter: PromptsMenuFilter,
-): PromptTaxonomy | null {
-  if (filter.type === "kind") {
-    return data.contentKinds.find((item) => item.slug === filter.value) || null;
-  }
-
-  if (filter.type === "tag") {
-    return data.tags.find((item) => item.slug === filter.value) || null;
-  }
-
-  if (filter.type === "network") {
-    return data.neuralNetworks.find((item) => item.slug === filter.value) || null;
-  }
-
-  if (filter.type === "collection") {
-    return null;
-  }
-
-  return data.goals.find((item) => item.slug === filter.value) || null;
-}
-
-function getFallbackTitle(filter: PromptsMenuFilter): string {
-  if (filter.type === "kind") {
-    return "Виды промптов";
-  }
-
-  if (filter.type === "collection") {
-    return "Подборка промптов";
-  }
-
-  return "Промпты";
 }
 
 function normalizeSort(value: string | undefined): PromptSortOrder {

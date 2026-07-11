@@ -901,9 +901,8 @@ async function getPromptMenuFilterItem<T>(
 
   params.set("filter[slug][_eq]", slug);
 
-  const items = await optionalDirectusRequest<T[]>(
+  const items = await directusRequest<T[]>(
     `/items/${collection}?${params.toString()}`,
-    [],
     { next: { revalidate: 60 } },
   );
 
