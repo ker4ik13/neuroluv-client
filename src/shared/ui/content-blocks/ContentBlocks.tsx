@@ -111,17 +111,26 @@ function ContentBlockView({
   headings: ContentHeading[];
 }) {
   if (block.type === "html") {
+    const content = (
+      <div
+        className={styles.richText}
+        dangerouslySetInnerHTML={{
+          __html: addHeadingIdsToHtml(
+            block.content,
+            getHtmlHeadings(headings, block.id),
+          ),
+        }}
+      />
+    );
+
+    if (hasPreformattedCode(block.content)) {
+      return <section className={styles.codeHtmlBlock}>{content}</section>;
+    }
+
     return (
       <section className={styles.copyHtmlBlock}>
         <CopyContentBox copyText={block.content} title={block.title || "Текст"}>
-          <div
-            dangerouslySetInnerHTML={{
-              __html: addHeadingIdsToHtml(
-                block.content,
-                getHtmlHeadings(headings, block.id),
-              ),
-            }}
-          />
+          {content}
         </CopyContentBox>
       </section>
     );
@@ -132,6 +141,7 @@ function ContentBlockView({
       <section className={styles.textBlock}>
         {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
         <div
+          className={styles.richText}
           dangerouslySetInnerHTML={{
             __html: addHeadingIdsToHtml(
               block.content,
@@ -314,6 +324,10 @@ function ContentBlockView({
   }
 
   return null;
+}
+
+function hasPreformattedCode(html: string): boolean {
+  return /<pre\b/i.test(html);
 }
 
 function extractHtmlHeadings(html: string): string[] {

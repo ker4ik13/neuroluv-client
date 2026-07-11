@@ -51,6 +51,7 @@
 
 .textBlock {
 	display: flex;
+	min-width: 0;
 	flex-direction: column;
 	gap: rem(20);
 
@@ -65,6 +66,8 @@
 		color: $color-ink;
 		font-size: rem(40);
 		line-height: rem(42);
+		overflow-wrap: anywhere;
+		word-break: break-word;
 
 		@media (max-width: em($breakpoint-tablet)) {
 			font-size: rem(30);
@@ -79,6 +82,8 @@
 		color: $color-ink;
 		font-size: rem(28);
 		line-height: 1.15;
+		overflow-wrap: anywhere;
+		word-break: break-word;
 	}
 
 	p,
@@ -88,6 +93,8 @@
 		color: $color-ink;
 		font-size: rem(19);
 		line-height: rem(31);
+		overflow-wrap: anywhere;
+		word-break: break-word;
 
 		@media (max-width: em($breakpoint-tablet)) {
 			font-size: rem(17);
@@ -102,6 +109,8 @@
 	a {
 		color: $color-cyan;
 		font-weight: 700;
+		overflow-wrap: anywhere;
+		word-break: break-word;
 		text-decoration: underline;
 		text-decoration-thickness: rem(1);
 		text-underline-offset: rem(4);
@@ -124,14 +133,120 @@
 		padding-left: rem(22);
 	}
 
-	> div {
+}
+
+.richText {
+	display: flex;
+	min-width: 0;
+	max-width: 100%;
+	flex-direction: column;
+	gap: rem(20);
+	overflow-wrap: anywhere;
+	word-break: break-word;
+
+	> * {
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	header {
 		display: flex;
 		flex-direction: column;
-		gap: rem(20);
+		gap: rem(12);
+	}
+
+	:where(img, video, iframe, embed, object) {
+		display: block;
+		max-width: 100%;
+		height: auto;
+	}
+
+	iframe {
+		width: 100%;
+		min-height: rem(280);
+		border: 0;
+	}
+
+	a {
+		display: inline;
+		max-width: 100%;
+		overflow-wrap: anywhere;
+		word-break: break-all;
+	}
+
+	code {
+		font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+
+	:not(pre) > code {
+		padding: rem(2) rem(5);
+		color: $color-ink-soft;
+		font-size: 0.9em;
+		background: $color-surface;
+		border-radius: rem(5);
+	}
+
+	pre {
+		@include body-font(500);
+
+		width: 100%;
+		max-width: 100%;
+		margin: 0;
+		padding: rem(20);
+		color: #d7e7ef;
+		font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+		font-size: rem(14);
+		line-height: 1.55;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		word-break: break-word;
+		background: $color-ink-soft;
+		border: rem(1) solid rgba($color-white, 0.1);
+		border-radius: rem(16);
+		tab-size: 2;
+
+		@media (max-width: em($breakpoint-tablet)) {
+			padding: rem(16);
+			font-size: rem(13);
+			border-radius: rem(12);
+		}
+	}
+
+	pre code {
+		padding: 0;
+		color: inherit;
+		font: inherit;
+		background: transparent;
+	}
+
+	table {
+		width: 100%;
+		max-width: 100%;
+		table-layout: fixed;
+		border-collapse: collapse;
+	}
+
+	th,
+	td {
+		padding: rem(10);
+		overflow-wrap: anywhere;
+		word-break: break-word;
+		border: rem(1) solid $color-border;
 	}
 }
 
+.textBlock > .richText {
+	gap: rem(20);
+}
+
 .copyHtmlBlock {
+	scroll-margin-top: rem(130);
+}
+
+.codeHtmlBlock {
+	max-width: 100%;
 	scroll-margin-top: rem(130);
 }
 
