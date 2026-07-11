@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import styles from "./ErrorPage.module.scss";
 
@@ -47,14 +48,14 @@ export function ErrorPage({ variant }: ErrorPageProps) {
           <p className={styles.description}>{content.description}</p>
 
           <div className={styles.actions}>
-            <a className={styles.primaryButton} href="/">
+            <Link className={styles.primaryButton} href="/">
               На главную
               <span aria-hidden="true">→</span>
-            </a>
-            <a className={styles.secondaryButton} href="/prompts">
+            </Link>
+            <Link className={styles.secondaryButton} href="/prompts">
               В галерею
               <span aria-hidden="true">→</span>
-            </a>
+            </Link>
           </div>
         </div>
 
