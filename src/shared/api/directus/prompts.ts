@@ -832,7 +832,7 @@ export async function getPromptMenuFilterSeo({
   const item = await getPromptMenuFilterItem<DirectusTaxonomy>(
     collectionByType[type],
     value,
-    `${TAXONOMY_FIELDS},is_filterable`,
+    TAXONOMY_FIELDS,
   );
 
   if (!item?.title || item.is_active === false) {
