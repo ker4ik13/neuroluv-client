@@ -503,7 +503,7 @@ type PromptDetailPageDataWithBlocks = PromptDetailPageData & {
 };
 
 const PAGE_SIZE = 30;
-const PROMPT_COLLECTIONS_PAGE_SIZE = 12;
+const PROMPT_COLLECTIONS_PAGE_SIZE = 60;
 
 export type GetPromptsPageDataParams = {
   collection?: string | null;

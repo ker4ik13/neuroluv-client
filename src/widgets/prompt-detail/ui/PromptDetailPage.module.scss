@@ -222,7 +222,7 @@ $sticky-sidebar-top: 112;
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		background: $color-ink-soft;
+		background: black;
 	}
 
 	> span {
@@ -323,7 +323,7 @@ $sticky-sidebar-top: 112;
 				rgba($color-ink-soft, 0.84) 58%,
 				$color-ink-soft 100%
 			);
-			content: "";
+			content: '';
 			backdrop-filter: blur(rem(3));
 		}
 	}

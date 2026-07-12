@@ -237,6 +237,26 @@
 	}
 }
 
+.tableScroll {
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+
+	table {
+		min-width: rem(640);
+		max-width: none;
+		table-layout: auto;
+	}
+
+	th,
+	td {
+		min-width: rem(180);
+		overflow-wrap: normal;
+		word-break: normal;
+	}
+}
+
 .textBlock > .richText {
 	gap: rem(20);
 }

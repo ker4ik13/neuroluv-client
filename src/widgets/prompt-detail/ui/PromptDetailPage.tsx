@@ -531,7 +531,7 @@ function buildPromptHeadings(
     });
   });
 
-  if (headings.length === 0) {
+  if (headings.length === 0 && promptText.trim().length > 0) {
     headings.push({
       id: "prompt",
       title: "Промпт",

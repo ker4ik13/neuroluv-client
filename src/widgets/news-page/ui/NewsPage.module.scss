@@ -283,17 +283,17 @@ $sticky-sidebar-top: 112;
 .featuredCard {
 	@include floating-particles(1, 0.26);
 
-	min-height: rem(430);
+	min-height: rem(320);
 	align-items: stretch;
-	gap: rem(28);
-	padding: rem(28);
+	gap: rem(24);
+	padding: rem(24);
 	color: $color-white;
 	background: $color-ink-soft;
 
 	@media (max-width: em($breakpoint-tablet)) {
 		flex-direction: column;
 		gap: rem(20);
-		min-height: rem(360);
+		min-height: 0;
 		padding: rem(22);
 	}
 }
@@ -304,7 +304,9 @@ $sticky-sidebar-top: 112;
 	display: block;
 	width: min(42%, rem(360));
 	flex: 0 0 min(42%, rem(360));
+	align-self: center;
 	overflow: hidden;
+	aspect-ratio: 16 / 9;
 	background: $color-ink;
 	border-radius: rem(16);
 
@@ -386,8 +388,8 @@ $sticky-sidebar-top: 112;
 	position: relative;
 	display: block;
 	width: 100%;
-	height: rem(200);
 	overflow: hidden;
+	aspect-ratio: 16 / 9;
 	background: $color-ink-soft;
 	border-radius: rem(12);
 
@@ -709,9 +711,9 @@ $sticky-sidebar-top: 112;
 	position: relative;
 	display: block;
 	width: rem(64);
-	height: rem(54);
 	flex: 0 0 rem(64);
 	overflow: hidden;
+	aspect-ratio: 16 / 9;
 	background: $color-ink-soft;
 	border-radius: rem(10);
 

@@ -195,9 +195,12 @@ $sticky-sidebar-top: 112;
 .heroVisual {
 	position: relative;
 	z-index: 1;
-	min-height: rem(360);
-	flex: 1 1 auto;
+	width: min(100%, rem(470));
+	min-height: 0;
+	flex: 0 0 rem(470);
 	overflow: hidden;
+	align-self: flex-start;
+	aspect-ratio: 16 / 9;
 	background: #1b3449;
 	border-radius: rem(24);
 	box-shadow: 0 rem(8) rem(22) rgba(0, 0, 0, 0.05);
@@ -208,8 +211,7 @@ $sticky-sidebar-top: 112;
 
 	@media (max-width: em($breakpoint-laptop)) {
 		width: 100%;
-		min-height: 0;
-		aspect-ratio: 16 / 9;
+		flex-basis: auto;
 	}
 }
 
@@ -991,8 +993,9 @@ $sticky-sidebar-top: 112;
 
 .relatedCard {
 	display: flex;
-	min-width: rem(280);
-	flex: 1 1 calc((100% - rem(40)) / 3);
+	min-width: 0;
+	max-width: calc((100% - rem(20)) / 2);
+	flex: 0 1 calc((100% - rem(20)) / 2);
 	flex-direction: column;
 	gap: rem(12);
 	padding: rem(20);
@@ -1000,14 +1003,19 @@ $sticky-sidebar-top: 112;
 	background: $color-white;
 	border-radius: rem(24);
 	box-shadow: 0 rem(12) rem(28) rgba(0, 0, 0, 0.07);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		max-width: none;
+		flex-basis: 100%;
+	}
 }
 
 .relatedImage {
 	position: relative;
 	display: block;
 	width: 100%;
-	height: rem(160);
 	overflow: hidden;
+	aspect-ratio: 16 / 9;
 	background: $color-ink-soft;
 	border-radius: rem(12);
 

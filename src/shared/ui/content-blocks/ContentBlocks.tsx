@@ -115,7 +115,7 @@ function ContentBlockView({
       <div
         className={styles.richText}
         dangerouslySetInnerHTML={{
-          __html: addHeadingIdsToHtml(
+          __html: prepareRichHtml(
             block.content,
             getHtmlHeadings(headings, block.id),
           ),
@@ -143,7 +143,7 @@ function ContentBlockView({
         <div
           className={styles.richText}
           dangerouslySetInnerHTML={{
-            __html: addHeadingIdsToHtml(
+            __html: prepareRichHtml(
               block.content,
               getHtmlHeadings(headings, block.id),
             ),
@@ -353,6 +353,17 @@ function addHeadingIdsToHtml(html: string, headings: ContentHeading[]): string {
 
       return `<${tag}${cleanAttributes} id="${heading.id}">${content}</${tag}>`;
     },
+  );
+}
+
+function prepareRichHtml(html: string, headings: ContentHeading[]): string {
+  return wrapTables(addHeadingIdsToHtml(html, headings));
+}
+
+function wrapTables(html: string): string {
+  return html.replace(
+    /<table\b[\s\S]*?<\/table>/gi,
+    (table) => `<div class="${styles.tableScroll}">${table}</div>`,
   );
 }
 

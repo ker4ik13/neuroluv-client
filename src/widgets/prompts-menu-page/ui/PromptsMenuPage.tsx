@@ -155,10 +155,12 @@ function ContentKindCard({ kind }: { kind: PromptTaxonomy }) {
     <Link className={styles.card} href={`/prompts-menu/kind-${kind.slug}`}>
       <span className={styles.accent} />
       <span className={styles.cardBody}>
-        <span className={styles.cardMeta}>
-          <span>{kind.count || 0} {getPromptsCountWord(kind.count || 0)}</span>
+        <span className={styles.cardHead}>
+          <strong>{kind.title}</strong>
+          <span className={styles.cardMeta}>
+            {kind.count || 0} {getPromptsCountWord(kind.count || 0)}
+          </span>
         </span>
-        <strong>{kind.title}</strong>
         {kind.description && <span className={styles.description}>{kind.description}</span>}
         <span className={styles.link}>Открыть →</span>
       </span>
