@@ -1139,8 +1139,16 @@ $sticky-sidebar-top: 112;
 
 .relatedGrid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, rem(320)), 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: rem(20);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	@media (max-width: em($breakpoint-mobile)) {
+		grid-template-columns: 1fr;
+	}
 }
 
 .relatedCard {
