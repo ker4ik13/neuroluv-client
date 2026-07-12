@@ -467,7 +467,7 @@ export async function getArticleBySlug(slug: string): Promise<NewsDetail | null>
 
 export async function getRelatedArticles(
   currentId: number,
-  limit = 9,
+  limit = 6,
 ): Promise<NewsItem[]> {
   const params = new URLSearchParams({
     fields: ARTICLE_FIELDS,

@@ -450,7 +450,7 @@ export async function getNewsBySlug(slug: string): Promise<NewsDetail | null> {
 
 export async function getRelatedNews(
   currentId: number,
-  limit = 9,
+  limit = 6,
 ): Promise<NewsItem[]> {
   const params = new URLSearchParams({
     fields: NEWS_FIELDS,
