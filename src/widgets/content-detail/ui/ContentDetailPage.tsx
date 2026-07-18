@@ -1,11 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { FaArrowRight, FaEye, FaShareAlt, FaTelegram } from "react-icons/fa";
+import { FaArrowRight, FaEye, FaTelegram } from "react-icons/fa";
 import { FaVk } from "react-icons/fa6";
 
 import type { NewsContentBlock, NewsDetail, NewsItem } from "@/entities/news";
-import { SITE_URL } from "@/shared/config/site";
+import { SHARE_SITE_URL } from "@/shared/config/site";
 import {
   buildContentHeadings,
   ContentBlocks,
@@ -13,6 +12,7 @@ import {
 } from "@/shared/ui/content-blocks";
 import { Noindex } from "@/shared/ui/noindex";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
+import { AuthorCard } from "@/shared/ui/author-card";
 
 import styles from "./ContentDetailPage.module.scss";
 
@@ -38,7 +38,7 @@ export function ContentDetailPage({
 
   return (
     <main className={styles.page}>
-      <DetailHero contentLabel={contentLabel} item={item} shareHref={shareHref} />
+      <DetailHero contentLabel={contentLabel} item={item} />
 
       <div className={styles.layout}>
         <article className={styles.article}>
@@ -56,28 +56,12 @@ export function ContentDetailPage({
 
         <Noindex>
           <SmartStickySidebar className={styles.sidebar}>
-            <SidebarPanel title="Поделиться">
-              <div className={styles.shareButtons}>
-                <a
-                  className={styles.shareButton}
-                  href={shareHref}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <FaTelegram aria-hidden="true" />
-                </a>
-                <a
-                  className={styles.shareButton}
-                  href={vkShareHref}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <FaVk aria-hidden="true" />
-                </a>
-              </div>
-            </SidebarPanel>
-
-            <AuthorSidebarCard contentLabel={contentLabel} item={item} />
+            <AuthorSidebarCard
+              contentLabel={contentLabel}
+              item={item}
+              shareHref={shareHref}
+              vkShareHref={vkShareHref}
+            />
             {sidebarCta && <SidebarCta block={sidebarCta} />}
           </SmartStickySidebar>
         </Noindex>
@@ -127,93 +111,73 @@ function SidebarCta({ block }: { block: NewsCtaBlock }) {
 function AuthorSidebarCard({
   contentLabel,
   item,
+  shareHref,
+  vkShareHref,
 }: {
   contentLabel: string;
   item: NewsDetail;
+  shareHref: string;
+  vkShareHref: string;
 }) {
+  const authorName = item.author?.name || "Редакция Нейролюба";
+
   return (
-    <section className={styles.authorCard}>
-      <span className={styles.authorCardEyebrow}>Автор</span>
-      <div className={styles.authorCardMain}>
-        <AuthorAvatar item={item} />
-        <span className={styles.authorCardText}>
-          <strong>{item.author?.name || "Редакция Нейролюба"}</strong>
-          <span>
-            {item.author
-              ? `${getPreparedContentLabel(contentLabel)} подготовил автор`
-              : "Команда Нейролюба"}
-          </span>
-        </span>
+    <AuthorCard
+      avatarUrl={item.author?.avatar?.url}
+      className={styles.authorCard}
+      name={authorName}
+      role={`Автор ${contentLabel.toLowerCase()} · ${item.author?.jobTitle || "AI-креатор"}`}
+    >
+      <div className={styles.authorShare}>
+        <span className={styles.authorShareLabel}>Поделиться</span>
+        <div className={styles.shareButtons}>
+          <a
+            aria-label="Поделиться в Telegram"
+            className={styles.shareButton}
+            href={shareHref}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <FaTelegram aria-hidden="true" />
+          </a>
+          <a
+            aria-label="Поделиться во ВКонтакте"
+            className={styles.shareButton}
+            href={vkShareHref}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <FaVk aria-hidden="true" />
+          </a>
+        </div>
       </div>
-      <div className={styles.authorCardMeta}>
-        {item.publishedAtLabel && <span>{item.publishedAtLabel}</span>}
-        {item.readTime && <span>{item.readTime} мин</span>}
-        {item.viewsCount !== null && <span>{item.viewsCount} просмотров</span>}
-      </div>
-    </section>
+    </AuthorCard>
   );
-}
-
-function getPreparedContentLabel(contentLabel: string): string {
-  if (contentLabel.toLowerCase() === "статья") {
-    return "Статью";
-  }
-
-  return contentLabel;
 }
 
 function DetailHero({
   contentLabel,
   item,
-  shareHref,
 }: {
   contentLabel: string;
   item: NewsDetail;
-  shareHref: string;
 }) {
   return (
     <section className={styles.hero}>
-      <div className={styles.heroPattern} />
       <div className={styles.heroContent}>
-        <div className={styles.badges}>
-          <span className={styles.badgePrimary}>{contentLabel}</span>
-          {item.topic && <span className={styles.badgeMuted}>{item.topic.title}</span>}
-          {item.tags.slice(0, 2).map((tag, index) => (
-            <span className={styles.badgeMuted} key={`tag-${tag.id}-${index}`}>
-              {tag.title}
-            </span>
-          ))}
-        </div>
+        {item.image && <HeroTags contentLabel={contentLabel} item={item} />}
 
         <h1 className={styles.heroTitle}>{item.title}</h1>
         <p className={styles.heroDescription}>{item.description}</p>
-        <span className={styles.heroAuthor}>
-          <AuthorAvatar item={item} />
-          <span>{item.author?.name || "Редакция Нейролюба"}</span>
-        </span>
-        <p className={styles.heroMeta}>
-          {[
-            item.publishedAtLabel,
-            item.readTime ? `${item.readTime} минут чтения` : null,
-            item.viewsCount !== null ? `${item.viewsCount} просмотров` : null,
-            item.topic?.title,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
+        {item.image && <HeroAuthorAndMeta item={item} />}
 
-        <a
-          className={styles.heroShare}
-          href={shareHref}
-          rel="noreferrer"
-          target="_blank"
-        >
-          Поделиться
-          <FaShareAlt aria-hidden="true" />
-        </a>
       </div>
 
-      <div className={styles.heroVisual}>
+      <div
+        className={`${styles.heroVisual} ${
+          item.image ? "" : styles.heroMetaPanel
+        }`}
+      >
         {item.image ? (
           <Image
             priority
@@ -223,25 +187,55 @@ function DetailHero({
             src={item.image.url}
           />
         ) : (
-          <span className={styles.heroPlaceholder}>AI</span>
+          <>
+            <HeroTags contentLabel={contentLabel} item={item} />
+            <span className={styles.metaPanelAuthorLabel}>Автор</span>
+            <HeroAuthorAndMeta item={item} />
+          </>
         )}
       </div>
     </section>
   );
 }
 
-function SidebarPanel({
-  children,
-  title,
+function HeroTags({
+  contentLabel,
+  item,
 }: {
-  children: ReactNode;
-  title: string;
+  contentLabel: string;
+  item: NewsDetail;
 }) {
   return (
-    <section className={styles.sidebarPanel}>
-      <h2>{title}</h2>
-      {children}
-    </section>
+    <div className={styles.badges}>
+      <span className={styles.badgePrimary}>{contentLabel}</span>
+      {item.topic && <span className={styles.badgeMuted}>{item.topic.title}</span>}
+      {item.tags.slice(0, 2).map((tag, index) => (
+        <span className={styles.badgeMuted} key={`tag-${tag.id}-${index}`}>
+          {tag.title}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function HeroAuthorAndMeta({ item }: { item: NewsDetail }) {
+  return (
+    <div className={styles.heroPublicationInfo}>
+      <span className={styles.heroAuthor}>
+        <AuthorAvatar item={item} />
+        <span>{item.author?.name || "Редакция Нейролюба"}</span>
+      </span>
+      <p className={styles.heroMeta}>
+        {[
+          item.publishedAtLabel,
+          item.readTime ? `${item.readTime} минут чтения` : null,
+          item.viewsCount !== null ? `${item.viewsCount} просмотров` : null,
+          item.topic?.title,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+    </div>
   );
 }
 
@@ -307,21 +301,21 @@ function buildTelegramShareHref(item: NewsDetail, basePath: string): string {
   const path = `${basePath}/${item.slug}`;
   const text = encodeURIComponent(item.title);
 
-  return `https://t.me/share/url?url=${encodeURIComponent(`${SITE_URL}${path}`)}&text=${text}`;
+  return `https://t.me/share/url?url=${encodeURIComponent(`${SHARE_SITE_URL}${path}`)}&text=${text}`;
 }
 
 function buildVkShareHref(item: NewsDetail, basePath: string): string {
   const path = `${basePath}/${item.slug}`;
   const params = new URLSearchParams({
     title: item.title,
-    url: `${SITE_URL}${path}`,
+    url: `${SHARE_SITE_URL}${path}`,
   });
 
   if (item.description) {
     params.set("description", item.description);
   }
 
-  return `https://vk.com/share.php?${params.toString()}`;
+  return `https://vk.ru/share.php?${params.toString()}`;
 }
 
 function getSidebarCta(blocks: NewsContentBlock[]): NewsCtaBlock | null {

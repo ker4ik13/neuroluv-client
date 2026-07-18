@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { splitFirstHeroBlock } from "@/entities/page";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoBySlug } from "@/shared/api/directus/seo";
 import { buildPageJsonLd } from "@/shared/lib/seo/json-ld";
@@ -22,7 +23,11 @@ export async function generateMetadata({
     getPageSeoBySlug(pageSlug),
     getPageBySlug(pageSlug),
   ]);
-  const title = page?.h1 || page?.title || seo?.title || "";
+  const title =
+    splitFirstHeroBlock(page?.blocks || []).hero?.title ||
+    page?.title ||
+    seo?.title ||
+    "";
 
   return buildPageMetadata(seo, {
     canonicalPath: pageSlug,
@@ -42,6 +47,8 @@ export default async function DynamicPage({ params }: DynamicPageProps) {
     notFound();
   }
 
+  const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(page.blocks);
+
   return (
     <>
       <JsonLd
@@ -50,7 +57,8 @@ export default async function DynamicPage({ params }: DynamicPageProps) {
           url: pageSlug,
         })}
       />
-      <PageBlocks blocks={page.blocks} />
+      {heroBlock && <PageBlocks blocks={[heroBlock]} />}
+      <PageBlocks blocks={remainingBlocks} />
     </>
   );
 }

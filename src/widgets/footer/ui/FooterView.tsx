@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { FooterData, FooterLink } from "@/entities/footer";
 import type { NavigationLogo, SocialLink } from "@/entities/navigation";
 import { BrandIcon } from "@/shared/ui/brand-icon";
+import { Container } from "@/shared/ui/container";
 
 import styles from "./Footer.module.scss";
 
@@ -13,7 +14,7 @@ type FooterViewProps = {
 export function FooterView({ footer }: FooterViewProps) {
   return (
     <footer className={styles.footer}>
-      <div className={styles.inner}>
+      <Container className={styles.inner}>
         <div className={styles.top}>
           <div className={styles.brand}>
             <Link aria-label="На главную" className={styles.logo} href="/">
@@ -77,7 +78,7 @@ export function FooterView({ footer }: FooterViewProps) {
             </div>
           )}
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

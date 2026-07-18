@@ -29,6 +29,7 @@ type NewsPageProps = {
   activeTopic: string | null;
   config?: ContentListPageConfig;
   data: NewsPageData;
+  showDefaultHero?: boolean;
   sort: NewsSortOrder;
 };
 
@@ -59,6 +60,7 @@ export function NewsPage({
   activeTopic,
   config = DEFAULT_CONFIG,
   data,
+  showDefaultHero = true,
   sort,
 }: NewsPageProps) {
   const [localData, setLocalData] = useState(data);
@@ -114,24 +116,26 @@ export function NewsPage({
   ]);
 
   return (
-    <div className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.heroPattern} />
-        <div className={styles.heroImage}>
-          <Image
-            priority
-            alt=""
-            fill
-            sizes="(max-width: 1024px) 100vw, 620px"
-            src={config.heroImageSrc}
-          />
-        </div>
-        <div className={styles.heroContent}>
-          <p className={styles.eyebrow}>{config.heroEyebrow}</p>
-          <h1 className={styles.heroTitle}>{config.heroTitle}</h1>
-          <p className={styles.heroDescription}>{config.heroDescription}</p>
-        </div>
-      </section>
+    <div className={`${styles.page} ${showDefaultHero ? "" : styles.pageWithoutHero}`}>
+      {showDefaultHero && (
+        <section className={styles.hero}>
+          <div className={styles.heroPattern} />
+          <div className={styles.heroImage}>
+            <Image
+              priority
+              alt=""
+              fill
+              sizes="(max-width: 1024px) 100vw, 620px"
+              src={config.heroImageSrc}
+            />
+          </div>
+          <div className={styles.heroContent}>
+            <p className={styles.eyebrow}>{config.heroEyebrow}</p>
+            <h1 className={styles.heroTitle}>{config.heroTitle}</h1>
+            <p className={styles.heroDescription}>{config.heroDescription}</p>
+          </div>
+        </section>
+      )}
 
       <div className={styles.contentShell}>
         <div className={styles.mainColumn}>

@@ -52,6 +52,7 @@ type DirectusAuthor = {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  title: string | null;
   avatar: DirectusFile | string | null;
 };
 
@@ -226,6 +227,7 @@ const NEWS_FIELDS = [
   "author.id",
   "author.first_name",
   "author.last_name",
+  "author.title",
   "author.avatar.id",
   "author.avatar.title",
   "author.avatar.type",
@@ -966,6 +968,7 @@ function normalizeAuthor(author: DirectusAuthor | string | null): NewsAuthor | n
   return {
     id: author.id,
     name,
+    jobTitle: author.title || null,
     avatar: normalizeImage(author.avatar, name),
   };
 }

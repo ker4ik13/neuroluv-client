@@ -76,8 +76,7 @@ export function buildPageJsonLd(
 ): JsonLdObject {
   return buildWebPageJsonLd({
     ...fallback,
-    description: page?.h1Description || fallback.description,
-    title: page?.h1 || page?.title || fallback.title,
+    title: page?.title || fallback.title,
   });
 }
 

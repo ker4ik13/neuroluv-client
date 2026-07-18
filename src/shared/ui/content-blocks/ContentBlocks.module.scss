@@ -155,7 +155,25 @@
 		gap: rem(12);
 	}
 
-	:where(img, video, iframe, embed, object) {
+	:where(img, video) {
+		display: block;
+		width: auto;
+		max-width: 100%;
+		margin-right: auto;
+		margin-left: auto;
+		height: auto;
+		max-height: rem(480);
+		object-fit: contain;
+		object-position: left center;
+		border-radius: rem(24);
+
+		@media (max-width: em($breakpoint-tablet)) {
+			max-height: rem(320);
+			border-radius: rem(18);
+		}
+	}
+
+	:where(iframe, embed, object) {
 		display: block;
 		max-width: 100%;
 		height: auto;
@@ -180,7 +198,7 @@
 		word-break: break-word;
 	}
 
-	:not(pre) > code {
+	:not(pre):not(.richText) > code {
 		padding: rem(2) rem(5);
 		color: $color-ink-soft;
 		font-size: 0.9em;
@@ -188,7 +206,8 @@
 		border-radius: rem(5);
 	}
 
-	pre {
+	pre,
+	> code {
 		@include body-font(500);
 
 		width: 100%;
@@ -219,6 +238,63 @@
 		color: inherit;
 		font: inherit;
 		background: transparent;
+	}
+
+	blockquote {
+		position: relative;
+		display: flex;
+		overflow: hidden;
+		flex-direction: column;
+		gap: rem(18);
+		padding: rem(30) rem(32) rem(30) rem(88);
+		color: $color-white;
+		background: $color-ink-soft;
+		border-radius: rem(24);
+
+		&::before {
+			@include heading-font(900);
+
+			position: absolute;
+			top: rem(30);
+			left: rem(30);
+			display: flex;
+			width: rem(42);
+			height: rem(42);
+			align-items: center;
+			justify-content: center;
+			color: $color-white;
+			font-size: rem(42);
+			line-height: 1;
+			content: '\201c';
+		}
+
+		:where(p, li) {
+			@include body-font(700);
+
+			color: #e5f0f5;
+			font-size: rem(22);
+			line-height: 1.4;
+		}
+
+		cite {
+			@include body-font(500);
+
+			color: #c7dbe5;
+			font-size: rem(15);
+			font-style: normal;
+		}
+
+		@media (max-width: em($breakpoint-tablet)) {
+			padding: rem(24);
+
+			&::before {
+				position: static;
+			}
+
+			:where(p, li) {
+				font-size: rem(19);
+			}
+		}
 	}
 
 	table {
@@ -321,6 +397,7 @@
 		color: #e5f0f5;
 		font-size: rem(22);
 		line-height: 1.4;
+		white-space: pre-line;
 	}
 
 	footer {
@@ -411,6 +488,7 @@
 .videoBlock {
 	display: flex;
 	flex-direction: column;
+	align-items: flex-start;
 	gap: rem(10);
 }
 
@@ -426,10 +504,20 @@
 
 	video {
 		display: block;
-		width: 100%;
-		max-height: rem(520);
+		width: auto;
+		max-width: 100%;
+		align-self: center;
+		height: auto;
+		max-height: rem(480);
+		object-fit: contain;
+		object-position: left center;
 		background: $color-ink-soft;
 		border-radius: rem(24);
+
+		@media (max-width: em($breakpoint-tablet)) {
+			max-height: rem(320);
+			border-radius: rem(18);
+		}
 	}
 
 	a {
@@ -450,19 +538,22 @@
 .imageWrap {
 	position: relative;
 	display: block;
-	width: 100%;
-	height: rem(340);
+	width: auto;
+	max-width: 100%;
+	align-self: center;
+	height: min(rem(480), calc(100vw - rem(80)));
 	overflow: hidden;
+	aspect-ratio: var(--content-image-ratio, 16 / 10);
 	background: $color-surface;
 	border-radius: rem(24);
 
 	img {
-		object-fit: cover;
+		object-fit: contain;
+		object-position: left center;
 	}
 
 	@media (max-width: em($breakpoint-tablet)) {
-		height: auto;
-		aspect-ratio: 16 / 10;
+		height: min(rem(320), calc(100vw - rem(64)));
 		border-radius: rem(18);
 	}
 }

@@ -37,6 +37,7 @@ type PromptsPageProps = {
   heroDescription?: string;
   heroTitle?: string;
   resetHref?: string;
+  showDefaultHero?: boolean;
   sort: PromptSortOrder;
 };
 
@@ -64,6 +65,7 @@ export function PromptsPage({
   heroDescription = "800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.",
   heroTitle = "Идеи, промпты и референсы для AI-контента",
   resetHref = "/prompts",
+  showDefaultHero = true,
   sort,
 }: PromptsPageProps) {
   const [localData, setLocalData] = useState(data);
@@ -127,32 +129,34 @@ export function PromptsPage({
   }, [activeParams, currentPage, localData.hasMore]);
 
   return (
-    <main className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <p className={styles.heroEyebrow}>Промпты</p>
-          <h1 className={styles.heroTitle}>{heroTitle}</h1>
-          <p className={styles.heroDescription}>{heroDescription}</p>
-          <a
-            className={styles.heroButton}
-            href="https://t.me/neuroluv"
-            rel="noreferrer"
-            target="_blank"
-          >
-            Заказать AI-контент
-            <FaMagic aria-hidden="true" />
-          </a>
-        </div>
-        <div className={styles.heroImage}>
-          <Image
-            priority
-            alt=""
-            fill
-            sizes="(max-width: 1024px) 100vw, 440px"
-            src="/images/news-hero-person.png"
-          />
-        </div>
-      </section>
+    <main className={`${styles.page} ${showDefaultHero ? "" : styles.pageWithoutHero}`}>
+      {showDefaultHero && (
+        <section className={styles.hero}>
+          <div className={styles.heroContent}>
+            <p className={styles.heroEyebrow}>Промпты</p>
+            <h1 className={styles.heroTitle}>{heroTitle}</h1>
+            <p className={styles.heroDescription}>{heroDescription}</p>
+            <a
+              className={styles.heroButton}
+              href="https://t.me/neuroluv"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Заказать AI-контент
+              <FaMagic aria-hidden="true" />
+            </a>
+          </div>
+          <div className={styles.heroImage}>
+            <Image
+              priority
+              alt=""
+              fill
+              sizes="(max-width: 1024px) 100vw, 440px"
+              src="/images/news-hero-person.png"
+            />
+          </div>
+        </section>
+      )}
 
       <div className={styles.layout}>
         <div className={styles.main}>

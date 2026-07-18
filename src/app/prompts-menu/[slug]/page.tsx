@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import type { PromptsPageData, PromptSortOrder } from "@/entities/prompt";
-import type { PageBlock } from "@/entities/page";
+import { splitFirstHeroBlock, type PageBlock } from "@/entities/page";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import {
   getPromptMenuFilterSeo,
@@ -117,14 +117,13 @@ export default async function PromptsMenuFilterRoute({
 
     data = promptsData;
     blocks = page?.blocks || [];
-    heroTitle = page?.h1 || filterSeo.title;
-    heroDescription =
-      page?.h1Description ||
-      filterSeo.description ||
-      heroDescription;
   } catch {
     data = EMPTY_PROMPTS_DATA;
   }
+
+  const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(blocks);
+  heroTitle = heroBlock?.title || heroTitle;
+  heroDescription = heroBlock?.description || heroDescription;
 
   return (
     <>
@@ -136,6 +135,7 @@ export default async function PromptsMenuFilterRoute({
           url: filter.path,
         })}
       />
+      {heroBlock && <PageBlocks blocks={[heroBlock]} />}
       <PromptsPage
         activeCollection={filter.type === "collection" ? filter.value : null}
         activeGoal={filter.type === "goal" ? filter.value : null}
@@ -149,9 +149,10 @@ export default async function PromptsMenuFilterRoute({
         heroDescription={heroDescription}
         heroTitle={heroTitle}
         resetHref="/prompts"
+        showDefaultHero={!heroBlock}
         sort={sort}
       />
-      <PageBlocks blocks={blocks} />
+      <PageBlocks blocks={remainingBlocks} />
     </>
   );
 }

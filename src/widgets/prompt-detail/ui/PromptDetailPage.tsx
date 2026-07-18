@@ -9,11 +9,15 @@ import type {
   PromptDetail,
   PromptItem,
 } from "@/entities/prompt";
-import { SITE_URL } from "@/shared/config/site";
-import { CopyContentBox } from "@/shared/ui/copy-content-box";
+import { SHARE_SITE_URL } from "@/shared/config/site";
+import {
+  ContentBlocks,
+  type ContentHeading,
+} from "@/shared/ui/content-blocks";
 import { Noindex } from "@/shared/ui/noindex";
 import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
+import { AuthorCard } from "@/shared/ui/author-card";
 
 import { CopyPromptButton } from "./CopyPromptButton";
 import { PromptComposer } from "./PromptComposer";
@@ -29,6 +33,7 @@ type PromptHeading = {
   title: string;
   blockId: number | "prompt";
   localIndex: number;
+  source: ContentHeading["source"] | "prompt";
 };
 
 export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
@@ -44,6 +49,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
     item.isPaid ? "" : item.promptText,
     contentBlocks,
   );
+  const contentHeadings = buildPromptContentHeadings(headings);
   const sidebarCta = getSidebarCta(contentBlocks);
 
   return (
@@ -66,7 +72,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
             {!item.isPaid && <CopyPromptButton text={item.promptText} />}
             <a
               className={styles.adaptButton}
-              href="https://t.me/neuroluv"
+              href="https://t.me/imishka0"
               rel="noreferrer"
               target="_blank"
             >
@@ -110,41 +116,30 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
 
           {contentBlocks.length > 0 && (
             <div className={styles.contentBlocks}>
-              {contentBlocks.map((block, index) => (
-                <ContentBlockView
-                  block={block}
-                  headings={headings}
-                  key={`prompt-content-${block.type}-${block.id}-${index}`}
-                />
-              ))}
+              <ContentBlocks blocks={contentBlocks} headings={contentHeadings} />
             </div>
           )}
         </article>
 
         <Noindex>
           <SmartStickySidebar className={styles.sidebar}>
-            <SidebarPanel title="Содержание">
-              <div className={styles.toc}>
-                {headings.map((heading) => (
-                  <a href={`#${heading.id}`} key={heading.id}>
-                    {heading.title}
-                  </a>
-                ))}
-              </div>
-            </SidebarPanel>
+            {headings.length > 0 && (
+              <SidebarPanel title="Содержание">
+                <div className={styles.toc}>
+                  {headings.map((heading) => (
+                    <a href={`#${heading.id}`} key={heading.id}>
+                      {heading.title}
+                    </a>
+                  ))}
+                </div>
+              </SidebarPanel>
+            )}
 
-            <SidebarPanel title="Поделиться">
-              <div className={styles.shareRow}>
-                <a href={shareHref} rel="noreferrer" target="_blank">
-                  <FaTelegram aria-hidden="true" />
-                </a>
-                <a href={vkShareHref} rel="noreferrer" target="_blank">
-                  <FaVk aria-hidden="true" />
-                </a>
-              </div>
-            </SidebarPanel>
-
-            <AuthorCard item={item} />
+            <PromptAuthorCard
+              item={item}
+              shareHref={shareHref}
+              vkShareHref={vkShareHref}
+            />
             {sidebarCta && <SidebarCta block={sidebarCta} />}
           </SmartStickySidebar>
         </Noindex>
@@ -227,212 +222,6 @@ function PromptHeroVisual({ item }: { item: PromptDetail }) {
   );
 }
 
-function ContentBlockView({
-  block,
-  headings,
-}: {
-  block: PromptContentBlock;
-  headings: PromptHeading[];
-}) {
-  if (block.type === "html") {
-    return (
-      <section className={styles.promptBox}>
-        <CopyContentBox copyText={block.content} title={block.title || "Текст"}>
-          <div
-            dangerouslySetInnerHTML={{
-              __html: addHeadingIdsToHtml(
-                block.content,
-                getBlockHeadings(headings, block.id),
-              ),
-            }}
-          />
-        </CopyContentBox>
-      </section>
-    );
-  }
-
-  if (block.type === "text") {
-    return (
-      <section className={styles.htmlBlock}>
-        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
-        <div
-          dangerouslySetInnerHTML={{
-            __html: addHeadingIdsToHtml(
-              block.content,
-              getBlockHeadings(headings, block.id),
-            ),
-          }}
-        />
-      </section>
-    );
-  }
-
-  if (block.type === "quote") {
-    return (
-      <blockquote className={styles.quoteBlock}>
-        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
-        <p>{block.text}</p>
-        {block.author && (
-          <footer>
-            <cite>{block.author}</cite>
-          </footer>
-        )}
-      </blockquote>
-    );
-  }
-
-  if (block.type === "list") {
-    return (
-      <section className={styles.listBlock}>
-        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
-        <div className={styles.steps}>
-          {block.items.map((item, index) => (
-            <div className={styles.step} key={`step-${item.id}-${index}`}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <div>
-                <strong>{item.title}</strong>
-                <p>{item.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (block.type === "image") {
-    return (
-      <figure className={styles.imageBlock}>
-        <span className={styles.imageWrap}>
-          <Image
-            alt={getImageAlt(block.image.title, block.title || block.caption || "Изображение промпта")}
-            fill
-            sizes="(max-width: 1024px) 100vw, 840px"
-            src={block.image.url}
-          />
-        </span>
-        {block.caption && <figcaption>{block.caption}</figcaption>}
-      </figure>
-    );
-  }
-
-  if (block.type === "video") {
-    return (
-      <figure className={styles.videoBlock}>
-        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
-        {block.video ? (
-          <video controls playsInline preload="metadata" src={block.video.url} />
-        ) : (
-          <a href={block.videoUrl || "#"} rel="noreferrer" target="_blank">
-            Смотреть видео
-          </a>
-        )}
-        {block.caption && <figcaption>{block.caption}</figcaption>}
-      </figure>
-    );
-  }
-
-  if (block.type === "cta") {
-    return (
-      <section className={styles.ctaBlock}>
-        <div>
-          <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>
-          <p>{block.description}</p>
-        </div>
-        {block.buttons.length > 0 && (
-          <div className={styles.ctaButtons}>
-            {block.buttons.map((button, index) => (
-              <a
-                className={`${styles.ctaButton} ${
-                  button.variant === "outline" ? styles.ctaButtonOutline : ""
-                }`}
-                href={button.href}
-                key={`cta-button-${button.id}-${index}`}
-                rel={button.target === "_blank" ? "noreferrer" : undefined}
-                target={button.target}
-              >
-                {button.label}
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
-    );
-  }
-
-  if (block.type === "cards") {
-    return (
-      <section className={styles.cardsBlock}>
-        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
-        <div className={styles.contentCards}>
-          {block.cards.map((card, index) => {
-            const content = (
-              <>
-                {card.image && (
-                  <span className={styles.contentCardImage}>
-                    <Image
-                      alt={getImageAlt(card.image.title, card.title || card.description)}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 260px"
-                      src={card.image.url}
-                    />
-                  </span>
-                )}
-                <span className={styles.contentCardText}>
-                  <span>{card.title}</span>
-                  <small>{card.description}</small>
-                </span>
-              </>
-            );
-
-            if (card.href) {
-              return (
-                <Link
-                  className={styles.contentCard}
-                  href={card.href}
-                  key={`content-card-${card.id}-${index}`}
-                >
-                  {content}
-                </Link>
-              );
-            }
-
-            return (
-              <div
-                className={styles.contentCard}
-                key={`content-card-${card.id}-${index}`}
-              >
-                {content}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-    );
-  }
-
-  if (block.type === "steps") {
-    return (
-      <section className={styles.stepsBlock}>
-        {block.title && <h2 id={getBlockHeadingId(headings, block.id)}>{block.title}</h2>}
-        <div className={styles.stepsList}>
-          {block.steps.map((step, index) => (
-            <div className={styles.stepItem} key={`step-${step.id}-${index}`}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <div>
-                <p>{step.title}</p>
-                <small>{step.description}</small>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  return null;
-}
-
 function SidebarPanel({
   children,
   title,
@@ -448,23 +237,46 @@ function SidebarPanel({
   );
 }
 
-function AuthorCard({ item }: { item: PromptDetail }) {
-  const initial = (item.author?.name || "N").slice(0, 1);
+function PromptAuthorCard({
+  item,
+  shareHref,
+  vkShareHref,
+}: {
+  item: PromptDetail;
+  shareHref: string;
+  vkShareHref: string;
+}) {
+  const authorName = item.author?.name || "Редакция Нейролюба";
 
   return (
-    <section className={styles.authorCard}>
-      <span className={styles.authorAvatar}>
-        {item.author?.avatar ? (
-          <Image alt="" fill sizes="58px" src={item.author.avatar.url} />
-        ) : (
-          initial
-        )}
-      </span>
-      <span>
-        <strong>{item.author?.name || "Ирина / NeuroLuv"}</strong>
-        <small>Автор промпта · AI-креатор</small>
-      </span>
-    </section>
+    <AuthorCard
+      avatarUrl={item.author?.avatar?.url}
+      className={styles.authorCard}
+      name={authorName}
+      role={`Автор промпта · ${item.author?.jobTitle || "AI-креатор"}`}
+    >
+      <div className={styles.authorShare}>
+        <span className={styles.authorShareLabel}>Поделиться</span>
+        <div className={styles.shareRow}>
+          <a
+            aria-label="Поделиться в Telegram"
+            href={shareHref}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <FaTelegram aria-hidden="true" />
+          </a>
+          <a
+            aria-label="Поделиться во ВКонтакте"
+            href={vkShareHref}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <FaVk aria-hidden="true" />
+          </a>
+        </div>
+      </div>
+    </AuthorCard>
   );
 }
 
@@ -492,7 +304,7 @@ function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
 }
 
 function buildTelegramShareHref(item: PromptDetail): string {
-  const url = `${SITE_URL}/prompts/${item.slug}`;
+  const url = `${SHARE_SITE_URL}/prompts/${item.slug}`;
   const text = `${item.title} - Нейролюб`;
 
   return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
@@ -501,7 +313,7 @@ function buildTelegramShareHref(item: PromptDetail): string {
 function buildVkShareHref(item: PromptDetail): string {
   const params = new URLSearchParams({
     title: item.title,
-    url: `${SITE_URL}/prompts/${item.slug}`,
+    url: `${SHARE_SITE_URL}/prompts/${item.slug}`,
   });
 
   if (item.description) {
@@ -528,6 +340,7 @@ function buildPromptHeadings(
       title,
       blockId: "prompt",
       localIndex,
+      source: "prompt",
     });
   });
 
@@ -537,23 +350,11 @@ function buildPromptHeadings(
       title: "Промпт",
       blockId: "prompt",
       localIndex: 0,
+      source: "prompt",
     });
   }
 
   blocks.forEach((block) => {
-    if (block.type === "html") {
-      extractHtmlHeadings(block.content).forEach((title, localIndex) => {
-        headings.push({
-          id: createUniqueHeadingId(title, usedIds),
-          title,
-          blockId: block.id,
-          localIndex,
-        });
-      });
-
-      return;
-    }
-
     const title = getContentBlockTitle(block);
 
     if (title) {
@@ -562,6 +363,19 @@ function buildPromptHeadings(
         title,
         blockId: block.id,
         localIndex: 0,
+        source: "block-title",
+      });
+    }
+
+    if (block.type === "html" || block.type === "text") {
+      extractHtmlHeadings(block.content).forEach((title, localIndex) => {
+        headings.push({
+          id: createUniqueHeadingId(title, usedIds),
+          title,
+          blockId: block.id,
+          localIndex,
+          source: "html",
+        });
       });
     }
   });
@@ -569,30 +383,26 @@ function buildPromptHeadings(
   return headings;
 }
 
+function buildPromptContentHeadings(headings: PromptHeading[]): ContentHeading[] {
+  return headings.flatMap((heading) => {
+    if (heading.blockId === "prompt" || heading.source === "prompt") {
+      return [];
+    }
+
+    return {
+      blockId: heading.blockId,
+      id: heading.id,
+      localIndex: heading.localIndex,
+      source: heading.source,
+      title: heading.title,
+    };
+  });
+}
+
 function extractHtmlHeadings(html: string): string[] {
   return [...html.matchAll(/<h[2-3][^>]*>([\s\S]*?)<\/h[2-3]>/gi)]
     .map((match) => stripHtml(match[1] || "").trim())
     .filter(Boolean);
-}
-
-function addHeadingIdsToHtml(html: string, headings: PromptHeading[]): string {
-  let index = 0;
-
-  return html.replace(
-    /<(h[2-3])([^>]*)>([\s\S]*?)<\/\1>/gi,
-    (match, tag: string, attributes: string, content: string) => {
-      const heading = headings[index];
-      index += 1;
-
-      if (!heading) {
-        return match;
-      }
-
-      const cleanAttributes = attributes.replace(/\s+id=(["']).*?\1/i, "");
-
-      return `<${tag}${cleanAttributes} id="${heading.id}">${content}</${tag}>`;
-    },
-  );
 }
 
 function getContentBlockTitle(block: PromptContentBlock): string | null {
@@ -629,20 +439,6 @@ function getPromptAspectRatio(format: string | null, isVideo: boolean): string {
   }
 
   return `${Number(match[1])} / ${Number(match[2])}`;
-}
-
-function getBlockHeadings(
-  headings: PromptHeading[],
-  blockId: PromptHeading["blockId"],
-): PromptHeading[] {
-  return headings.filter((heading) => heading.blockId === blockId);
-}
-
-function getBlockHeadingId(
-  headings: PromptHeading[],
-  blockId: PromptHeading["blockId"],
-): string | undefined {
-  return headings.find((heading) => heading.blockId === blockId)?.id;
 }
 
 function createUniqueHeadingId(

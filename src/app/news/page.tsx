@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import type { NewsPageData } from "@/entities/news";
-import type { PageBlock } from "@/entities/page";
+import { splitFirstHeroBlock, type PageBlock } from "@/entities/page";
 import { getNewsPageData } from "@/shared/api/directus/news";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
@@ -86,15 +86,14 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
 
     data = newsData;
     blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
-    heroTitle = exactPage?.h1 || basePage?.h1 || NEWS_PAGE_CONFIG.heroTitle;
-    heroDescription =
-      exactPage?.h1Description ||
-      basePage?.h1Description ||
-      NEWS_PAGE_CONFIG.heroDescription;
   } catch {
     data = EMPTY_NEWS_DATA;
     blocks = [];
   }
+
+  const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(blocks);
+  heroTitle = heroBlock?.title || heroTitle;
+  heroDescription = heroBlock?.description || heroDescription;
 
   return (
     <>
@@ -106,16 +105,18 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
           url: currentPath,
         })}
       />
+      {heroBlock && <PageBlocks blocks={[heroBlock]} />}
       <NewsPage
         activeQuery={q}
         activeTag={tag}
         activeTopic={topic}
-        config={{ ...NEWS_PAGE_CONFIG, heroDescription, heroTitle }}
+        config={NEWS_PAGE_CONFIG}
         data={data}
         key={currentPath}
+        showDefaultHero={!heroBlock}
         sort={sort}
       />
-      <PageBlocks blocks={blocks} />
+      <PageBlocks blocks={remainingBlocks} />
     </>
   );
 }

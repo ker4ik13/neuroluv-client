@@ -30,8 +30,6 @@ type DirectusPageSeo = {
   seo_noindex: boolean | null;
   seo_nofollow: boolean | null;
   canonical_url: string | null;
-  og_title: string | null;
-  og_description: string | null;
   og_image: DirectusFile | string | null;
 };
 
@@ -79,8 +77,6 @@ export const DIRECTUS_SEO_FIELDS = [
   "seo_noindex",
   "seo_nofollow",
   "canonical_url",
-  "og_title",
-  "og_description",
   "og_image.id",
   "og_image.title",
   "og_image.type",
@@ -177,8 +173,8 @@ export function normalizeDirectusSeo(
     noindex: Boolean(source.seo_noindex),
     nofollow: Boolean(source.seo_nofollow),
     canonicalUrl: source.canonical_url || null,
-    ogTitle: source.og_title || title,
-    ogDescription: source.og_description || description,
+    ogTitle: title,
+    ogDescription: description,
     ogImage: normalizeAsset(source.og_image, "Open Graph"),
   };
 }

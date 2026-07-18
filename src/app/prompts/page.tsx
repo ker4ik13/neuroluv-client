@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import type { PromptsPageData, PromptSortOrder } from "@/entities/prompt";
-import type { PageBlock } from "@/entities/page";
+import { splitFirstHeroBlock, type PageBlock } from "@/entities/page";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPromptsPageData } from "@/shared/api/directus/prompts";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
@@ -92,15 +92,14 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
 
     data = promptsData;
     blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
-    heroTitle = exactPage?.h1 || basePage?.h1 || DEFAULT_HERO_TITLE;
-    heroDescription =
-      exactPage?.h1Description ||
-      basePage?.h1Description ||
-      DEFAULT_HERO_DESCRIPTION;
   } catch {
     data = EMPTY_PROMPTS_DATA;
     blocks = [];
   }
+
+  const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(blocks);
+  heroTitle = heroBlock?.title || heroTitle;
+  heroDescription = heroBlock?.description || heroDescription;
 
   return (
     <>
@@ -112,6 +111,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
           url: currentPath,
         })}
       />
+      {heroBlock && <PageBlocks blocks={[heroBlock]} />}
       <PromptsPage
         activeGoal={goal}
         activeKind={kind}
@@ -123,9 +123,10 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
         heroDescription={heroDescription}
         heroTitle={heroTitle}
         key={currentPath}
+        showDefaultHero={!heroBlock}
         sort={sort}
       />
-      <PageBlocks blocks={blocks} />
+      <PageBlocks blocks={remainingBlocks} />
     </>
   );
 }

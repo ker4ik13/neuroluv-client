@@ -22,6 +22,7 @@ export type PromptTaxonomy = {
 export type PromptAuthor = {
   id: string;
   name: string;
+  jobTitle: string | null;
   avatar: PromptImage | null;
 };
 

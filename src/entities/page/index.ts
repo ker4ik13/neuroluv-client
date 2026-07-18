@@ -28,3 +28,4 @@ export type {
   PageUseCasesBlock,
   PageZeroBlock,
 } from "./model";
+export { splitFirstHeroBlock } from "./lib/split-first-hero-block";

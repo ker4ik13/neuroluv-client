@@ -6,10 +6,10 @@ $sticky-sidebar-top: 112;
 
 .page {
 	width: 100%;
-	padding: rem(80) rem(20) rem(48);
+	padding: rem(40) rem(20) rem(48);
 
 	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(48) rem(16) rem(36);
+		padding: rem(18) rem(16) rem(36);
 	}
 }
 
@@ -876,7 +876,6 @@ $sticky-sidebar-top: 112;
 }
 
 .sidebarPanel,
-.authorCard,
 .parameters,
 .albumCard,
 .tagsCard,
@@ -928,8 +927,6 @@ $sticky-sidebar-top: 112;
 .shareRow {
 	display: flex;
 	gap: rem(10);
-	padding-top: rem(12);
-	border-top: rem(1) solid $color-border;
 
 	a {
 		display: inline-flex;
@@ -944,50 +941,30 @@ $sticky-sidebar-top: 112;
 }
 
 .authorCard {
-	flex-direction: row;
-	align-items: center;
-	gap: rem(12);
-}
+	@media (max-width: em($breakpoint-laptop)) {
+		flex: 1 1 calc((100% - rem(16)) / 2);
+		min-width: rem(280);
+	}
 
-.authorAvatar {
-	position: relative;
-	display: inline-flex;
-	width: rem(58);
-	height: rem(58);
-	flex: 0 0 rem(58);
-	overflow: hidden;
-	align-items: center;
-	justify-content: center;
-	color: $color-white;
-	font-size: rem(28);
-	font-weight: 900;
-	background: $color-cyan;
-	border-radius: 50%;
-
-	img {
-		object-fit: cover;
+	@media (max-width: em($breakpoint-tablet)) {
+		min-width: 0;
+		flex-basis: 100%;
 	}
 }
 
-.authorCard strong,
-.authorCard small {
-	display: block;
+.authorShare {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: rem(12);
 }
 
-.authorCard strong {
-	@include heading-font(700);
+.authorShareLabel {
+	@include body-font(700);
 
 	color: $color-ink;
-	font-size: rem(20);
-	line-height: 1.15;
-}
-
-.authorCard small {
-	@include body-font(500);
-
-	margin-top: rem(6);
-	color: $color-ink-muted;
 	font-size: rem(15);
+	line-height: 1.2;
 }
 
 .parameters {

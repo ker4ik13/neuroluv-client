@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import type { NewsContentBlock } from "@/entities/news";
+import type { PromptContentBlock } from "@/entities/prompt";
 import { CopyContentBox } from "@/shared/ui/copy-content-box";
 
 import styles from "./ContentBlocks.module.scss";
@@ -15,7 +17,7 @@ export type ContentHeading = {
 };
 
 type ContentBlocksProps = {
-  blocks: NewsContentBlock[];
+  blocks: ContentBlock[];
   headings?: ContentHeading[];
 };
 
@@ -68,7 +70,7 @@ export function ContentToc({
   );
 }
 
-export function buildContentHeadings(blocks: NewsContentBlock[]): ContentHeading[] {
+export function buildContentHeadings(blocks: ContentBlock[]): ContentHeading[] {
   const usedIds = new Map<string, number>();
   const headings: ContentHeading[] = [];
 
@@ -107,7 +109,7 @@ function ContentBlockView({
   block,
   headings,
 }: {
-  block: NewsContentBlock;
+  block: ContentBlock;
   headings: ContentHeading[];
 }) {
   if (block.type === "html") {
@@ -206,9 +208,9 @@ function ContentBlockView({
   if (block.type === "image") {
     return (
       <figure className={styles.imageBlock}>
-        <span className={styles.imageWrap}>
+        <span className={styles.imageWrap} style={getContentImageStyle(block.image)}>
           <Image
-            alt={block.image.title}
+            alt={getImageAlt(block.image.title, block.title || block.caption || "Изображение")}
             fill
             sizes="(max-width: 1024px) 100vw, 840px"
             src={block.image.url}
@@ -331,7 +333,7 @@ function hasPreformattedCode(html: string): boolean {
 }
 
 function extractHtmlHeadings(html: string): string[] {
-  return [...html.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)]
+  return [...html.matchAll(/<h[2-3]\b[^>]*>([\s\S]*?)<\/h[2-3]>/gi)]
     .map((match) => stripHtml(match[1] || "").trim())
     .filter(Boolean);
 }
@@ -340,7 +342,7 @@ function addHeadingIdsToHtml(html: string, headings: ContentHeading[]): string {
   let index = 0;
 
   return html.replace(
-    /<(h2)([^>]*)>([\s\S]*?)<\/\1>/gi,
+    /<(h[2-3])([^>]*)>([\s\S]*?)<\/\1>/gi,
     (match, tag: string, attributes: string, content: string) => {
       const heading = headings[index];
       index += 1;
@@ -357,7 +359,15 @@ function addHeadingIdsToHtml(html: string, headings: ContentHeading[]): string {
 }
 
 function prepareRichHtml(html: string, headings: ContentHeading[]): string {
-  return wrapTables(addHeadingIdsToHtml(html, headings));
+  return wrapTables(addHeadingIdsToHtml(normalizeCodeBlocks(html), headings));
+}
+
+function normalizeCodeBlocks(html: string): string {
+  return html.replace(
+    /<p\b[^>]*>\s*<code\b([^>]*)>([\s\S]*?)<\/code>\s*<\/p>/gi,
+    (_match, attributes: string, code: string) =>
+      `<pre><code${attributes}>${code}</code></pre>`,
+  );
 }
 
 function wrapTables(html: string): string {
@@ -367,7 +377,7 @@ function wrapTables(html: string): string {
   );
 }
 
-function getContentBlockTitle(block: NewsContentBlock): string | null {
+function getContentBlockTitle(block: ContentBlock): string | null {
   if (
     block.type === "text" ||
     block.type === "video" ||
@@ -382,7 +392,7 @@ function getContentBlockTitle(block: NewsContentBlock): string | null {
   return null;
 }
 
-function getHtmlContent(block: NewsContentBlock): string | null {
+function getHtmlContent(block: ContentBlock): string | null {
   if (block.type === "html" || block.type === "text") {
     return block.content;
   }
@@ -431,3 +441,22 @@ function slugify(value: string): string {
 function stripHtml(value: string): string {
   return value.replace(/<[^>]+>/g, "");
 }
+
+function getContentImageStyle(image: {
+  height: number | null;
+  width: number | null;
+}): CSSProperties {
+  if (!image.width || !image.height) {
+    return {};
+  }
+
+  return {
+    "--content-image-ratio": `${image.width} / ${image.height}`,
+  } as CSSProperties;
+}
+
+function getImageAlt(imageTitle: string, fallback: string): string {
+  return imageTitle.trim() || fallback;
+}
+
+type ContentBlock = NewsContentBlock | PromptContentBlock;

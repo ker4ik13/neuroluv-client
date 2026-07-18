@@ -129,32 +129,28 @@
 }
 
 .cards {
-	display: flex;
+	display: grid;
 	max-width: rem(660);
 	width: 100%;
-	flex-wrap: wrap;
-	align-content: flex-start;
-	align-items: stretch;
-	justify-content: flex-start;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-auto-rows: minmax(0, 1fr);
 	gap: rem(24);
 
 	@media (max-width: em($breakpoint-laptop)) {
 		max-width: 100%;
 	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		grid-template-columns: 1fr;
+	}
 }
 
 .card {
-	min-width: rem(280);
-	flex: 1 1 calc((100% - rem(24)) / 2);
+	min-width: 0;
 	padding: rem(24);
 	color: $color-white;
 	background: $color-ink;
 	border-radius: rem(12);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		min-width: 0;
-		flex-basis: 100%;
-	}
 }
 
 .cardHeader {

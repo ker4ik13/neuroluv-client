@@ -6,10 +6,18 @@ $sticky-sidebar-top: 112;
 
 .page {
 	width: 100%;
-	padding: rem(80) rem(20) rem(40);
+	padding: rem(40) rem(20);
 
 	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(48) rem(16) rem(32);
+		padding: rem(18) rem(16) rem(32);
+	}
+}
+
+.pageWithoutHero {
+	padding-top: 0;
+
+	.contentShell {
+		margin-top: 0;
 	}
 }
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { splitFirstHeroBlock } from "@/entities/page";
 import type { PromptsMenuPageData } from "@/entities/prompt";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPromptsMenuPageData } from "@/shared/api/directus/prompts";
@@ -42,11 +43,10 @@ export default async function PromptsMenuRoute() {
     data = EMPTY_MENU_DATA;
   }
 
-  const topBlocks = page?.blocks.slice(0, 1) || [];
-  const bottomBlocks = page?.blocks.slice(1) || [];
-  const title = page?.h1 || page?.title || "Каталог промптов";
+  const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(page?.blocks || []);
+  const title = heroBlock?.title || page?.title || "Каталог промптов";
   const description =
-    page?.h1Description ||
+    heroBlock?.description ||
     "Подборки, виды и фильтры промптов для удобного поиска.";
 
   return (
@@ -59,9 +59,9 @@ export default async function PromptsMenuRoute() {
           url: "/prompts-menu",
         })}
       />
-      <PageBlocks blocks={topBlocks} />
+      {heroBlock && <PageBlocks blocks={[heroBlock]} />}
       <PromptsMenuPage data={data} />
-      <PageBlocks blocks={bottomBlocks} />
+      <PageBlocks blocks={remainingBlocks} />
     </>
   );
 }

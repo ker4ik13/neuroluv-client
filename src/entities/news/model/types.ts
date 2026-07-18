@@ -19,6 +19,7 @@ export type NewsTaxonomy = {
 export type NewsAuthor = {
   id: string;
   name: string;
+  jobTitle: string | null;
   avatar: NewsImage | null;
 };
 

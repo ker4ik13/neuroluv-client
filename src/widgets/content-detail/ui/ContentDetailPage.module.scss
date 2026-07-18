@@ -9,11 +9,11 @@ $sticky-sidebar-top: 112;
 	width: 100%;
 	flex-direction: column;
 	gap: rem(80);
-	padding: rem(80) rem(20) rem(60);
+	padding: rem(40) rem(20) rem(60);
 
 	@media (max-width: em($breakpoint-tablet)) {
 		gap: rem(48);
-		padding: rem(48) rem(16);
+		padding: rem(18) rem(16) rem(48);
 	}
 }
 
@@ -57,6 +57,7 @@ $sticky-sidebar-top: 112;
 	flex: 0 1 rem(710);
 	flex-direction: column;
 	align-items: flex-start;
+	justify-content: flex-start;
 	gap: rem(30);
 
 	@media (max-width: em($breakpoint-laptop)) {
@@ -142,6 +143,17 @@ $sticky-sidebar-top: 112;
 	line-height: rem(20);
 }
 
+.heroPublicationInfo {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: rem(14);
+
+	@media (max-width: em($breakpoint-tablet)) {
+		gap: rem(8) rem(12);
+	}
+}
+
 .heroAuthor {
 	@include body-font(600);
 
@@ -215,6 +227,36 @@ $sticky-sidebar-top: 112;
 	}
 }
 
+.heroMetaPanel {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	gap: rem(18);
+	padding: rem(36) rem(28) rem(36) rem(46);
+
+	.badges {
+		gap: rem(10);
+	}
+
+	.heroMeta {
+		margin: 0;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		padding: rem(30) rem(24) rem(30) rem(36);
+	}
+}
+
+.metaPanelAuthorLabel {
+	@include body-font(600);
+
+	color: rgba($color-white, 0.7);
+	font-size: rem(14);
+	line-height: 1;
+	text-transform: uppercase;
+}
+
 .heroPlaceholder,
 .relatedPlaceholder {
 	@include heading-font(800);
@@ -228,11 +270,10 @@ $sticky-sidebar-top: 112;
 	font-size: rem(42);
 	background: #1b3449;
 }
-
 .layout {
 	display: flex;
 	align-items: flex-start;
-	gap: rem(30);
+	gap: rem(20);
 
 	@media (max-width: em($breakpoint-laptop)) {
 		flex-direction: column;
@@ -356,7 +397,7 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	flex-direction: column;
 	gap: rem(12);
-	padding: rem(24);
+	padding: rem(20);
 	color: $color-white;
 	background: #132838;
 	border-radius: rem(16);
@@ -366,7 +407,7 @@ $sticky-sidebar-top: 112;
 	position: relative;
 	overflow: hidden;
 	gap: rem(18);
-	padding: rem(30) rem(32) rem(30) rem(88);
+	padding: rem(30) rem(32) rem(30) rem(80);
 	background: $color-ink-soft;
 	border-radius: rem(24);
 
@@ -392,15 +433,15 @@ $sticky-sidebar-top: 112;
 		@include heading-font(800);
 
 		color: $color-white;
-		font-size: rem(24);
+		font-size: rem(22);
 		line-height: 1.1;
 	}
 
 	p {
-		@include body-font(700);
+		@include body-font(600);
 
 		color: #e5f0f5;
-		font-size: rem(22);
+		font-size: rem(18);
 		line-height: 1.4;
 	}
 
@@ -711,8 +752,8 @@ $sticky-sidebar-top: 112;
 	position: sticky;
 	top: var(--smart-sticky-top, rem($sticky-sidebar-top));
 	display: flex;
-	width: rem(310);
-	flex: 0 0 rem(310);
+	width: rem(320);
+	flex: 0 0 rem(320);
 	flex-direction: column;
 	gap: rem(16);
 	align-self: flex-start;
@@ -727,7 +768,6 @@ $sticky-sidebar-top: 112;
 }
 
 .sidebarPanel,
-.authorCard,
 .sideCta {
 	display: flex;
 	flex-direction: column;
@@ -743,74 +783,24 @@ $sticky-sidebar-top: 112;
 }
 
 .authorCard {
-	gap: rem(16);
-	color: $color-ink;
+	@media (max-width: em($breakpoint-laptop)) {
+		flex: 1 1 rem(280);
+	}
 }
 
-.authorCardEyebrow {
-	@include heading-font(800);
-
-	color: $color-ink;
-	font-size: rem(18);
-	line-height: 1.1;
-	text-transform: uppercase;
-}
-
-.authorCardMain {
+.authorShare {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
 	gap: rem(12);
-
-	.heroAuthorAvatar,
-	.heroAuthorFallback {
-		width: rem(44);
-		height: rem(44);
-		flex-basis: rem(44);
-		color: $color-white;
-		background: $color-ink-soft;
-	}
 }
 
-.authorCardText {
-	display: flex;
-	min-width: 0;
-	flex-direction: column;
-	gap: rem(4);
+.authorShareLabel {
+	@include body-font(700);
 
-	strong {
-		@include body-font(700);
-
-		color: $color-ink;
-		font-size: rem(17);
-		line-height: 1.15;
-	}
-
-	span {
-		@include body-font(400);
-
-		color: $color-ink-muted;
-		font-size: rem(14);
-		line-height: 1.25;
-	}
-}
-
-.authorCardMeta {
-	@include body-font(500);
-
-	display: flex;
-	flex-wrap: wrap;
-	gap: rem(8);
-	color: $color-ink-muted;
-	font-size: rem(13);
+	color: $color-ink;
+	font-size: rem(15);
 	line-height: 1.2;
-
-	span {
-		display: inline-flex;
-		align-items: center;
-		padding: rem(6) rem(9);
-		background: $color-surface;
-		border-radius: rem(999);
-	}
 }
 
 .sidebarPanel h2,

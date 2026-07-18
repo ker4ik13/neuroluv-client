@@ -16,31 +16,33 @@ export function BigCtaBlock({ block }: BigCtaBlockProps) {
       <div className={styles.panel}>
         <div className={styles.content}>
           <h2 className={styles.title}>{block.title}</h2>
-          {block.description && (
-            <p className={styles.description}>{block.description}</p>
-          )}
+          <div className={styles.contentBody}>
+            {block.description && (
+              <p className={styles.description}>{block.description}</p>
+            )}
 
-          {block.advantages.length > 0 && (
-            <div className={styles.advantages}>
-              {block.advantages.map((advantage, index) => (
-                <AdvantageCard
-                  advantage={advantage}
-                  key={`big-cta-advantage-${advantage.id}-${index}`}
-                />
-              ))}
-            </div>
-          )}
+            {block.advantages.length > 0 && (
+              <div className={styles.advantages}>
+                {block.advantages.map((advantage, index) => (
+                  <AdvantageCard
+                    advantage={advantage}
+                    key={`big-cta-advantage-${advantage.id}-${index}`}
+                  />
+                ))}
+              </div>
+            )}
 
-          {block.buttons.length > 0 && (
-            <div className={styles.actions}>
-              {block.buttons.map((button, index) => (
-                <CtaButton
-                  button={button}
-                  key={`big-cta-button-${button.id}-${index}`}
-                />
-              ))}
-            </div>
-          )}
+            {block.buttons.length > 0 && (
+              <div className={styles.actions}>
+                {block.buttons.map((button, index) => (
+                  <CtaButton
+                    button={button}
+                    key={`big-cta-button-${button.id}-${index}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {block.image && (

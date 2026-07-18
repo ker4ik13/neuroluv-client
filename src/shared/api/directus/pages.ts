@@ -391,8 +391,6 @@ type DirectusPage = {
   id: number;
   title: string | null;
   slug: string | null;
-  h1: string | null;
-  h1_description: string | null;
   blocks?: DirectusPageBlock[];
 };
 
@@ -400,8 +398,6 @@ export const PAGE_FIELDS = [
   "id",
   "title",
   "slug",
-  "h1",
-  "h1_description",
   "blocks.id",
   "blocks.sort",
   "blocks.collection",
@@ -677,7 +673,7 @@ const ZERO_BLOCK_FIELDS = [
 ].join(",");
 
 export const PAGE_BLOCK_FIELDS = PAGE_FIELDS.split(",")
-  .filter((field) => !["id", "title", "slug", "h1", "h1_description"].includes(field))
+  .filter((field) => !["id", "title", "slug"].includes(field))
   .join(",");
 
 export async function getPageBySlug(slug: string): Promise<Page | null> {
@@ -736,8 +732,6 @@ function normalizePage(page: DirectusPage | null): Page | null {
     id: page.id,
     title: page.title || "",
     slug: page.slug,
-    h1: page.h1 || null,
-    h1Description: page.h1_description || null,
     blocks: normalizePageBlocks(page.blocks || []),
   };
 }
