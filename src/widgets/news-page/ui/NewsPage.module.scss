@@ -378,6 +378,10 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	flex-wrap: wrap;
 	gap: rem(20);
+
+	@media (max-width: em($breakpoint-mobile)) {
+		gap: rem(12);
+	}
 }
 
 .card {
@@ -389,6 +393,10 @@ $sticky-sidebar-top: 112;
 
 	@media (max-width: em($breakpoint-tablet)) {
 		flex-basis: 100%;
+	}
+
+	@media (max-width: em($breakpoint-mobile)) {
+		flex-basis: calc((100% - rem(12)) / 2);
 	}
 }
 
@@ -558,7 +566,26 @@ $sticky-sidebar-top: 112;
 		position: static;
 		width: 100%;
 		flex-basis: auto;
-		flex-flow: row wrap;
+		order: -1;
+		flex-flow: row nowrap;
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding: rem(2) 0 rem(10);
+		scroll-snap-type: x proximity;
+		scrollbar-width: none;
+		overscroll-behavior-x: contain;
+		-webkit-overflow-scrolling: touch;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
+
+		> .sidebarPanel,
+		> .telegramPanel {
+			min-width: 0;
+			flex: 0 0 min(rem(320), calc(100vw - rem(48)));
+			scroll-snap-align: start;
+		}
 	}
 }
 

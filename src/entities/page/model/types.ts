@@ -169,14 +169,63 @@ export type PagePromptCard = {
   autoplay: boolean;
 };
 
+export type PagePromptSelection = {
+  authorId: string | null;
+  collectionId: number | null;
+  difficulty: string | null;
+  goalId: number | null;
+  neuralNetworkId: number | null;
+  tagIds: number[];
+  typeIds: number[];
+};
+
 export type PagePromptsBlock = {
   id: number;
   type: "prompts";
   title: string;
   description: string;
   link: string | null;
-  selectionMode: "manual" | "popular" | "fresh";
+  limit: number;
+  selection: PagePromptSelection;
+  selectionMode:
+    | "manual"
+    | "fresh"
+    | "old"
+    | "author"
+    | "collection"
+    | "tags"
+    | "goal"
+    | "type"
+    | "neural_network"
+    | "difficulty";
   prompts: PagePromptCard[];
+};
+
+export type PageArticleCard = {
+  id: number;
+  title: string;
+  description: string;
+  href: string;
+  image: PageImage | null;
+  badge: string;
+};
+
+export type PageArticleSelection = {
+  authorId: string | null;
+  tagIds: number[];
+  topicId: number | null;
+};
+
+export type PageArticlesBlock = {
+  id: number;
+  type: "articles";
+  title: string;
+  description: string;
+  link: string | null;
+  limit: number;
+  selection: PageArticleSelection;
+  selectionMode: "manual" | "fresh" | "old" | "topic" | "tags" | "author";
+  articles: PageArticleCard[];
 };
 
 export type PageTaskGridItem = {
@@ -239,6 +288,7 @@ export type PageBlock =
   | PageStepsBlock
   | PageTableBlock
   | PagePromptsBlock
+  | PageArticlesBlock
   | PageTaskGridBlock
   | PageBigCtaBlock
   | PageMiniCtaBlock

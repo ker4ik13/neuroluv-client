@@ -20,7 +20,7 @@
 
 .head {
 	display: flex;
-	align-items: flex-end;
+	align-items: flex-start;
 	justify-content: space-between;
 	gap: rem(24);
 
@@ -72,19 +72,31 @@
 	@include body-font(600);
 
 	display: inline-flex;
+	min-height: rem(48);
 	align-items: center;
 	justify-content: center;
-	min-height: rem(48);
-	padding: rem(12) rem(18);
-	color: $color-white;
-	background: $color-ink;
+	gap: rem(16);
+	padding: rem(12) rem(26);
+	color: $color-cyan;
+	font-size: rem(18);
+	line-height: 1;
+	white-space: nowrap;
+	background: $color-white;
+	border: rem(1.4) solid $color-cyan;
 	border-radius: rem(14);
 	transition:
 		background-color 160ms ease,
+		color 160ms ease,
 		transform 160ms ease;
 
+	svg {
+		width: rem(16);
+		height: rem(16);
+	}
+
 	&:hover {
-		background: $color-ink-soft;
+		color: $color-white;
+		background: $color-cyan;
 		transform: translateY(rem(-1));
 	}
 

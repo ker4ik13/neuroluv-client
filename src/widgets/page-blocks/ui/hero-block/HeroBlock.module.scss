@@ -38,6 +38,9 @@
 		padding: rem(26) rem(22);
 		border-radius: rem(22);
 	}
+	@media (max-width: em($breakpoint-mobile)) {
+		padding: rem(20) rem(16) rem(4);
+	}
 }
 
 .content {
@@ -206,11 +209,10 @@
 
 .imageWrap {
 	position: absolute;
-	top: rem(-45);
-	right: rem(-37);
+	top: 0;
+	right: 0;
 	z-index: 1;
-	width: rem(622);
-	height: rem(622);
+	height: 100%;
 	pointer-events: none;
 
 	@media (max-width: em($breakpoint-laptop)) {
@@ -225,6 +227,9 @@
 
 	@media (max-width: em($breakpoint-tablet)) {
 		aspect-ratio: 16 / 10;
+	}
+	@media (max-width: em($breakpoint-mobile)) {
+		aspect-ratio: 16 / 8;
 	}
 }
 

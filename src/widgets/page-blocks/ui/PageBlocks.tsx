@@ -1,4 +1,5 @@
 import type { PageBlock } from "@/entities/page";
+import { ArticlesBlock } from "@/widgets/page-blocks/ui/articles-block/ArticlesBlock";
 import { AboutBlock } from "@/widgets/page-blocks/ui/about-block/AboutBlock";
 import { BigCtaBlock } from "@/widgets/page-blocks/ui/big-cta-block/BigCtaBlock";
 import { FaqBlock } from "@/widgets/page-blocks/ui/faq-block/FaqBlock";
@@ -40,6 +41,9 @@ const blockRenderers = {
   ),
   prompts: (block: Extract<PageBlock, { type: "prompts" }>) => (
     <PromptsBlock block={block} />
+  ),
+  articles: (block: Extract<PageBlock, { type: "articles" }>) => (
+    <ArticlesBlock block={block} />
   ),
   taskGrid: (block: Extract<PageBlock, { type: "taskGrid" }>) => (
     <TaskGridBlock block={block} />
@@ -100,6 +104,10 @@ function PageBlockItem({ block }: { block: PageBlock }) {
 
   if (block.type === "prompts") {
     return blockRenderers.prompts(block);
+  }
+
+  if (block.type === "articles") {
+    return blockRenderers.articles(block);
   }
 
   if (block.type === "taskGrid") {

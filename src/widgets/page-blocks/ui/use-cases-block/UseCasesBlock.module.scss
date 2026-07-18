@@ -195,6 +195,17 @@
 	@media (max-width: em($breakpoint-tablet)) {
 		--use-cases-columns: 1;
 	}
+	@media (max-width: em($breakpoint-mobile)) {
+		--use-cases-columns: 1;
+
+		&[data-layout='two'] {
+			--use-cases-columns: 1;
+		}
+
+		&[data-layout='three'] {
+			--use-cases-columns: 1;
+		}
+	}
 }
 
 .card {

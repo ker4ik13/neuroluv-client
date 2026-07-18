@@ -3,6 +3,8 @@ import type {
   Page,
   PageAboutBlock,
   PageAboutCard,
+  PageArticleCard,
+  PageArticlesBlock,
   PageBigCtaBlock,
   PageCtaItem,
   PageBlock,
@@ -269,7 +271,21 @@ type DirectusPromptImageJunction = {
 };
 
 type DirectusPromptNeuralNetwork = {
+  id?: number;
   name: string | null;
+};
+
+type DirectusPromptBlockTaxonomyJunction = {
+  prompt_tags_id?: { id: number } | number | null;
+  prompt_types_id?: { id: number } | number | null;
+};
+
+type DirectusPromptBlockReference = {
+  id: number;
+};
+
+type DirectusPromptBlockAuthor = {
+  id: string;
 };
 
 type DirectusPrompt = {
@@ -297,9 +313,61 @@ type DirectusPromptsBlock = {
   title: string | null;
   description: string | null;
   link: string | null;
-  selection_mode: "manual" | "popular" | "fresh" | string | null;
+  selection_mode: string | null;
   is_active: boolean | null;
+  limit: number | null;
+  author: DirectusPromptBlockAuthor | string | null;
+  prompt_collection: DirectusPromptBlockReference | number | null;
+  goal: DirectusPromptBlockReference | number | null;
+  prompt_type: DirectusPromptBlockReference | number | null;
+  neural_network: DirectusPromptBlockReference | number | null;
+  difficulty: string | null;
+  tags?: DirectusPromptBlockTaxonomyJunction[];
+  types?: DirectusPromptBlockTaxonomyJunction[];
   prompts?: DirectusPromptJunction[];
+};
+
+type DirectusArticleBlockTaxonomyJunction = {
+  sort?: number | null;
+  article_tags_id?: { id: number; title?: string | null } | number | null;
+  article_topics_id?: { id: number; title?: string | null } | number | null;
+};
+
+type DirectusArticleBlockAuthor = {
+  id: string;
+};
+
+type DirectusArticle = {
+  id: number;
+  title: string | null;
+  slug: string | null;
+  description: string | null;
+  article_type: string | null;
+  created_at: string | null;
+  status: "published" | "draft" | "archived" | string | null;
+  image: DirectusFile | string | null;
+  author: DirectusArticleBlockAuthor | string | null;
+  tags?: DirectusArticleBlockTaxonomyJunction[];
+  topics?: DirectusArticleBlockTaxonomyJunction[];
+};
+
+type DirectusArticleJunction = {
+  sort: number | null;
+  articles_id: DirectusArticle | number | null;
+};
+
+type DirectusArticlesBlock = {
+  id: number;
+  title: string | null;
+  description: string | null;
+  link: string | null;
+  selection_mode: string | null;
+  is_active: boolean | null;
+  limit: number | null;
+  author: DirectusArticleBlockAuthor | string | null;
+  topic: DirectusPromptBlockReference | number | null;
+  tags?: DirectusArticleBlockTaxonomyJunction[];
+  articles?: DirectusArticleJunction[];
 };
 
 type DirectusTaskGridItem = {
@@ -378,6 +446,7 @@ export type DirectusPageBlock = {
     | DirectusStepsBlock
     | DirectusTableBlock
     | DirectusPromptsBlock
+    | DirectusArticlesBlock
     | DirectusTaskGridBlock
     | DirectusBigCtaBlock
     | DirectusMiniCtaBlock
@@ -572,6 +641,15 @@ export const PAGE_FIELDS = [
   "blocks.item:block_prompts.description",
   "blocks.item:block_prompts.link",
   "blocks.item:block_prompts.selection_mode",
+  "blocks.item:block_prompts.limit",
+  "blocks.item:block_prompts.author.id",
+  "blocks.item:block_prompts.prompt_collection.id",
+  "blocks.item:block_prompts.goal.id",
+  "blocks.item:block_prompts.prompt_type.id",
+  "blocks.item:block_prompts.neural_network.id",
+  "blocks.item:block_prompts.difficulty",
+  "blocks.item:block_prompts.tags.prompt_tags_id.id",
+  "blocks.item:block_prompts.types.prompt_types_id.id",
   "blocks.item:block_prompts.is_active",
   "blocks.item:block_prompts.prompts.id",
   "blocks.item:block_prompts.prompts.sort",
@@ -591,6 +669,35 @@ export const PAGE_FIELDS = [
   "blocks.item:block_prompts.prompts.prompts_id.images.directus_files_id.type",
   "blocks.item:block_prompts.prompts.prompts_id.images.directus_files_id.width",
   "blocks.item:block_prompts.prompts.prompts_id.images.directus_files_id.height",
+  "blocks.item:block_articles.id",
+  "blocks.item:block_articles.title",
+  "blocks.item:block_articles.description",
+  "blocks.item:block_articles.link",
+  "blocks.item:block_articles.selection_mode",
+  "blocks.item:block_articles.limit",
+  "blocks.item:block_articles.author.id",
+  "blocks.item:block_articles.topic.id",
+  "blocks.item:block_articles.tags.article_tags_id.id",
+  "blocks.item:block_articles.is_active",
+  "blocks.item:block_articles.articles.id",
+  "blocks.item:block_articles.articles.sort",
+  "blocks.item:block_articles.articles.articles_id.id",
+  "blocks.item:block_articles.articles.articles_id.title",
+  "blocks.item:block_articles.articles.articles_id.slug",
+  "blocks.item:block_articles.articles.articles_id.description",
+  "blocks.item:block_articles.articles.articles_id.article_type",
+  "blocks.item:block_articles.articles.articles_id.status",
+  "blocks.item:block_articles.articles.articles_id.image.id",
+  "blocks.item:block_articles.articles.articles_id.image.title",
+  "blocks.item:block_articles.articles.articles_id.image.type",
+  "blocks.item:block_articles.articles.articles_id.image.width",
+  "blocks.item:block_articles.articles.articles_id.image.height",
+  "blocks.item:block_articles.articles.articles_id.topics.sort",
+  "blocks.item:block_articles.articles.articles_id.topics.article_topics_id.id",
+  "blocks.item:block_articles.articles.articles_id.topics.article_topics_id.title",
+  "blocks.item:block_articles.articles.articles_id.tags.sort",
+  "blocks.item:block_articles.articles.articles_id.tags.article_tags_id.id",
+  "blocks.item:block_articles.articles.articles_id.tags.article_tags_id.title",
   "blocks.item:block_task_grid.id",
   "blocks.item:block_task_grid.title",
   "blocks.item:block_task_grid.description",
@@ -789,6 +896,12 @@ function normalizeBlock(block: DirectusPageBlock): PageBlock | null {
   if (block.collection === "block_prompts") {
     return normalizePromptsBlock(
       block.item as DirectusPromptsBlock | number | string | null,
+    );
+  }
+
+  if (block.collection === "block_articles") {
+    return normalizeArticlesBlock(
+      block.item as DirectusArticlesBlock | number | string | null,
     );
   }
 
@@ -1161,8 +1274,34 @@ function normalizePromptsBlock(
     title: item.title,
     description: item.description || "",
     link: item.link || null,
+    limit: normalizePromptsBlockLimit(item.limit),
+    selection: normalizePromptBlockSelection(item),
     selectionMode: normalizePromptsSelectionMode(item.selection_mode),
     prompts: normalizePromptCards(item.prompts || []),
+  };
+}
+
+function normalizeArticlesBlock(
+  item: DirectusArticlesBlock | number | string | null,
+): PageArticlesBlock | null {
+  if (!item || typeof item !== "object" || item.is_active === false || !item.title) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    type: "articles",
+    title: item.title,
+    description: item.description || "",
+    link: item.link || null,
+    limit: normalizeArticlesBlockLimit(item.limit),
+    selection: {
+      authorId: getDirectusUserId(item.author),
+      tagIds: getArticleBlockTaxonomyIds(item.tags || [], "article_tags_id"),
+      topicId: getDirectusReferenceId(item.topic),
+    },
+    selectionMode: normalizeArticlesSelectionMode(item.selection_mode),
+    articles: normalizeArticleCards(item.articles || []),
   };
 }
 
@@ -1171,27 +1310,36 @@ async function hydratePageDynamicBlocks(page: Page | null): Promise<Page | null>
     return null;
   }
 
-  const blocks = await Promise.all(
-    page.blocks.map(async (block) => {
+  return {
+    ...page,
+    blocks: await hydratePageBlocks(page.blocks),
+  };
+}
+
+export async function hydratePageBlocks(blocks: PageBlock[]): Promise<PageBlock[]> {
+  return Promise.all(
+    blocks.map(async (block) => {
       if (block.type === "zero") {
         return hydrateZeroBlock(block);
       }
 
-      if (block.type !== "prompts" || block.selectionMode === "manual") {
-        return block;
+      if (block.type === "prompts" && block.selectionMode !== "manual") {
+        return {
+          ...block,
+          prompts: await getDynamicPromptCards(block),
+        };
       }
 
-      return {
-        ...block,
-        prompts: await getDynamicPromptCards(block.selectionMode),
-      };
+      if (block.type === "articles" && block.selectionMode !== "manual") {
+        return {
+          ...block,
+          articles: await getDynamicArticleCards(block),
+        };
+      }
+
+      return block;
     }),
   );
-
-  return {
-    ...page,
-    blocks,
-  };
 }
 
 async function hydrateZeroBlock(block: PageZeroBlock): Promise<PageZeroBlock> {
@@ -1205,18 +1353,22 @@ async function hydrateZeroBlock(block: PageZeroBlock): Promise<PageZeroBlock> {
   return hydratedBlock || block;
 }
 
-const PROMPTS_BLOCK_LIMIT = 3;
-
 async function getDynamicPromptCards(
-  selectionMode: Exclude<PagePromptsBlock["selectionMode"], "manual">,
+  block: PagePromptsBlock,
 ): Promise<PagePromptCard[]> {
   const params = new URLSearchParams({
     fields: PROMPTS_BLOCK_ITEM_FIELDS,
-    limit: String(PROMPTS_BLOCK_LIMIT),
-    sort: selectionMode === "popular" ? "-views_count,-published_at,-id" : "-published_at,-id",
+    limit: String(block.limit),
+    sort: block.selectionMode === "old" ? "published_at,id" : "-published_at,-id",
   });
 
   params.set("filter[status][_eq]", "published");
+
+  const hasSelection = await applyDynamicPromptSelection(params, block);
+
+  if (!hasSelection) {
+    return [];
+  }
 
   const prompts = await directusRequest<DirectusPrompt[]>(
     `/items/prompts?${params.toString()}`,
@@ -1224,6 +1376,130 @@ async function getDynamicPromptCards(
   );
 
   return normalizePromptItems(prompts);
+}
+
+async function getDynamicArticleCards(
+  block: PageArticlesBlock,
+): Promise<PageArticleCard[]> {
+  const params = new URLSearchParams({
+    fields: ARTICLES_BLOCK_ITEM_FIELDS,
+    limit: String(block.limit),
+    sort: block.selectionMode === "old" ? "created_at,id" : "-created_at,-id",
+  });
+
+  params.set("filter[status][_eq]", "published");
+
+  if (!applyDynamicArticleSelection(params, block)) {
+    return [];
+  }
+
+  const articles = await directusRequest<DirectusArticle[]>(
+    `/items/articles?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return normalizeArticleItems(articles);
+}
+
+function applyDynamicArticleSelection(
+  params: URLSearchParams,
+  block: PageArticlesBlock,
+): boolean {
+  const { selection, selectionMode } = block;
+
+  if (selectionMode === "fresh" || selectionMode === "old") {
+    return true;
+  }
+
+  if (selectionMode === "author" && selection.authorId) {
+    params.set("filter[author][_eq]", selection.authorId);
+    return true;
+  }
+
+  if (selectionMode === "topic" && selection.topicId) {
+    params.set("filter[topics][article_topics_id][_eq]", String(selection.topicId));
+    return true;
+  }
+
+  if (selectionMode === "tags" && selection.tagIds.length > 0) {
+    params.set("filter[tags][article_tags_id][_in]", selection.tagIds.join(","));
+    return true;
+  }
+
+  return false;
+}
+
+async function applyDynamicPromptSelection(
+  params: URLSearchParams,
+  block: PagePromptsBlock,
+): Promise<boolean> {
+  const { selection, selectionMode } = block;
+
+  if (selectionMode === "fresh" || selectionMode === "old") {
+    return true;
+  }
+
+  if (selectionMode === "author" && selection.authorId) {
+    params.set("filter[author][_eq]", selection.authorId);
+    return true;
+  }
+
+  if (selectionMode === "collection" && selection.collectionId) {
+    const promptIds = await getPromptIdsByCollectionId(selection.collectionId);
+
+    if (promptIds.length === 0) {
+      return false;
+    }
+
+    params.set("filter[id][_in]", promptIds.join(","));
+    return true;
+  }
+
+  if (selectionMode === "tags" && selection.tagIds.length > 0) {
+    params.set("filter[tags][prompt_tags_id][_in]", selection.tagIds.join(","));
+    return true;
+  }
+
+  if (selectionMode === "goal" && selection.goalId) {
+    params.set("filter[goal][_eq]", String(selection.goalId));
+    return true;
+  }
+
+  if (selectionMode === "type" && selection.typeIds.length > 0) {
+    params.set("filter[types][prompt_types_id][_in]", selection.typeIds.join(","));
+    return true;
+  }
+
+  if (selectionMode === "neural_network" && selection.neuralNetworkId) {
+    params.set("filter[neural_network][_eq]", String(selection.neuralNetworkId));
+    return true;
+  }
+
+  if (selectionMode === "difficulty" && selection.difficulty) {
+    params.set("filter[difficulty][_eq]", selection.difficulty);
+    return true;
+  }
+
+  return false;
+}
+
+async function getPromptIdsByCollectionId(collectionId: number): Promise<number[]> {
+  const params = new URLSearchParams({
+    fields: "prompts_id",
+    limit: "-1",
+  });
+
+  params.set("filter[prompt_collections_id][_eq]", String(collectionId));
+
+  const rows = await directusRequest<
+    Array<{ prompts_id: number | { id: number } | null }>
+  >(`/items/prompt_collections_prompts?${params.toString()}`, {
+    next: { revalidate: 60 },
+  });
+
+  return rows
+    .map((row) => getDirectusReferenceId(row.prompts_id))
+    .filter((id): id is number => id !== null);
 }
 
 const PROMPTS_BLOCK_ITEM_FIELDS = [
@@ -1249,11 +1525,76 @@ const PROMPTS_BLOCK_ITEM_FIELDS = [
 function normalizePromptsSelectionMode(
   mode: DirectusPromptsBlock["selection_mode"],
 ): PagePromptsBlock["selectionMode"] {
-  if (mode === "fresh" || mode === "popular") {
+  if (
+    mode === "fresh" ||
+    mode === "old" ||
+    mode === "author" ||
+    mode === "collection" ||
+    mode === "tags" ||
+    mode === "goal" ||
+    mode === "type" ||
+    mode === "neural_network" ||
+    mode === "difficulty"
+  ) {
     return mode;
   }
 
   return "manual";
+}
+
+function normalizePromptsBlockLimit(limit: number | null): number {
+  const normalized =
+    typeof limit === "number" && Number.isFinite(limit) ? Math.trunc(limit) : 3;
+
+  return Math.min(Math.max(normalized, 1), 24);
+}
+
+function normalizePromptBlockSelection(
+  item: DirectusPromptsBlock,
+): PagePromptsBlock["selection"] {
+  const typeIds = [
+    getDirectusReferenceId(item.prompt_type),
+    ...getPromptBlockTaxonomyIds(item.types || [], "prompt_types_id"),
+  ].filter((id): id is number => id !== null);
+
+  return {
+    authorId: getDirectusUserId(item.author),
+    collectionId: getDirectusReferenceId(item.prompt_collection),
+    difficulty: item.difficulty || null,
+    goalId: getDirectusReferenceId(item.goal),
+    neuralNetworkId: getDirectusReferenceId(item.neural_network),
+    tagIds: getPromptBlockTaxonomyIds(item.tags || [], "prompt_tags_id"),
+    typeIds: [...new Set(typeIds)],
+  };
+}
+
+function getPromptBlockTaxonomyIds(
+  items: DirectusPromptBlockTaxonomyJunction[],
+  field: "prompt_tags_id" | "prompt_types_id",
+): number[] {
+  return [
+    ...new Set(
+      items
+        .map((item) => getDirectusReferenceId(item[field] || null))
+        .filter((id): id is number => id !== null),
+    ),
+  ];
+}
+
+function getDirectusReferenceId(
+  reference: { id: number } | number | null,
+): number | null {
+  const id = typeof reference === "object" && reference !== null ? reference.id : reference;
+
+  return typeof id === "number" && Number.isInteger(id) ? id : null;
+}
+
+function getDirectusUserId(
+  author: DirectusPromptBlockAuthor | string | null,
+): string | null {
+  const id = typeof author === "object" && author !== null ? author.id : author;
+
+  return typeof id === "string" && id ? id : null;
 }
 
 function normalizePromptCards(prompts: DirectusPromptJunction[]): PagePromptCard[] {
@@ -1308,6 +1649,133 @@ function normalizePromptImage(images: DirectusPromptImageJunction[]): PageImage 
 
   return normalizeImage(image || null, "Промпт");
 }
+
+function normalizeArticlesSelectionMode(
+  mode: DirectusArticlesBlock["selection_mode"],
+): PageArticlesBlock["selectionMode"] {
+  if (
+    mode === "fresh" ||
+    mode === "old" ||
+    mode === "topic" ||
+    mode === "tags" ||
+    mode === "author"
+  ) {
+    return mode;
+  }
+
+  return "manual";
+}
+
+function normalizeArticlesBlockLimit(limit: number | null): number {
+  const normalized =
+    typeof limit === "number" && Number.isFinite(limit) ? Math.trunc(limit) : 4;
+
+  return Math.min(Math.max(normalized, 1), 24);
+}
+
+function getArticleBlockTaxonomyIds(
+  items: DirectusArticleBlockTaxonomyJunction[],
+  field: "article_tags_id" | "article_topics_id",
+): number[] {
+  return [
+    ...new Set(
+      items
+        .map((item) => getDirectusReferenceId(item[field] || null))
+        .filter((id): id is number => id !== null),
+    ),
+  ];
+}
+
+function normalizeArticleCards(
+  articles: DirectusArticleJunction[],
+): PageArticleCard[] {
+  return articles
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map((article) => article.articles_id)
+    .filter(isPublishedDirectusArticle)
+    .filter((article) => Boolean(article.title && article.slug))
+    .map(normalizeArticleCard);
+}
+
+function normalizeArticleItems(articles: DirectusArticle[]): PageArticleCard[] {
+  return articles
+    .filter(isPublishedDirectusArticle)
+    .filter((article) => Boolean(article.title && article.slug))
+    .map(normalizeArticleCard);
+}
+
+function isPublishedDirectusArticle(
+  article: DirectusArticle | number | null,
+): article is DirectusArticle {
+  return (
+    typeof article === "object" &&
+    article !== null &&
+    (article.status === "published" || article.status === null)
+  );
+}
+
+function normalizeArticleCard(article: DirectusArticle): PageArticleCard {
+  return {
+    id: article.id,
+    title: article.title || "",
+    description: article.description || "",
+    href: `/articles/${article.slug || ""}`,
+    image: normalizeImage(article.image, article.title || "Статья"),
+    badge: getArticleCardBadge(article),
+  };
+}
+
+function getArticleCardBadge(article: DirectusArticle): string {
+  const topic = getArticleTaxonomyTitle(article.topics || [], "article_topics_id");
+
+  if (topic) {
+    return topic;
+  }
+
+  const tag = getArticleTaxonomyTitle(article.tags || [], "article_tags_id");
+
+  if (tag) {
+    return tag;
+  }
+
+  return article.article_type || "Статья";
+}
+
+function getArticleTaxonomyTitle(
+  items: DirectusArticleBlockTaxonomyJunction[],
+  field: "article_tags_id" | "article_topics_id",
+): string | null {
+  const taxonomy = [...items]
+    .sort((first, second) => (first.sort || 0) - (second.sort || 0))
+    .map((item) => item[field])
+    .find(
+      (item): item is { id: number; title?: string | null } =>
+        typeof item === "object" && item !== null,
+    );
+
+  return taxonomy?.title || null;
+}
+
+const ARTICLES_BLOCK_ITEM_FIELDS = [
+  "id",
+  "title",
+  "slug",
+  "description",
+  "article_type",
+  "created_at",
+  "status",
+  "image.id",
+  "image.title",
+  "image.type",
+  "image.width",
+  "image.height",
+  "topics.sort",
+  "topics.article_topics_id.id",
+  "topics.article_topics_id.title",
+  "tags.sort",
+  "tags.article_tags_id.id",
+  "tags.article_tags_id.title",
+].join(",");
 
 function normalizeTaskGridBlock(
   item: DirectusTaskGridBlock | number | string | null,

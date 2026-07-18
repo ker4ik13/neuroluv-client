@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FaArrowRight } from "react-icons/fa";
 
 import type { PagePromptCard, PagePromptsBlock } from "@/entities/page";
 import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
@@ -34,6 +35,7 @@ export function PromptsBlock({ block }: PromptsBlockProps) {
           {block.link && (
             <Link className={styles.moreLink} href={block.link}>
               Все промпты
+              <FaArrowRight aria-hidden="true" />
             </Link>
           )}
         </div>

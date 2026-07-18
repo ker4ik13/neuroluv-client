@@ -17,6 +17,7 @@ import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
   PAGE_BLOCK_FIELDS,
+  hydratePageBlocks,
   normalizePageBlocks,
   type DirectusPageBlock,
 } from "@/shared/api/directus/pages";
@@ -510,7 +511,7 @@ async function getNewsPageBlocksBySlug(slug: string): Promise<PageBlock[]> {
     preview.requestOptions,
   );
 
-  return normalizePageBlocks(news[0]?.blocks || []);
+  return hydratePageBlocks(normalizePageBlocks(news[0]?.blocks || []));
 }
 
 export async function getNewsSlugs(): Promise<string[]> {
