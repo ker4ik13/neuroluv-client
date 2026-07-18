@@ -481,19 +481,6 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	flex-wrap: wrap;
 	gap: rem(8);
-
-	@media (max-width: em($breakpoint-mobile)) {
-		width: 100%;
-		flex-wrap: nowrap;
-		overflow-x: auto;
-		padding-bottom: rem(2);
-		scrollbar-width: none;
-		-webkit-overflow-scrolling: touch;
-
-		&::-webkit-scrollbar {
-			display: none;
-		}
-	}
 }
 
 .badge,
@@ -520,14 +507,6 @@ $sticky-sidebar-top: 112;
 	background: $color-cyan;
 }
 
-@media (max-width: em($breakpoint-mobile)) {
-	.badge,
-	.badgePrimary {
-		flex: 0 0 auto;
-		white-space: nowrap;
-	}
-}
-
 .cardTitle {
 	@include heading-font(700);
 
@@ -541,10 +520,6 @@ $sticky-sidebar-top: 112;
 
 	@media (max-width: em($breakpoint-tablet)) {
 		font-size: rem(16);
-	}
-
-	@media (max-width: em($breakpoint-mobile)) {
-		font-size: rem(14);
 	}
 }
 
