@@ -396,7 +396,7 @@ $sticky-sidebar-top: 112;
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
-		flex-basis: calc((100% - rem(12)) / 2);
+		flex-basis: 100%;
 	}
 }
 

@@ -126,7 +126,7 @@ function AuthorSidebarCard({
       avatarUrl={item.author?.avatar?.url}
       className={styles.authorCard}
       name={authorName}
-      role={`Автор ${contentLabel.toLowerCase()} · ${item.author?.jobTitle || "AI-креатор"}`}
+      role={`Автор · ${item.author?.jobTitle || "AI-креатор"}`}
     >
       <div className={styles.authorShare}>
         <span className={styles.authorShareLabel}>Поделиться</span>
