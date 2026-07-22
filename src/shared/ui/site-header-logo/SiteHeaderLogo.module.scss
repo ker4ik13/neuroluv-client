@@ -1,0 +1,14 @@
+@use '../../../styles/functions' as *;
+
+.box {
+	display: flex;
+	height: rem(32);
+	flex: 0 0 auto;
+	align-items: center;
+}
+
+.image {
+	width: auto;
+	height: 100%;
+	object-fit: contain;
+}

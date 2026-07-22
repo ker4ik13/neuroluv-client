@@ -7,13 +7,13 @@ import { FaChevronDown } from "react-icons/fa";
 
 import type {
   HeaderNavigation,
-  NavigationLogo,
   NavigationItem,
   SocialLink,
 } from "@/entities/navigation";
 import { AppIcon } from "@/shared/ui/app-icon";
 import { BrandIcon } from "@/shared/ui/brand-icon";
 import { Container } from "@/shared/ui/container";
+import { SiteHeaderLogo } from "@/shared/ui/site-header-logo";
 
 import styles from "./Header.module.scss";
 
@@ -86,7 +86,7 @@ export function HeaderView({ navigation }: HeaderViewProps) {
             href="/"
             onClick={handleNavigate}
           >
-            <LogoMark logo={navigation.logo} />
+            <SiteHeaderLogo logo={navigation.logo} />
             <span className={styles.logoText}>{navigation.siteName}</span>
           </Link>
 
@@ -150,32 +150,6 @@ export function HeaderView({ navigation }: HeaderViewProps) {
         </div>
       </Container>
     </header>
-  );
-}
-
-type LogoMarkProps = {
-  logo: NavigationLogo | null;
-};
-
-function LogoMark({ logo }: LogoMarkProps) {
-  const [hasImageError, setHasImageError] = useState(false);
-
-  if (!logo || hasImageError) {
-    return null;
-  }
-
-  return (
-    <span className={styles.logoImageBox}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        alt=""
-        aria-hidden="true"
-        className={styles.logoImage}
-        src={logo.url}
-        title={logo.title}
-        onError={() => setHasImageError(true)}
-      />
-    </span>
   );
 }
 

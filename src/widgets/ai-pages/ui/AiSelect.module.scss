@@ -1,0 +1,208 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+
+.root {
+	display: grid;
+	min-width: 0;
+	gap: rem(8);
+}
+
+.control {
+	position: relative;
+	min-width: 0;
+}
+
+.label {
+	color: var(--ai-text);
+	font-size: rem(14);
+	font-weight: 750;
+}
+
+.trigger {
+	display: grid;
+	width: 100%;
+	min-height: rem(52);
+	grid-template-columns: minmax(0, 1fr) rem(20);
+	align-items: center;
+	gap: rem(12);
+	padding: rem(10) rem(14);
+	color: var(--ai-text);
+	font: inherit;
+	text-align: left;
+	background: #f9fbfc;
+	border: rem(1) solid var(--ai-border);
+	border-radius: rem(12);
+	cursor: pointer;
+	outline: none;
+	transition:
+		background-color 150ms ease,
+		border-color 150ms ease,
+		box-shadow 150ms ease;
+
+	&:hover:not(:disabled) {
+		border-color: #c4d5df;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+
+		background: #fff;
+		border-color: var(--ai-primary);
+	}
+
+	&:disabled {
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
+}
+
+.rootOpen .trigger {
+	background: #fff;
+	border-color: var(--ai-primary);
+	box-shadow: 0 0 0 rem(3) rgba(8, 127, 219, 0.12);
+}
+
+.rootInvalid .trigger {
+	border-color: var(--ai-error);
+}
+
+.triggerContent,
+.optionContent {
+	display: grid;
+	min-width: 0;
+	gap: rem(3);
+}
+
+.value,
+.placeholder,
+.optionLabel {
+	overflow: hidden;
+	font-size: rem(15);
+	font-weight: 700;
+	line-height: 1.25;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.placeholder {
+	color: #8797a4;
+	font-weight: 600;
+}
+
+.valueDescription,
+.optionDescription,
+.description,
+.error {
+	font-size: rem(12);
+	line-height: 1.35;
+}
+
+.valueDescription,
+.optionDescription,
+.description {
+	color: var(--ai-muted);
+}
+
+.chevron {
+	width: rem(20);
+	height: rem(20);
+	flex: 0 0 rem(20);
+	color: var(--ai-muted);
+	transition: transform 150ms ease;
+}
+
+.rootOpen .chevron {
+	transform: rotate(180deg);
+}
+
+.listbox {
+	position: absolute;
+	left: 0;
+	z-index: 80;
+	display: grid;
+	width: 100%;
+	max-height: rem(320);
+	box-sizing: border-box;
+	gap: rem(4);
+	margin: 0;
+	padding: rem(6);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	list-style: none;
+	background: var(--ai-surface);
+	border: rem(1) solid rgba(8, 127, 219, 0.28);
+	border-radius: rem(14);
+	box-shadow: 0 rem(18) rem(50) rgba(19, 40, 56, 0.18);
+}
+
+.listboxBottom {
+	top: calc(100% + rem(6));
+	bottom: auto;
+	transform-origin: top;
+}
+
+.listboxTop {
+	top: auto;
+	bottom: calc(100% + rem(6));
+	transform-origin: bottom;
+}
+
+.option {
+	display: grid;
+	min-height: rem(48);
+	grid-template-columns: minmax(0, 1fr) rem(22);
+	align-items: center;
+	gap: rem(10);
+	padding: rem(10) rem(11);
+	color: var(--ai-text);
+	border-radius: rem(10);
+	cursor: pointer;
+	outline: none;
+	transition:
+		color 120ms ease,
+		background-color 120ms ease;
+}
+
+.optionActive {
+	background: var(--ai-surface-soft);
+}
+
+.optionSelected {
+	color: var(--ai-primary);
+	background: var(--ai-primary-soft);
+}
+
+.optionDisabled {
+	cursor: not-allowed;
+	opacity: 0.48;
+}
+
+.checkSlot {
+	display: inline-flex;
+	width: rem(22);
+	height: rem(22);
+	align-items: center;
+	justify-content: center;
+	font-size: rem(18);
+}
+
+.error {
+	color: var(--ai-error);
+	font-weight: 650;
+}
+
+@media (max-width: 520px) {
+	.value,
+	.placeholder,
+	.optionLabel {
+		font-size: rem(16);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.trigger,
+	.chevron,
+	.option {
+		transition: none;
+	}
+}

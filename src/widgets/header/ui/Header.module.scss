@@ -111,19 +111,6 @@ $header-burger-breakpoint: 900;
 	}
 }
 
-.logoImageBox {
-	display: flex;
-	height: rem(32);
-	flex: 0 0 auto;
-	align-items: center;
-}
-
-.logoImage {
-	width: auto;
-	height: 100%;
-	object-fit: contain;
-}
-
 .burger {
 	display: none;
 	width: rem(36);

@@ -1,0 +1,535 @@
+"use client";
+
+import {
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { FiCheck, FiChevronDown } from "react-icons/fi";
+
+import styles from "./AiSelect.module.scss";
+
+type AiSelectValue = string | number;
+
+export type AiSelectOption<Value extends AiSelectValue = string> = {
+  value: Value;
+  label: string;
+  description?: string;
+  disabled?: boolean;
+};
+
+export type AiSelectProps<Value extends AiSelectValue = string> = {
+  id: string;
+  label: string;
+  options: readonly AiSelectOption<Value>[];
+  value?: Value | null;
+  onChange: (value: Value) => void;
+  className?: string;
+  description?: string;
+  disabled?: boolean;
+  error?: string;
+  name?: string;
+  placeholder?: string;
+  required?: boolean;
+};
+
+const TYPEAHEAD_RESET_MS = 700;
+const LISTBOX_GAP_PX = 6;
+const LISTBOX_MAX_HEIGHT_PX = 320;
+
+type ListboxPlacement = "top" | "bottom";
+
+type ListboxLayout = {
+  placement: ListboxPlacement;
+  maxHeight: number;
+};
+
+export function AiSelect<Value extends AiSelectValue = string>({
+  id,
+  label,
+  options,
+  value,
+  onChange,
+  className = "",
+  description,
+  disabled = false,
+  error,
+  name,
+  placeholder = "Выберите значение",
+  required = false,
+}: AiSelectProps<Value>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [listboxLayout, setListboxLayout] = useState<ListboxLayout>({
+    placement: "bottom",
+    maxHeight: LISTBOX_MAX_HEIGHT_PX,
+  });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
+  const optionRefs = useRef(new Map<number, HTMLLIElement>());
+  const typeaheadRef = useRef("");
+  const typeaheadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerId = `${id}-trigger`;
+  const labelId = `${id}-label`;
+  const valueId = `${id}-value`;
+  const listboxId = `${id}-listbox`;
+  const descriptionId = description ? `${id}-description` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
+  const selectedIndex = useMemo(
+    () => options.findIndex((option) => Object.is(option.value, value)),
+    [options, value],
+  );
+  const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : null;
+  const resolvedActiveIndex =
+    activeIndex >= 0 && options[activeIndex] && !options[activeIndex].disabled
+      ? activeIndex
+      : selectedIndex >= 0 && !options[selectedIndex]?.disabled
+        ? selectedIndex
+        : findEnabledOption(options, -1, 1);
+  const isDisabled = disabled || options.length === 0;
+  const activeOptionId =
+    isOpen && resolvedActiveIndex >= 0
+      ? getOptionId(id, resolvedActiveIndex)
+      : undefined;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !rootRef.current?.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    const handleFocusIn = (event: FocusEvent) => {
+      if (
+        event.target instanceof Node &&
+        !rootRef.current?.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("focusin", handleFocusIn);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || resolvedActiveIndex < 0) return;
+
+    optionRefs.current.get(resolvedActiveIndex)?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, resolvedActiveIndex]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const trigger = triggerRef.current;
+    const listbox = listboxRef.current;
+    if (!trigger || !listbox) return;
+
+    let animationFrameId = 0;
+
+    const updateListboxLayout = () => {
+      const triggerRect = trigger.getBoundingClientRect();
+      const visibleBounds = getVisibleVerticalBounds(trigger);
+      const spaceAbove = Math.max(
+        0,
+        triggerRect.top - visibleBounds.top - LISTBOX_GAP_PX,
+      );
+      const spaceBelow = Math.max(
+        0,
+        visibleBounds.bottom - triggerRect.bottom - LISTBOX_GAP_PX,
+      );
+      const desiredHeight = Math.min(
+        LISTBOX_MAX_HEIGHT_PX,
+        Math.ceil(listbox.scrollHeight),
+      );
+      const placement: ListboxPlacement =
+        spaceBelow < desiredHeight && spaceAbove > spaceBelow ? "top" : "bottom";
+      const availableHeight = placement === "top" ? spaceAbove : spaceBelow;
+      const maxHeight = Math.max(
+        0,
+        Math.floor(Math.min(LISTBOX_MAX_HEIGHT_PX, availableHeight)),
+      );
+
+      setListboxLayout((current) =>
+        current.placement === placement && current.maxHeight === maxHeight
+          ? current
+          : { placement, maxHeight },
+      );
+    };
+
+    const scheduleListboxLayoutUpdate = () => {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(updateListboxLayout);
+    };
+
+    updateListboxLayout();
+    window.addEventListener("resize", scheduleListboxLayoutUpdate);
+    window.addEventListener("scroll", scheduleListboxLayoutUpdate, true);
+    window.visualViewport?.addEventListener(
+      "resize",
+      scheduleListboxLayoutUpdate,
+    );
+    window.visualViewport?.addEventListener(
+      "scroll",
+      scheduleListboxLayoutUpdate,
+    );
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(scheduleListboxLayoutUpdate);
+    resizeObserver?.observe(trigger);
+    resizeObserver?.observe(listbox);
+    getClippingAncestors(trigger).forEach((ancestor) =>
+      resizeObserver?.observe(ancestor),
+    );
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", scheduleListboxLayoutUpdate);
+      window.removeEventListener("scroll", scheduleListboxLayoutUpdate, true);
+      window.visualViewport?.removeEventListener(
+        "resize",
+        scheduleListboxLayoutUpdate,
+      );
+      window.visualViewport?.removeEventListener(
+        "scroll",
+        scheduleListboxLayoutUpdate,
+      );
+      resizeObserver?.disconnect();
+    };
+  }, [isOpen, options]);
+
+  useEffect(() => {
+    if (!isDisabled) return;
+
+    const timeoutId = window.setTimeout(() => setIsOpen(false), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [isDisabled]);
+
+  useEffect(() => {
+    return () => {
+      if (typeaheadTimerRef.current) {
+        clearTimeout(typeaheadTimerRef.current);
+      }
+    };
+  }, []);
+
+  function open(preferredIndex?: number) {
+    if (isDisabled) return;
+
+    const initialIndex =
+      preferredIndex !== undefined &&
+      preferredIndex >= 0 &&
+      !options[preferredIndex]?.disabled
+        ? preferredIndex
+        : selectedIndex >= 0 && !options[selectedIndex]?.disabled
+          ? selectedIndex
+          : findEnabledOption(options, -1, 1);
+
+    setActiveIndex(initialIndex);
+    setIsOpen(true);
+  }
+
+  function close({ restoreFocus = false } = {}) {
+    setIsOpen(false);
+    clearTypeahead();
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => triggerRef.current?.focus());
+    }
+  }
+
+  function selectOption(index: number) {
+    const option = options[index];
+    if (!option || option.disabled) return;
+
+    onChange(option.value);
+    setActiveIndex(index);
+    close({ restoreFocus: true });
+  }
+
+  function moveActive(direction: 1 | -1) {
+    const nextIndex = findEnabledOption(options, resolvedActiveIndex, direction);
+    if (nextIndex >= 0) setActiveIndex(nextIndex);
+  }
+
+  function handleTypeahead(key: string) {
+    const normalizedKey = key.toLocaleLowerCase("ru-RU");
+    const nextQuery = `${typeaheadRef.current}${normalizedKey}`;
+    let matchIndex = findTypeaheadMatch(options, nextQuery, resolvedActiveIndex);
+
+    if (matchIndex < 0 && nextQuery.length > 1) {
+      typeaheadRef.current = normalizedKey;
+      matchIndex = findTypeaheadMatch(options, normalizedKey, resolvedActiveIndex);
+    } else {
+      typeaheadRef.current = nextQuery;
+    }
+
+    if (typeaheadTimerRef.current) clearTimeout(typeaheadTimerRef.current);
+    typeaheadTimerRef.current = setTimeout(clearTypeahead, TYPEAHEAD_RESET_MS);
+
+    if (matchIndex >= 0) {
+      if (!isOpen) open(matchIndex);
+      else setActiveIndex(matchIndex);
+    }
+  }
+
+  function clearTypeahead() {
+    typeaheadRef.current = "";
+    if (typeaheadTimerRef.current) {
+      clearTimeout(typeaheadTimerRef.current);
+      typeaheadTimerRef.current = null;
+    }
+  }
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (isDisabled) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (isOpen) moveActive(1);
+      else open(findEnabledOption(options, selectedIndex, 1));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (isOpen) moveActive(-1);
+      else open(findEnabledOption(options, selectedIndex, -1));
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      const firstIndex = findEnabledOption(options, -1, 1);
+      if (isOpen) setActiveIndex(firstIndex);
+      else open(firstIndex);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      const lastIndex = findEnabledOption(options, 0, -1);
+      if (isOpen) setActiveIndex(lastIndex);
+      else open(lastIndex);
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (isOpen && resolvedActiveIndex >= 0) selectOption(resolvedActiveIndex);
+      else open();
+      return;
+    }
+
+    if (event.key === "Escape" && isOpen) {
+      event.preventDefault();
+      close();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      close();
+      return;
+    }
+
+    if (
+      event.key.length === 1 &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
+      handleTypeahead(event.key);
+    }
+  }
+
+  return (
+    <div
+      className={`${styles.root} ${isOpen ? styles.rootOpen : ""} ${error ? styles.rootInvalid : ""} ${className}`}
+      ref={rootRef}
+    >
+      <label className={styles.label} htmlFor={triggerId} id={labelId}>
+        {label}
+        {required ? <span aria-hidden="true"> *</span> : null}
+      </label>
+
+      <div className={styles.control}>
+        <button
+          aria-activedescendant={activeOptionId}
+          aria-controls={listboxId}
+          aria-describedby={describedBy}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-invalid={error ? true : undefined}
+          aria-labelledby={`${labelId} ${valueId}`}
+          aria-required={required || undefined}
+          className={styles.trigger}
+          disabled={isDisabled}
+          id={triggerId}
+          ref={triggerRef}
+          role="combobox"
+          type="button"
+          onClick={() => {
+            if (isOpen) close();
+            else open();
+          }}
+          onKeyDown={handleKeyDown}
+        >
+          <span className={styles.triggerContent} id={valueId}>
+            <span className={selectedOption ? styles.value : styles.placeholder}>
+              {selectedOption?.label || placeholder}
+            </span>
+            {selectedOption?.description ? (
+              <span className={styles.valueDescription}>{selectedOption.description}</span>
+            ) : null}
+          </span>
+          <FiChevronDown aria-hidden="true" className={styles.chevron} />
+        </button>
+
+        {isOpen ? (
+          <ul
+            aria-labelledby={labelId}
+            className={`${styles.listbox} ${listboxLayout.placement === "top" ? styles.listboxTop : styles.listboxBottom}`}
+            data-placement={listboxLayout.placement}
+            id={listboxId}
+            ref={listboxRef}
+            role="listbox"
+            style={{ maxHeight: listboxLayout.maxHeight } as CSSProperties}
+          >
+            {options.map((option, index) => (
+              <li
+                aria-disabled={option.disabled || undefined}
+                aria-selected={index === selectedIndex}
+                className={`${styles.option} ${index === resolvedActiveIndex ? styles.optionActive : ""} ${index === selectedIndex ? styles.optionSelected : ""} ${option.disabled ? styles.optionDisabled : ""}`}
+                id={getOptionId(id, index)}
+                key={`${typeof option.value}:${String(option.value)}`}
+                ref={(element) => {
+                  if (element) optionRefs.current.set(index, element);
+                  else optionRefs.current.delete(index);
+                }}
+                role="option"
+                onClick={() => selectOption(index)}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseMove={() => {
+                  if (!option.disabled) setActiveIndex(index);
+                }}
+              >
+                <span className={styles.optionContent}>
+                  <span className={styles.optionLabel}>{option.label}</span>
+                  {option.description ? (
+                    <span className={styles.optionDescription}>{option.description}</span>
+                  ) : null}
+                </span>
+                <span aria-hidden="true" className={styles.checkSlot}>
+                  {index === selectedIndex ? <FiCheck /> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      {name ? <input name={name} type="hidden" value={value == null ? "" : String(value)} /> : null}
+      {description ? (
+        <small className={styles.description} id={descriptionId}>
+          {description}
+        </small>
+      ) : null}
+      {error ? (
+        <small aria-live="polite" className={styles.error} id={errorId}>
+          {error}
+        </small>
+      ) : null}
+    </div>
+  );
+}
+
+function findEnabledOption<Value extends AiSelectValue>(
+  options: readonly AiSelectOption<Value>[],
+  fromIndex: number,
+  direction: 1 | -1,
+): number {
+  if (options.length === 0) return -1;
+
+  for (let offset = 1; offset <= options.length; offset += 1) {
+    const index = (fromIndex + direction * offset + options.length) % options.length;
+    if (!options[index]?.disabled) return index;
+  }
+
+  return -1;
+}
+
+function findTypeaheadMatch<Value extends AiSelectValue>(
+  options: readonly AiSelectOption<Value>[],
+  query: string,
+  fromIndex: number,
+): number {
+  if (!query) return -1;
+
+  for (let offset = 1; offset <= options.length; offset += 1) {
+    const index = (Math.max(fromIndex, -1) + offset) % options.length;
+    const option = options[index];
+    if (
+      option &&
+      !option.disabled &&
+      option.label.toLocaleLowerCase("ru-RU").startsWith(query)
+    ) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function getOptionId(id: string, index: number): string {
+  return `${id}-option-${index}`;
+}
+
+function getVisibleVerticalBounds(element: HTMLElement): {
+  top: number;
+  bottom: number;
+} {
+  const visualViewport = window.visualViewport;
+  let top = visualViewport?.offsetTop ?? 0;
+  let bottom = visualViewport
+    ? visualViewport.offsetTop + visualViewport.height
+    : window.innerHeight;
+
+  getClippingAncestors(element).forEach((ancestor) => {
+    const rect = ancestor.getBoundingClientRect();
+    const contentTop = rect.top + ancestor.clientTop;
+    const contentBottom = contentTop + ancestor.clientHeight;
+    top = Math.max(top, contentTop);
+    bottom = Math.min(bottom, contentBottom);
+  });
+
+  return { top, bottom: Math.max(top, bottom) };
+}
+
+function getClippingAncestors(element: HTMLElement): HTMLElement[] {
+  const ancestors: HTMLElement[] = [];
+  let ancestor = element.parentElement;
+
+  while (ancestor) {
+    const { overflowY } = window.getComputedStyle(ancestor);
+    if (overflowY !== "visible") ancestors.push(ancestor);
+    ancestor = ancestor.parentElement;
+  }
+
+  return ancestors;
+}

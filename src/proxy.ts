@@ -4,6 +4,12 @@ const DEFAULT_DIRECTUS_URL = "https://dev.cms.neuroluv.ru";
 const DIRECTUS_URL = (
   process.env.NEXT_PUBLIC_DIRECTUS_URL || DEFAULT_DIRECTUS_URL
 ).replace(/\/$/, "");
+const AI_API_URL = (
+  process.env.NEXT_PUBLIC_AI_API_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://api.neuroluv.ru/v1"
+    : "http://localhost:4000/v1")
+).replace(/\/$/, "");
 const REDIRECTS_CACHE_TTL_MS = 60_000;
 
 type DirectusRedirect = {
@@ -40,6 +46,12 @@ export async function proxy(request: NextRequest) {
   }
 
   const pathname = normalizePath(request.nextUrl.pathname);
+
+  // The AI application owns its namespace and must not be shadowed by CMS redirects.
+  if (pathname === "/ai" || pathname.startsWith("/ai/")) {
+    return nextAiResponse(request);
+  }
+
   const redirects = await getRedirectRules();
   const redirect = redirects.find((rule) => rule.fromPath === pathname);
 
@@ -54,6 +66,52 @@ export async function proxy(request: NextRequest) {
   }
 
   return NextResponse.redirect(target, redirect.status);
+}
+
+function nextAiResponse(request: NextRequest): NextResponse {
+  const nonce = crypto.randomUUID().replaceAll("-", "");
+  const contentSecurityPolicy = buildAiContentSecurityPolicy(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("Content-Security-Policy", contentSecurityPolicy);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", contentSecurityPolicy);
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), payment=()",
+  );
+  return response;
+}
+
+function buildAiContentSecurityPolicy(nonce: string): string {
+  const directusOrigin = new URL(DIRECTUS_URL).origin;
+  const apiOrigin = new URL(AI_API_URL).origin;
+  const developmentScriptPolicy =
+    process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+  const directives = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${developmentScriptPolicy}`,
+    "style-src 'self' 'unsafe-inline'",
+    `connect-src 'self' ${apiOrigin} ${directusOrigin}`,
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https:",
+    "font-src 'self' data:",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ];
+
+  if (process.env.NODE_ENV === "production") {
+    directives.push("upgrade-insecure-requests");
+  }
+
+  return directives.join("; ");
 }
 
 export const config = {

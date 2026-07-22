@@ -5,6 +5,7 @@ const directusUrl = new URL(
 );
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {

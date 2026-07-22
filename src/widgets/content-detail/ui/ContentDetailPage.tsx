@@ -57,7 +57,6 @@ export function ContentDetailPage({
         <Noindex>
           <SmartStickySidebar className={styles.sidebar}>
             <AuthorSidebarCard
-              contentLabel={contentLabel}
               item={item}
               shareHref={shareHref}
               vkShareHref={vkShareHref}
@@ -109,12 +108,10 @@ function SidebarCta({ block }: { block: NewsCtaBlock }) {
 }
 
 function AuthorSidebarCard({
-  contentLabel,
   item,
   shareHref,
   vkShareHref,
 }: {
-  contentLabel: string;
   item: NewsDetail;
   shareHref: string;
   vkShareHref: string;
