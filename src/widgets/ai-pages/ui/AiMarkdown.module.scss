@@ -1,0 +1,96 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+
+.markdown {
+	display: grid;
+	min-width: 0;
+	gap: rem(11);
+	overflow-wrap: anywhere;
+
+	> * {
+		margin: 0;
+	}
+
+	h2,
+	h3,
+	h4 {
+		color: var(--ai-text);
+		line-height: 1.35;
+	}
+
+	h2 {
+		font-size: rem(18);
+	}
+
+	h3 {
+		font-size: rem(17);
+	}
+
+	h4 {
+		font-size: rem(16);
+	}
+
+	p,
+	li,
+	blockquote {
+		line-height: 1.65;
+	}
+
+	ul,
+	ol {
+		display: grid;
+		gap: rem(5);
+		margin: 0;
+		padding-left: rem(22);
+	}
+
+	blockquote {
+		padding-left: rem(12);
+		color: var(--ai-muted);
+		border-left: rem(3) solid var(--ai-primary);
+	}
+
+	pre {
+		max-width: 100%;
+		padding: rem(12);
+		overflow-x: auto;
+		color: #eaf4fa;
+		background: #172c3c;
+		border-radius: rem(10);
+	}
+
+	code {
+		padding: rem(2) rem(5);
+		font-family:
+			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.9em;
+		background: var(--ai-surface-soft);
+		border-radius: rem(5);
+	}
+
+	pre code {
+		padding: 0;
+		color: inherit;
+		white-space: pre;
+		background: transparent;
+	}
+
+	a {
+		color: var(--ai-primary);
+		font-weight: 650;
+		text-decoration: underline;
+		text-decoration-thickness: rem(1);
+		text-underline-offset: rem(2);
+
+		&:focus-visible {
+			@include focus-ring;
+			border-radius: rem(4);
+		}
+	}
+
+	hr {
+		width: 100%;
+		border: 0;
+		border-top: rem(1) solid var(--ai-border);
+	}
+}

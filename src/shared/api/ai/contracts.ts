@@ -11,9 +11,11 @@ export type AiApiProblem = {
 export type AiNavigationItem = {
 	id: string | number;
 	label: string;
+	ariaLabel?: string | null;
 	href: string;
 	icon?: string | null;
 	sort?: number | null;
+	children?: AiNavigationItem[];
 };
 
 export type AiNavigationResponse = {
@@ -21,11 +23,27 @@ export type AiNavigationResponse = {
 	data: AiNavigationItem[];
 };
 
+export type AiFooterNavigationResponse = {
+	data: AiNavigationItem[];
+};
+
+export type AiPageMetadata = {
+	path: string;
+	title?: string | null;
+	heading?: string | null;
+	content?: string | null;
+	seoTitle?: string | null;
+	seoDescription?: string | null;
+	noindex: boolean;
+	imageUrl?: string | null;
+};
+
 export type AiUser = {
 	id: string;
 	displayName: string;
 	email?: string | null;
 	avatarUrl?: string | null;
+	locale?: 'ru-RU' | 'en-US';
 };
 
 export type AiWalletSummary = {
@@ -53,8 +71,22 @@ export type AiModelCapabilities = {
 	acceptsReference?: boolean;
 	acceptsNegativePrompt?: boolean;
 	acceptsSound?: boolean;
+	supportsContext?: boolean;
 	maxUploadBytes?: number;
 	maxReferenceFiles?: number;
+	referencePromptTag?: string;
+	reasoning?: {
+		modes: string[];
+		defaultMode: string;
+		mandatory: boolean;
+	};
+	videoModes?: Array<{
+		code: string;
+		operation: 'text_to_video' | 'image_to_video';
+		imageInput?: 'frame_images' | 'input_references';
+		minReferenceFiles: number;
+		maxReferenceFiles: number;
+	}>;
 };
 
 export type AiPublicModel = {
@@ -62,8 +94,14 @@ export type AiPublicModel = {
 	slug: string;
 	name: string;
 	description?: string | null;
+	logoUrl?: string | null;
 	modality: AiModelModality;
 	capabilities: AiModelCapabilities;
+	presentation?: {
+		family?: string | null;
+		variant?: string | null;
+		sort?: number | null;
+	} | null;
 	available: boolean;
 	unavailableReason?: string | null;
 };
@@ -71,7 +109,7 @@ export type AiPublicModel = {
 export type AiQuoteRequest = {
 	operation: string;
 	modelId: string;
-	promptConfigId?: string;
+	promptId?: number;
 	toolId?: string;
 	parameters: Record<string, unknown>;
 };
@@ -109,7 +147,9 @@ export type AiRunSummary = {
 	workId?: string | null;
 	status: AiRunStatus;
 	title: string;
+	prompt?: string | null;
 	modality: AiModelModality;
+	modelId?: string | null;
 	modelName: string;
 	createdAt: string;
 	progress?: number | null;
@@ -123,7 +163,7 @@ export type AiRetryPreset = {
 	runId: string;
 	operation: string;
 	modelId: string;
-	promptConfigId?: string | null;
+	promptId?: number | null;
 	toolId?: string | null;
 	parameters: Record<string, unknown>;
 	hasInputReference: boolean;
@@ -142,6 +182,18 @@ export type AiMessageAttachment = {
 	previewUrl?: string | null;
 	downloadUrl?: string | null;
 	deletedAt?: string | null;
+};
+
+export type AiUploadResult = {
+	id: string;
+	name: string;
+	mimeType: string;
+	sizeBytes: string;
+	width: number | null;
+	height: number | null;
+	previewUrl: string;
+	downloadUrl: string;
+	expiresAt: string;
 };
 
 export type AiRunDetail = AiRunSummary & {
@@ -187,12 +239,18 @@ export type AiRunOutput = {
 	sizeBytes?: string | null;
 	width?: number | null;
 	height?: number | null;
+	aspectRatio?: string | null;
 	outputUrl?: string | null;
 	previewUrl?: string | null;
 	downloadUrl?: string | null;
 	copyUrl?: string | null;
 	url?: string | null;
 	deletedAt?: string | null;
+};
+
+export type AiCitation = {
+	title: string;
+	url: string;
 };
 
 export type AiPage<T> = {
@@ -223,7 +281,12 @@ export type AiWorkSummary = {
 	title: string;
 	modality: AiModelModality;
 	status: AiRunStatus | 'expired';
+	model?: {
+		id: string;
+		name: string;
+	};
 	previewUrl?: string | null;
+	outputUrl?: string | null;
 	favorite: boolean;
 	shared: boolean;
 	createdAt: string;
@@ -243,7 +306,7 @@ export type AiPlan = {
 	amountMinor: number;
 	currency: string;
 	credits: number;
-	interval: 'week' | 'month' | 'three_months' | 'custom';
+	interval: 'week' | 'month' | 'three_months' | 'year' | 'custom';
 	intervalLabel: string;
 	priceSuffix: string;
 	features: string[];
@@ -259,6 +322,15 @@ export type AiTopupPackage = {
 	credits: number;
 	eligible: boolean;
 	ineligibleReason?: string | null;
+};
+
+export type AiPromoQuote = {
+	code: string;
+	baseAmountMinor: number;
+	discountMinor: number;
+	finalAmountMinor: number;
+	bonusCredits: number;
+	currency: string;
 };
 
 export type AiBalancePage = {
@@ -314,6 +386,12 @@ export type AiPromptDetail = AiPromptCard & {
 	description?: string | null;
 	seoTitle?: string | null;
 	seoDescription?: string | null;
+	promptTemplate: string;
+	defaultAspectRatio?: string | null;
+	minimumReferenceFiles: number;
+	maximumReferenceFiles: number;
+	allowReferenceUpload: boolean;
+	allowUserPromptEdit: boolean;
 	variablesSchema?: {
 		fields?: Array<{
 			code: string;
@@ -321,6 +399,7 @@ export type AiPromptDetail = AiPromptCard & {
 			type?: 'text' | 'textarea' | 'number' | 'select';
 			required?: boolean;
 			placeholder?: string | null;
+			templateToken?: string | null;
 			options?: AiToolFieldOption[];
 		}>;
 	} | null;
@@ -330,7 +409,7 @@ export type AiPromptDetail = AiPromptCard & {
 export type AiPromptCatalog = AiPage<AiPromptCard> & {
 	filters?: {
 		categories?: Array<{ value: string; label: string }>;
-		access?: Array<{ value: string; label: string }>;
+		modelIds?: string[];
 	};
 };
 
@@ -360,6 +439,7 @@ export type AiWorkOutput = {
 	sizeBytes?: string | null;
 	width?: number | null;
 	height?: number | null;
+	aspectRatio?: string | null;
 	moderationStatus?: string | null;
 	heldForReview: boolean;
 	assetAvailable: boolean;
@@ -375,6 +455,7 @@ export type AiHistoryItem = {
 	id: string;
 	kind: 'run' | 'ledger' | 'payment' | 'refund';
 	title: string;
+	prompt?: string | null;
 	description?: string | null;
 	status: string;
 	createdAt: string;
@@ -437,6 +518,18 @@ export type AiUserProfile = {
 	language?: string | null;
 	marketingConsent?: boolean;
 	productUpdates?: boolean;
+	authMethods: {
+		emailPassword: boolean;
+		emailVerified: boolean;
+		emailTwoFactorEnabled: boolean;
+		telegram: boolean;
+	};
+};
+
+export type AiTwoFactorRequired = {
+	requiresTwoFactor: true;
+	challengeId: string;
+	destinationHint: string;
 };
 
 export type AiReferralPayout = {
@@ -464,6 +557,8 @@ export type AiReferralStats = {
 	referredBonusPercent?: number | null;
 	holdDays?: number | null;
 	payoutMethods?: Array<'bank' | 'crypto'>;
+	promptAuthorRewardGenerations: number;
+	promptAuthorRewardCredits: number;
 	payouts: AiReferralPayout[];
 };
 
@@ -479,6 +574,7 @@ export type AiPublicShare = {
 	slug: string;
 	title: string;
 	modality: AiModelModality;
+	modelId?: string | null;
 	modelName?: string | null;
 	createdAt: string;
 	previewUrl?: string | null;

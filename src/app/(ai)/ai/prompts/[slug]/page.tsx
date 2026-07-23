@@ -30,10 +30,7 @@ export async function generateMetadata({
       type: "article",
       ...(prompt.imageUrl ? { images: [prompt.imageUrl] } : {}),
     },
-    robots: {
-      index: !prompt.seoNoindex,
-      follow: !prompt.seoNofollow,
-    },
+    robots: { index: false, follow: false },
   };
 }
 

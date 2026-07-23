@@ -4,24 +4,21 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   FiAlertCircle,
+  FiCalendar,
   FiCopy,
-  FiDownload,
   FiImage,
   FiRefreshCw,
-  FiShield,
+  FiZap,
 } from "react-icons/fi";
 
 import { useAiSession } from "@/features/ai-session";
-import {
-  aiApiFetch,
-  type AiApiEnvelope,
-  type AiPublicShare,
-} from "@/shared/api/ai";
+import { useAiLocale } from "@/features/ai-locale";
+import { type AiPublicShare } from "@/shared/api/ai";
 
-import { getAiErrorMessage, unwrapAiData, useAiResource } from "../model/api";
+import { useAiResource } from "../model/api";
 import { formatDate } from "../model/format";
 import { writeLocalJson } from "../model/storage";
-import { AiButton, AiCard, AiPage, AiPageHeader, FieldMessage } from "./AiUi";
+import { AiButton, AiCard, AiPage, FieldMessage } from "./AiUi";
 import styles from "./AiPages.module.scss";
 
 export function SharePage({
@@ -33,52 +30,38 @@ export function SharePage({
 }) {
   const router = useRouter();
   const { session } = useAiSession();
+  const { locale, t } = useAiLocale();
   const share = useAiResource<AiPublicShare>(
     `/public/shares/${encodeURIComponent(slug)}`,
     initialShare,
   );
-  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  async function remix() {
-    if (!share.data?.remixSupported) {
+  function usePrompt() {
+    const prompt = share.data?.prompt?.trim();
+    if (!prompt) {
+      setError(t("Промпт этой работы недоступен", "This work's prompt is unavailable"));
       return;
     }
-
     if (!session.authenticated) {
       router.push(`/ai/auth?returnTo=${encodeURIComponent(`/ai/share/${slug}`)}`);
       return;
     }
 
-    setIsPending(true);
     setError(null);
-    try {
-      const payload = await aiApiFetch<
-        { draftToken: string; modality: string; modelId: string; suggestedOperation: string } |
-        AiApiEnvelope<{ draftToken: string; modality: string; modelId: string; suggestedOperation: string }>
-      >(`/public/shares/${encodeURIComponent(slug)}/remix`, { method: "POST" });
-      const draft = unwrapAiData(payload);
-      writeLocalJson(
-        "neuroluv-ai:create-preset",
-        {
-          publicShareDraftToken: draft.draftToken,
-          modelId: draft.modelId,
-          operation: draft.suggestedOperation,
-        },
-      );
-      router.push(
-        draft.modality === "video"
-          ? "/ai/create/video"
-          : draft.modality === "text"
-            ? "/ai/create/text"
-            : "/ai/create/photo",
-      );
-    } catch (requestError) {
-      setError(getAiErrorMessage(requestError));
-    } finally {
-      setIsPending(false);
-    }
+    writeLocalJson("neuroluv-ai:create-preset", {
+      prompt,
+      ...(share.data?.negativePrompt ? { negativePrompt: share.data.negativePrompt } : {}),
+      ...(share.data?.modelId ? { modelId: share.data.modelId } : {}),
+    });
+    router.push(
+      share.data?.modality === "video"
+        ? "/ai/create/video"
+        : share.data?.modality === "text"
+          ? "/ai/create/text"
+          : "/ai/create/photo",
+    );
   }
 
   async function copyPage() {
@@ -87,7 +70,7 @@ export function SharePage({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError("Не удалось скопировать ссылку");
+      setError(t("Не удалось скопировать ссылку", "Unable to copy the link"));
     }
   }
 
@@ -105,67 +88,57 @@ export function SharePage({
       <AiPage>
         <AiCard className={styles.shareMissing}>
           <FiAlertCircle aria-hidden="true" />
-          <h1>{revoked ? "Ссылка недоступна" : "Не удалось открыть работу"}</h1>
+          <h1>{revoked ? t("Ссылка недоступна", "Link unavailable") : t("Не удалось открыть работу", "Unable to open the work")}</h1>
           <p>
             {revoked
-              ? "Владелец мог отозвать ссылку, либо работа больше не существует."
+              ? t("Владелец мог отозвать ссылку, либо работа больше не существует.", "The owner may have revoked the link, or the work no longer exists.")
               : share.error}
           </p>
-          {!revoked ? <AiButton variant="secondary" onClick={share.reload}><FiRefreshCw aria-hidden="true" /> Повторить</AiButton> : null}
+          {!revoked ? <AiButton variant="secondary" onClick={share.reload}><FiRefreshCw aria-hidden="true" /> {t("Повторить", "Retry")}</AiButton> : null}
         </AiCard>
       </AiPage>
     );
   }
 
-  const disclosure = publicDisclosure(share.data);
-
   return (
     <AiPage>
-      <AiPageHeader
-        eyebrow="Публичная работа"
-        title={share.data.title}
-        description={`Создано ${formatDate(share.data.createdAt)} · ${disclosure.summary}`}
-        actions={
-          <AiButton variant="secondary" onClick={() => void copyPage()}>
-            <FiCopy aria-hidden="true" /> {copied ? "Скопировано" : "Поделиться"}
-          </AiButton>
-        }
-      />
+      <header className={`${styles.detailToolbar} ${styles.shareToolbar}`}>
+        <strong className={styles.detailTitle}>{share.data.title}</strong>
+        <AiButton variant="secondary" onClick={() => void copyPage()}>
+          <FiCopy aria-hidden="true" />
+          {copied ? t("Скопировано", "Copied") : t("Поделиться", "Share")}
+        </AiButton>
+      </header>
 
       <div className={styles.shareGrid}>
         <AiCard className={styles.shareResult}>
           <PublicResult share={share.data} />
+          <div className={styles.resultMeta}>
+            <span>
+              <FiCalendar aria-hidden="true" />
+              {formatDate(share.data.createdAt, true, locale)}
+            </span>
+            {share.data.modelName ? <strong>{share.data.modelName}</strong> : null}
+          </div>
         </AiCard>
         <aside className={styles.shareAside}>
-          <AiCard>
-            <span className={styles.shareShield}><FiShield aria-hidden="true" /></span>
-            <h2>Что опубликовано</h2>
-            <p>{disclosure.details}</p>
-            {share.data.disclosure?.promptIncluded ? (
-              <SharedPrompt label="Промпт" value={share.data.prompt} />
-            ) : null}
-            {share.data.disclosure?.negativePromptIncluded ? (
-              <SharedPrompt label="Negative prompt" value={share.data.negativePrompt} />
-            ) : null}
-          </AiCard>
-          <AiCard>
-            <h2>Создать свою версию</h2>
+          <AiCard className={styles.usePromptCard}>
+            <h2>{t("Использовать промпт", "Use prompt")}</h2>
             <p>
-              {share.data.remixSupported
-                ? "Результат будет добавлен как референс в новый приватный черновик."
-                : share.data.remixUnavailableReason || "Эту работу пока нельзя использовать как референс."}
+              {share.data.prompt
+                ? t(
+                    "Промпт и модель будут перенесены в новый приватный чат.",
+                    "The prompt and model will be copied into a new private chat.",
+                  )
+                : t(
+                    "Промпт этой работы недоступен.",
+                    "This work's prompt is unavailable.",
+                  )}
             </p>
-            <AiButton
-              disabled={isPending || !share.data.remixSupported}
-              onClick={() => void remix()}
-            >
-              {isPending ? "Готовим черновик…" : "Использовать как референс"}
+            <AiButton disabled={!share.data.prompt} onClick={usePrompt}>
+              <FiZap aria-hidden="true" />
+              {t("Использовать промпт", "Use prompt")}
             </AiButton>
-            {share.data.downloadUrl ? (
-              <a className={`${styles.button} ${styles.button_secondary}`} href={share.data.downloadUrl}>
-                <FiDownload aria-hidden="true" /> Скачать
-              </a>
-            ) : null}
             {error ? <FieldMessage>{error}</FieldMessage> : null}
           </AiCard>
         </aside>
@@ -174,38 +147,10 @@ export function SharePage({
   );
 }
 
-function SharedPrompt({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className={styles.sharedPrompt}>
-      <strong>{label}</strong>
-      <p>{value || "Не указан"}</p>
-    </div>
-  );
-}
-
-function publicDisclosure(share: AiPublicShare): { summary: string; details: string } {
-  const published: string[] = [];
-  const hidden: string[] = ["автор"];
-  const disclosure = share.disclosure;
-
-  if (disclosure?.promptIncluded) published.push("промпт");
-  else hidden.push("промпт");
-
-  if (disclosure?.negativePromptIncluded) published.push("negative prompt");
-  else hidden.push("negative prompt");
-
-  if (disclosure?.sourceReferenceIncluded) published.push("исходный референс");
-  else hidden.push("исходный референс");
-
-  return {
-    summary: published.length ? `открыто: ${published.join(", ")}` : "детали генерации скрыты",
-    details: `${published.length ? `Опубликовано: ${published.join(", ")}. ` : ""}Скрыто: ${hidden.join(", ")}.`,
-  };
-}
-
 function PublicResult({ share }: { share: AiPublicShare }) {
+  const { t } = useAiLocale();
   if (share.expired) {
-    return <div className={styles.deletedResult}><FiImage aria-hidden="true" /><h2>Файл недоступен</h2></div>;
+    return <div className={styles.deletedResult}><FiImage aria-hidden="true" /><h2>{t("Файл недоступен", "File unavailable")}</h2></div>;
   }
   if (share.modality === "video" && share.outputUrl) {
     return <video controls playsInline preload="metadata" src={share.outputUrl} />;
@@ -219,5 +164,5 @@ function PublicResult({ share }: { share: AiPublicShare }) {
       <img alt={share.title} src={share.outputUrl || share.previewUrl || ""} />
     );
   }
-  return <div className={styles.deletedResult}><FiImage aria-hidden="true" /><h2>Файл недоступен</h2></div>;
+  return <div className={styles.deletedResult}><FiImage aria-hidden="true" /><h2>{t("Файл недоступен", "File unavailable")}</h2></div>;
 }

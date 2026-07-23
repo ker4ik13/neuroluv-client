@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 
+import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
 import { WorksPage } from "@/widgets/ai-pages";
 
-export const metadata: Metadata = { title: "Мои работы", robots: { index: false, follow: false } };
+export function generateMetadata(): Promise<Metadata> {
+  return buildAiPageMetadata("/ai/works", {
+    title: "Мои работы",
+    description: "Сохранённые изображения и видео.",
+  });
+}
 
 export default async function Page({
   searchParams,

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 
+import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
 import { CreateStudioPage } from "@/widgets/ai-pages";
 
-export const metadata: Metadata = {
-  title: "Создать видео",
-  description: "Генерация AI-видео по тексту или изображению в студии Нейролюба.",
-  alternates: { canonical: "/ai/create/video" },
-  robots: { index: true, follow: true },
-};
+export function generateMetadata(): Promise<Metadata> {
+  return buildAiPageMetadata("/ai/create/video", {
+    title: "Создать видео",
+    description: "Генерация AI-видео по тексту или изображению в студии Нейролюба.",
+  });
+}
 
 export default function Page() {
   return <CreateStudioPage kind="video" />;

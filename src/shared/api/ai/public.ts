@@ -6,6 +6,7 @@ import type {
 	AiFaqItem,
 	AiPromptCatalog,
 	AiPromptDetail,
+	AiPageMetadata,
 	AiPublicShare,
 } from './contracts';
 
@@ -16,6 +17,16 @@ export async function getAiPublicPrompt(slug: string): Promise<AiPromptDetail | 
 		`/catalog/prompts/${encodeURIComponent(slug)}`,
 	);
 
+	return payload?.data ?? null;
+}
+
+export async function getAiPageMetadata(
+	path: string,
+	locale: 'ru-RU' | 'en-US' = 'ru-RU',
+): Promise<AiPageMetadata | null> {
+	const payload = await fetchAiPublic<AiApiEnvelope<AiPageMetadata>>(
+		`/catalog/page?path=${encodeURIComponent(path)}&locale=${encodeURIComponent(locale)}`,
+	);
 	return payload?.data ?? null;
 }
 

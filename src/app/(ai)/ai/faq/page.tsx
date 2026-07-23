@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 
-import { hasAiPublicFaq } from "@/shared/api/ai/public";
+import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
 import { FaqPage } from "@/widgets/ai-pages";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const indexable = await hasAiPublicFaq();
-
-  return {
+  return buildAiPageMetadata("/ai/faq", {
     title: "Частые вопросы",
     description: "Ответы на вопросы об AI-студии Нейролюба, генерациях, оплате и файлах.",
-    alternates: { canonical: "/ai/faq" },
-    robots: { index: indexable, follow: indexable },
-  };
+  });
 }
 
 export default function Page() {

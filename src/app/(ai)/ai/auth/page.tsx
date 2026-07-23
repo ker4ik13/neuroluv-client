@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 
+import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
 import { AuthPage } from "@/widgets/ai-pages";
 
-export const metadata: Metadata = { title: "Вход", robots: { index: false, follow: false } };
+export function generateMetadata(): Promise<Metadata> {
+  return buildAiPageMetadata("/ai/auth", {
+    title: "Вход",
+    description: "Вход или регистрация в Нейролюб Studio.",
+  });
+}
 
 export default async function Page({
   searchParams,

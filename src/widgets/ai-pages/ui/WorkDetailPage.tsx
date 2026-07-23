@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   FiArchive,
+  FiArrowLeft,
   FiBookmark,
+  FiCalendar,
   FiCopy,
   FiDownload,
   FiImage,
@@ -15,6 +18,7 @@ import {
 } from "react-icons/fi";
 
 import { useAiSession } from "@/features/ai-session";
+import { useAiLocale } from "@/features/ai-locale";
 import {
   aiApiFetch,
   type AiApiEnvelope,
@@ -45,6 +49,7 @@ import styles from "./AiPages.module.scss";
 export function WorkDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { session, isLoading: isSessionLoading } = useAiSession();
+  const { locale, t } = useAiLocale();
   const work = useAiResource<AiWorkDetail>(
     session.authenticated ? `/works/${encodeURIComponent(id)}` : null,
   );
@@ -81,7 +86,7 @@ export function WorkDetailPage({ id }: { id: string }) {
   if (!isSessionLoading && !session.authenticated) {
     return (
       <AiPage>
-        <AiPageHeader title="Работа" description="Просмотр результата и управление приватностью." />
+        <AiPageHeader title={t("Работа", "Work")} />
         <AccountGate returnTo={`/ai/works/${id}`} />
       </AiPage>
     );
@@ -111,13 +116,14 @@ export function WorkDetailPage({ id }: { id: string }) {
         current ? { ...current, shared: false, shareSlug: null } : current,
       );
       shareIntentKey.current = null;
-      setNotice("Публичная ссылка отозвана");
+      setNotice(t("Публичная ссылка отозвана", "Public link revoked"));
       return;
     }
 
     shareIntentKey.current ||= crypto.randomUUID();
     const payload = await mutate(`/works/${work.data.id}/share`, "POST", {
       idempotencyKey: shareIntentKey.current,
+      includePrompt: true,
     });
     const share = payload
       ? unwrapAiData(
@@ -132,13 +138,13 @@ export function WorkDetailPage({ id }: { id: string }) {
       work.update((current) =>
         current ? { ...current, shared: true, shareSlug } : current,
       );
-      await copyPublicLink(shareSlug, "Ссылка создана и скопирована");
+      await copyPublicLink(shareSlug, t("Ссылка создана и скопирована", "Link created and copied"));
     }
   }
 
   async function copyPublicLink(
     shareSlug = work.data?.shareSlug,
-    successMessage = "Ссылка скопирована",
+    successMessage = t("Ссылка скопирована", "Link copied"),
   ) {
     if (!shareSlug) return;
     setActionError(null);
@@ -146,7 +152,7 @@ export function WorkDetailPage({ id }: { id: string }) {
       await writeClipboardText(`${window.location.origin}/ai/share/${shareSlug}`);
       setNotice(successMessage);
     } catch {
-      setActionError("Не удалось скопировать ссылку");
+      setActionError(t("Не удалось скопировать ссылку", "Unable to copy the link"));
     }
   }
 
@@ -171,7 +177,7 @@ export function WorkDetailPage({ id }: { id: string }) {
   async function repeatWithOldReference() {
     const runId = work.data?.runId;
     if (!runId) {
-      setActionError("Исходный запуск недоступен для повторения");
+      setActionError(t("Исходный запуск недоступен для повторения", "The original run cannot be repeated"));
       return;
     }
     setShowRepeatWarning(false);
@@ -189,7 +195,7 @@ export function WorkDetailPage({ id }: { id: string }) {
 
   function repeat() {
     if (!work.data?.runId) {
-      setActionError("Исходный запуск недоступен для повторения");
+      setActionError(t("Исходный запуск недоступен для повторения", "The original run cannot be repeated"));
       return;
     }
 
@@ -214,7 +220,7 @@ export function WorkDetailPage({ id }: { id: string }) {
     const structured = readStructuredPrompt(selectedOutput?.data);
     const prompt = (structured?.mainPrompt || selectedOutput?.text || work.data?.textContent)?.trim();
     if (!prompt) {
-      setActionError("Готовый промпт недоступен");
+      setActionError(t("Готовый промпт недоступен", "The generated prompt is unavailable"));
       return;
     }
 
@@ -230,7 +236,7 @@ export function WorkDetailPage({ id }: { id: string }) {
   }
 
   async function handleDelete() {
-    if (!work.data || !window.confirm("Удалить эту работу? Действие нельзя отменить.")) return;
+    if (!work.data || !window.confirm(t("Удалить эту работу? Действие нельзя отменить.", "Delete this work? This action cannot be undone."))) return;
     const result = await mutate(`/works/${work.data.id}`, "DELETE");
     if (result !== null) router.replace("/ai/works");
   }
@@ -241,22 +247,30 @@ export function WorkDetailPage({ id }: { id: string }) {
         error={work.error}
         isEmpty={!work.data}
         isLoading={isSessionLoading || work.isLoading}
-        emptyTitle="Работа не найдена"
+        emptyTitle={t("Работа не найдена", "Work not found")}
         onRetry={work.reload}
       >
         {work.data ? (
           <>
-            <AiPageHeader
-              backHref="/ai/works"
-              eyebrow={work.data.operationLabel || "Моя работа"}
-              title={work.data.title}
-              description={`Создано ${formatDate(work.data.createdAt, true)}${work.data.modelName ? ` · ${work.data.modelName}` : ""}`}
-              actions={<StatusBadge status={work.data.status} />}
-            />
+            <header className={styles.detailToolbar}>
+              <Link className={styles.detailBackLink} href="/ai/works">
+                <FiArrowLeft aria-hidden="true" />
+                {t("Назад", "Back")}
+              </Link>
+              <strong className={styles.detailTitle}>{work.data.title}</strong>
+              <StatusBadge status={work.data.status} />
+            </header>
 
             <div className={styles.workDetailGrid}>
               <AiCard className={styles.resultCard}>
                 <WorkResult output={selectedOutput} work={work.data} />
+                <div className={styles.resultMeta}>
+                  <span>
+                    <FiCalendar aria-hidden="true" />
+                    {formatDate(work.data.createdAt, true, locale)}
+                  </span>
+                  {work.data.modelName ? <strong>{work.data.modelName}</strong> : null}
+                </div>
                 {outputs.length > 1 ? (
                   <OutputPicker
                     outputs={outputs}
@@ -269,18 +283,18 @@ export function WorkDetailPage({ id }: { id: string }) {
 
               <aside className={styles.workAside}>
                 <AiCard className={styles.workInfoCard}>
-                  <h2>Действия</h2>
+                  <h2>{t("Действия", "Actions")}</h2>
                   {work.data.chargedCredits !== null && work.data.chargedCredits !== undefined ? (
                     <p className={styles.infoLine}>
-                      <span>Списано</span>
-                      <strong>{formatCredits(work.data.chargedCredits)}</strong>
+                      <span>{t("Списано", "Charged")}</span>
+                      <strong>{formatCredits(work.data.chargedCredits, locale)}</strong>
                     </p>
                   ) : null}
                   <div className={styles.actionStack}>
                     {work.data.operation === "photo_to_prompt" &&
                     (selectedOutput?.text || work.data.textContent) ? (
                       <AiButton disabled={isPending} onClick={useGeneratedPrompt}>
-                        <FiImage aria-hidden="true" /> Сгенерировать по промпту
+                        <FiImage aria-hidden="true" /> {t("Сгенерировать по промпту", "Generate from prompt")}
                       </AiButton>
                     ) : null}
                     {(selectedOutput?.downloadUrl || work.data.downloadUrl) &&
@@ -290,11 +304,11 @@ export function WorkDetailPage({ id }: { id: string }) {
                         download
                         href={selectedOutput?.downloadUrl || work.data.downloadUrl || undefined}
                       >
-                        <FiDownload aria-hidden="true" /> Скачать
+                        <FiDownload aria-hidden="true" /> {t("Скачать", "Download")}
                       </a>
                     ) : null}
                     <AiButton disabled={isPending} variant="secondary" onClick={repeat}>
-                      <FiRefreshCw aria-hidden="true" /> Повторить
+                      <FiRefreshCw aria-hidden="true" /> {t("Повторить", "Repeat")}
                     </AiButton>
                     <AiButton
                       disabled={isPending}
@@ -302,11 +316,11 @@ export function WorkDetailPage({ id }: { id: string }) {
                       onClick={() => void handleFavorite()}
                     >
                       <FiBookmark aria-hidden="true" fill={work.data.favorite ? "currentColor" : "none"} />
-                      {work.data.favorite ? "Убрать из избранного" : "В избранное"}
+                      {work.data.favorite ? t("Убрать из избранного", "Remove from favorites") : t("В избранное", "Add to favorites")}
                     </AiButton>
                     <AiButton disabled={isPending} variant="secondary" onClick={() => void handleShare()}>
                       {work.data.shared ? <FiX aria-hidden="true" /> : <FiShare2 aria-hidden="true" />}
-                      {work.data.shared ? "Отозвать ссылку" : "Создать публичную ссылку"}
+                      {work.data.shared ? t("Отозвать ссылку", "Revoke link") : t("Создать публичную ссылку", "Create public link")}
                     </AiButton>
                     {work.data.shared && work.data.shareSlug ? (
                       <AiButton
@@ -314,7 +328,7 @@ export function WorkDetailPage({ id }: { id: string }) {
                         variant="ghost"
                         onClick={() => void copyPublicLink()}
                       >
-                        <FiCopy aria-hidden="true" /> Скопировать ссылку
+                        <FiCopy aria-hidden="true" /> {t("Скопировать ссылку", "Copy link")}
                       </AiButton>
                     ) : null}
                     <AiButton
@@ -322,10 +336,10 @@ export function WorkDetailPage({ id }: { id: string }) {
                       variant="ghost"
                       onClick={() => void handleArchive()}
                     >
-                      <FiArchive aria-hidden="true" /> В архив
+                      <FiArchive aria-hidden="true" /> {t("В архив", "Archive")}
                     </AiButton>
                     <AiButton disabled={isPending} variant="danger" onClick={() => void handleDelete()}>
-                      <FiTrash2 aria-hidden="true" /> Удалить
+                      <FiTrash2 aria-hidden="true" /> {t("Удалить", "Delete")}
                     </AiButton>
                   </div>
                   {notice ? <FieldMessage tone="success">{notice}</FieldMessage> : null}
@@ -345,17 +359,16 @@ export function WorkDetailPage({ id }: { id: string }) {
                   tabIndex={-1}
                   onMouseDown={(event) => event.stopPropagation()}
                 >
-                  <h2 id="repeat-title">Проверить исходное фото</h2>
+                  <h2 id="repeat-title">{t("Проверить исходное фото", "Check the source image")}</h2>
                   <p>
-                    Этот запуск использовал референс. Скорее всего, перед повтором
-                    его стоит заменить.
+                    {t("Этот запуск использовал референс. Скорее всего, перед повтором его стоит заменить.", "This run used a reference image. You may want to replace it before repeating the run.")}
                   </p>
                   <div className={styles.modalActions}>
-                    <AiButton autoFocus onClick={replaceReference}>Заменить фото</AiButton>
+                    <AiButton autoFocus onClick={replaceReference}>{t("Заменить фото", "Replace image")}</AiButton>
                     <AiButton variant="secondary" onClick={() => void repeatWithOldReference()}>
-                      Продолжить с прежним
+                      {t("Продолжить с прежним", "Keep current image")}
                     </AiButton>
-                    <AiButton variant="ghost" onClick={() => setShowRepeatWarning(false)}>Отмена</AiButton>
+                    <AiButton variant="ghost" onClick={() => setShowRepeatWarning(false)}>{t("Отмена", "Cancel")}</AiButton>
                   </div>
                 </div>
               </div>
@@ -368,6 +381,7 @@ export function WorkDetailPage({ id }: { id: string }) {
 }
 
 function WorkResult({ work, output }: { work: AiWorkDetail; output: AiWorkOutput | null }) {
+  const { t } = useAiLocale();
   const deleted = output ? output.deletedByRetention : Boolean(work.fileDeletedAt);
   const outputUrl = output?.outputUrl || output?.previewUrl || work.outputUrl || work.previewUrl;
   const text = output?.text || work.textContent;
@@ -377,8 +391,8 @@ function WorkResult({ work, output }: { work: AiWorkDetail; output: AiWorkOutput
     return (
       <div className={styles.deletedResult}>
         <FiTrash2 aria-hidden="true" />
-        <h2>Файл удалён по сроку хранения</h2>
-        <p>Метаданные запуска и финансовая история сохранены.</p>
+        <h2>{t("Файл удалён по сроку хранения", "File removed after retention period")}</h2>
+        <p>{t("Метаданные запуска и финансовая история сохранены.", "Run metadata and financial history have been preserved.")}</p>
       </div>
     );
   }
@@ -386,8 +400,8 @@ function WorkResult({ work, output }: { work: AiWorkDetail; output: AiWorkOutput
   if (output?.heldForReview) {
     return (
       <div className={styles.deletedResult}>
-        <h2>Результат ожидает проверки</h2>
-        <p>Он станет доступен только после успешной модерации.</p>
+        <h2>{t("Результат ожидает проверки", "Result is awaiting review")}</h2>
+        <p>{t("Он станет доступен только после успешной модерации.", "It will become available after moderation is complete.")}</p>
       </div>
     );
   }
@@ -401,19 +415,19 @@ function WorkResult({ work, output }: { work: AiWorkDetail; output: AiWorkOutput
     return (
       <div className={styles.textResult}>
         <div className={styles.textResultHeader}>
-          <h2>Результат</h2>
+          <h2>{t("Результат", "Result")}</h2>
           <AiButton
             type="button"
             variant="ghost"
             onClick={() => void navigator.clipboard.writeText(structured?.mainPrompt || text)}
           >
-            <FiCopy aria-hidden="true" /> Копировать
+            <FiCopy aria-hidden="true" /> {t("Копировать", "Copy")}
           </AiButton>
         </div>
         {structured ? (
           <div className={styles.structuredPrompt}>
-            <PromptSection label="Основной промпт" value={structured.mainPrompt} />
-            <PromptSection label="Короткий промпт" value={structured.shortPrompt} />
+            <PromptSection label={t("Основной промпт", "Main prompt")} value={structured.mainPrompt} />
+            <PromptSection label={t("Короткий промпт", "Short prompt")} value={structured.shortPrompt} />
             <PromptSection label="Negative prompt" value={structured.negativePrompt} />
           </div>
         ) : (
@@ -432,8 +446,8 @@ function WorkResult({ work, output }: { work: AiWorkDetail; output: AiWorkOutput
 
   return (
     <div className={styles.deletedResult}>
-      <h2>Результат пока недоступен</h2>
-      <p>Обновите страницу позднее или откройте историю запуска.</p>
+      <h2>{t("Результат пока недоступен", "Result is not available yet")}</h2>
+      <p>{t("Обновите страницу позднее или откройте историю запуска.", "Try again later or open the run history.")}</p>
     </div>
   );
 }
@@ -449,11 +463,12 @@ function OutputPicker({
   title: string;
   onSelect: (id: string) => void;
 }) {
+  const { t } = useAiLocale();
   return (
-    <div aria-label="Варианты результата" className={styles.outputPicker} role="group">
+    <div aria-label={t("Варианты результата", "Result variants")} className={styles.outputPicker} role="group">
       {outputs.map((output) => (
         <button
-          aria-label={`Показать вариант ${output.index + 1}`}
+          aria-label={`${t("Показать вариант", "Show variant")} ${output.index + 1}`}
           aria-pressed={output.id === selectedId}
           className={styles.outputOption}
           key={output.id}
@@ -467,7 +482,7 @@ function OutputPicker({
             <span aria-hidden="true">{output.index + 1}</span>
           )}
           <small>
-            {title} · {output.heldForReview ? "на проверке" : `вариант ${output.index + 1}`}
+            {title} · {output.heldForReview ? t("на проверке", "under review") : `${t("вариант", "variant")} ${output.index + 1}`}
           </small>
         </button>
       ))}

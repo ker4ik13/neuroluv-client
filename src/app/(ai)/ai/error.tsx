@@ -15,6 +15,9 @@ export default function ErrorPage({
   useEffect(() => {
     console.error("AI route render error", {
       digest: error.digest,
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
     });
   }, [error]);
 

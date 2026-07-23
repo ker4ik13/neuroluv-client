@@ -9,9 +9,11 @@ import {
   FiSend,
   FiUserPlus,
   FiUsers,
+  FiZap,
 } from "react-icons/fi";
 
 import { useAiSession } from "@/features/ai-session";
+import { useAiLocale } from "@/features/ai-locale";
 import {
   aiApiFetch,
   type AiReferralStats,
@@ -29,14 +31,17 @@ import {
   FieldMessage,
   StatusBadge,
 } from "./AiUi";
+import { AiSelect } from "./AiSelect";
 import styles from "./AiPages.module.scss";
 
 export function ReferralsPage() {
   const { session, isLoading: isSessionLoading } = useAiSession();
+  const { locale, t } = useAiLocale();
   const stats = useAiResource<AiReferralStats>(session.authenticated ? "/referrals" : null);
   const [copied, setCopied] = useState(false);
   const [payoutOpen, setPayoutOpen] = useState(false);
   const [method, setMethod] = useState<"bank" | "crypto">("bank");
+  const [asset, setAsset] = useState("USDT");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -60,7 +65,7 @@ export function ReferralsPage() {
   if (!isSessionLoading && !session.authenticated) {
     return (
       <AiPage>
-        <AiPageHeader title="Партнёрская программа" description="Приглашения, заработок и выплаты." />
+        <AiPageHeader title={t("Партнёрская программа", "Referral program")} />
         <AccountGate returnTo="/ai/referrals" />
       </AiPage>
     );
@@ -73,7 +78,7 @@ export function ReferralsPage() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError("Не удалось скопировать ссылку. Выделите её вручную.");
+      setError(t("Не удалось скопировать ссылку. Выделите её вручную.", "Unable to copy the link. Select it manually."));
     }
   }
 
@@ -119,7 +124,7 @@ export function ReferralsPage() {
           currency: stats.data?.currency || "RUB",
         },
       });
-      setNotice("Заявка на выплату отправлена на проверку.");
+      setNotice(t("Заявка на выплату отправлена на проверку.", "Payout request submitted for review."));
       payoutIntent.current = null;
       setPayoutOpen(false);
       form.reset();
@@ -141,11 +146,7 @@ export function ReferralsPage() {
 
   return (
     <AiPage>
-      <AiPageHeader
-        eyebrow="Доступно каждому аккаунту"
-        title="Партнёрская программа"
-        description="Делитесь персональной ссылкой и получайте комиссию после первой успешной покупки приглашённого."
-      />
+      <AiPageHeader title={t("Партнёрская программа", "Referral program")} />
 
       <AsyncState
         error={stats.error}
@@ -157,71 +158,78 @@ export function ReferralsPage() {
           <>
             <AiCard className={styles.referralHero}>
               <div>
-                <span className={styles.eyebrow}>Ваша ссылка</span>
-                <h2>Пригласить друзей и коллег</h2>
+                <h2>{t("Пригласить друзей и коллег", "Invite friends and colleagues")}</h2>
                 <p>
-                  Атрибуция действует {stats.data.attributionDays} дней. Учитывается
-                  последний действительный переход до регистрации.
+                  {t(
+                    `Вознаграждение начисляется после первой успешной покупки приглашённого.`,
+                    `The reward is credited after the invitee's first successful purchase.`,
+                  )}
                 </p>
               </div>
               <div className={styles.referralLinkBox}>
-                <input aria-label="Реферальная ссылка" readOnly value={stats.data.referralUrl} />
+                <input aria-label={t("Реферальная ссылка", "Referral link")} readOnly value={stats.data.referralUrl} />
                 <AiButton variant="secondary" onClick={() => void copyLink()}>
                   {copied ? <FiCheck aria-hidden="true" /> : <FiCopy aria-hidden="true" />}
-                  {copied ? "Скопировано" : "Копировать"}
+                  {copied ? t("Скопировано", "Copied") : t("Копировать", "Copy")}
                 </AiButton>
               </div>
             </AiCard>
 
             <div className={styles.statsGrid}>
-              <StatCard icon={<FiMousePointer />} label="Переходы" value={stats.data.clicks.toLocaleString("ru-RU")} />
-              <StatCard icon={<FiUserPlus />} label="Регистрации" value={stats.data.registrations.toLocaleString("ru-RU")} />
-              <StatCard icon={<FiUsers />} label="Первые оплаты" value={stats.data.firstPayments.toLocaleString("ru-RU")} />
-              <StatCard icon={<FiDollarSign />} label="Выплачено" value={formatMoney(stats.data.paidAmountMinor, stats.data.currency)} />
+              <StatCard icon={<FiMousePointer />} label={t("Переходы", "Visits")} value={stats.data.clicks.toLocaleString(locale)} />
+              <StatCard icon={<FiUserPlus />} label={t("Регистрации", "Registrations")} value={stats.data.registrations.toLocaleString(locale)} />
+              <StatCard icon={<FiUsers />} label={t("Первые оплаты", "First payments")} value={stats.data.firstPayments.toLocaleString(locale)} />
+              <StatCard icon={<FiDollarSign />} label={t("Оплачено", "Paid")} value={formatMoney(stats.data.paidAmountMinor, stats.data.currency, locale)} />
+              <StatCard icon={<FiZap />} label={t("За использование промптов", "Prompt usage rewards")} value={stats.data.promptAuthorRewardCredits.toLocaleString(locale)} />
             </div>
 
             <div className={styles.referralLowerGrid}>
               <AiCard className={styles.earningsCard}>
                 <div className={styles.cardTitleRow}>
-                  <div><span className={styles.eyebrow}>Отдельно от AI-кредитов</span><h2>Партнёрский заработок</h2></div>
+                  <h2>{t("Партнёрский заработок", "Referral earnings")}</h2>
                   <FiDollarSign aria-hidden="true" />
                 </div>
                 <div className={styles.earningsRows}>
-                  <div><span>Доступно к выплате</span><strong>{formatMoney(stats.data.availableAmountMinor, stats.data.currency)}</strong></div>
-                  <div><span>На удержании</span><strong>{formatMoney(stats.data.pendingAmountMinor, stats.data.currency)}</strong></div>
-                  <div><span>Минимальная выплата</span><strong>{formatMoney(stats.data.minimumPayoutMinor, stats.data.currency)}</strong></div>
+                  <div><span>{t("Доступно к выплате", "Available for payout")}</span><strong>{formatMoney(stats.data.availableAmountMinor, stats.data.currency, locale)}</strong></div>
+                  <div><span>{t("На удержании", "On hold")}</span><strong>{formatMoney(stats.data.pendingAmountMinor, stats.data.currency, locale)}</strong></div>
+                  <div><span>{t("Минимальная выплата", "Minimum payout")}</span><strong>{formatMoney(stats.data.minimumPayoutMinor, stats.data.currency, locale)}</strong></div>
+                  <div>
+                    <span>{t("Генераций по вашим промптам", "Generations using your prompts")}</span>
+                    <strong>{stats.data.promptAuthorRewardGenerations.toLocaleString(locale)}</strong>
+                  </div>
                 </div>
                 {!canPayout ? (
                   <p className={styles.lockNotice}>
-                    До минимальной суммы осталось {formatMoney(
+                    {t("До минимальной суммы осталось", "Remaining to minimum payout")} {formatMoney(
                       Math.max(0, stats.data.minimumPayoutMinor - stats.data.availableAmountMinor),
                       stats.data.currency,
+                      locale,
                     )}.
                   </p>
                 ) : null}
                 <AiButton disabled={!canPayout} onClick={() => setPayoutOpen(true)}>
-                  <FiSend aria-hidden="true" /> Запросить выплату
+                  <FiSend aria-hidden="true" /> {t("Запросить выплату", "Request payout")}
                 </AiButton>
               </AiCard>
 
               <AiCard className={styles.programRules}>
-                <h2>Как начисляется вознаграждение</h2>
+                <h2>{t("Как начисляется вознаграждение", "How rewards are calculated")}</h2>
                 <ol>
-                  <li><span>1</span><p>Человек переходит по вашей ссылке и регистрируется в течение {stats.data.attributionDays} дней.</p></li>
-                  <li><span>2</span><p>После его первой успешной покупки создаётся партнёрская комиссия{stats.data.referrerPercent ? ` ${stats.data.referrerPercent}%` : ""}.</p></li>
-                  <li><span>3</span><p>Комиссия проходит период удержания{stats.data.holdDays ? ` ${stats.data.holdDays} дней` : ""}, затем становится доступной.</p></li>
+                  <li><span>1</span><p>{t(`Человек переходит по вашей ссылке и регистрируется в течение ${stats.data.attributionDays} дней.`, `A person follows your link and registers within ${stats.data.attributionDays} days.`)}</p></li>
+                  <li><span>2</span><p>{t(`После его первой успешной покупки создаётся партнёрская комиссия${stats.data.referrerPercent ? ` ${stats.data.referrerPercent}%` : ""}.`, `A referral commission${stats.data.referrerPercent ? ` of ${stats.data.referrerPercent}%` : ""} is created after their first successful purchase.`)}</p></li>
+                  <li><span>3</span><p>{t(`Комиссия проходит период удержания${stats.data.holdDays ? ` ${stats.data.holdDays} дней` : ""}, затем становится доступной.`, `The commission is held${stats.data.holdDays ? ` for ${stats.data.holdDays} days` : ""} and then becomes available.`)}</p></li>
                 </ol>
               </AiCard>
             </div>
 
             <AiCard className={styles.payoutHistory}>
-              <h2>Заявки на выплату</h2>
-              {!stats.data.payouts.length ? <p>Заявок пока нет.</p> : null}
+              <h2>{t("Заявки на выплату", "Payout requests")}</h2>
+              {!stats.data.payouts.length ? <p>{t("Заявок пока нет.", "No requests yet.")}</p> : null}
               <div className={styles.paymentList}>
                 {stats.data.payouts.map((payout) => (
                   <div className={styles.paymentRow} key={payout.id}>
-                    <div><strong>{payout.method === "bank" ? "Банк" : "Криптовалюта"}</strong><small>{formatDate(payout.createdAt)}</small></div>
-                    <strong>{formatMoney(payout.amountMinor, payout.currency)}</strong>
+                    <div><strong>{payout.method === "bank" ? t("Банк", "Bank") : t("Криптовалюта", "Crypto")}</strong><small>{formatDate(payout.createdAt, false, locale)}</small></div>
+                    <strong>{formatMoney(payout.amountMinor, payout.currency, locale)}</strong>
                     <StatusBadge status={payout.status} />
                   </div>
                 ))}
@@ -237,56 +245,61 @@ export function ReferralsPage() {
       {payoutOpen && stats.data ? (
         <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setPayoutOpen(false)}>
           <form aria-labelledby="payout-title" aria-modal="true" className={styles.modal} role="dialog" onMouseDown={(event) => event.stopPropagation()} onSubmit={requestPayout}>
-            <h2 id="payout-title">Запрос выплаты</h2>
-            <p>Доступно: {formatMoney(stats.data.availableAmountMinor, stats.data.currency)}</p>
+            <h2 id="payout-title">{t("Запрос выплаты", "Payout request")}</h2>
+            <p>{t("Доступно", "Available")}: {formatMoney(stats.data.availableAmountMinor, stats.data.currency, locale)}</p>
             <div className={styles.segmented}>
-              {methods.includes("bank") ? <button aria-pressed={activeMethod === "bank"} className={activeMethod === "bank" ? styles.segmentActive : ""} type="button" onClick={() => setMethod("bank")}>Банк</button> : null}
-              {methods.includes("crypto") ? <button aria-pressed={activeMethod === "crypto"} className={activeMethod === "crypto" ? styles.segmentActive : ""} type="button" onClick={() => setMethod("crypto")}>Криптовалюта</button> : null}
+              {methods.includes("bank") ? <button aria-pressed={activeMethod === "bank"} className={activeMethod === "bank" ? styles.segmentActive : ""} type="button" onClick={() => setMethod("bank")}>{t("Банк", "Bank")}</button> : null}
+              {methods.includes("crypto") ? <button aria-pressed={activeMethod === "crypto"} className={activeMethod === "crypto" ? styles.segmentActive : ""} type="button" onClick={() => setMethod("crypto")}>{t("Криптовалюта", "Crypto")}</button> : null}
             </div>
             {activeMethod === "bank" ? (
               <>
                 <label className={styles.field}>
-                  <span>Получатель</span>
+                  <span>{t("Получатель", "Recipient")}</span>
                   <input autoComplete="name" autoFocus maxLength={160} name="recipientName" required />
                 </label>
                 <label className={styles.field}>
-                  <span>Номер счёта или карты</span>
+                  <span>{t("Номер счёта или карты", "Account or card number")}</span>
                   <input autoComplete="off" inputMode="numeric" name="account" pattern="[0-9 +()\-]{6,40}" required />
                 </label>
                 <label className={styles.field}>
-                  <span>Банк <em>необязательно</em></span>
+                  <span>{t("Банк", "Bank")} <em>{t("необязательно", "optional")}</em></span>
                   <input autoComplete="off" maxLength={160} name="bankName" />
                 </label>
               </>
             ) : (
               <>
+                <AiSelect
+                  compact
+                  id="payout-asset"
+                  label={t("Актив", "Asset")}
+                  name="asset"
+                  options={[
+                    { value: "USDT", label: "USDT" },
+                    { value: "TON", label: "TON" },
+                    { value: "BTC", label: "BTC" },
+                  ]}
+                  value={asset}
+                  onChange={setAsset}
+                />
                 <label className={styles.field}>
-                  <span>Актив</span>
-                  <select defaultValue="USDT" name="asset">
-                    <option value="USDT">USDT</option>
-                    <option value="TON">TON</option>
-                    <option value="BTC">BTC</option>
-                  </select>
+                  <span>{t("Сеть", "Network")}</span>
+                  <input autoFocus maxLength={40} name="network" placeholder={t("Например, TRC20", "For example, TRC20")} required />
                 </label>
                 <label className={styles.field}>
-                  <span>Сеть</span>
-                  <input autoFocus maxLength={40} name="network" placeholder="Например, TRC20" required />
-                </label>
-                <label className={styles.field}>
-                  <span>Адрес кошелька</span>
+                  <span>{t("Адрес кошелька", "Wallet address")}</span>
                   <textarea autoComplete="off" maxLength={180} name="address" required rows={2} />
                 </label>
                 <label className={styles.field}>
-                  <span>Memo / Tag <em>необязательно</em></span>
+                  <span>Memo / Tag <em>{t("необязательно", "optional")}</em></span>
                   <input autoComplete="off" maxLength={120} name="memo" />
                 </label>
               </>
             )}
-            <small>Реквизиты шифруются backend-ом и не сохраняются в браузере.</small>
+            <small>{t("Реквизиты передаются и хранятся в защищённом виде.", "Payment details are transmitted and stored securely.")}</small>
             {error ? <FieldMessage>{error}</FieldMessage> : null}
             <div className={styles.modalActions}>
-              <AiButton disabled={isPending} type="submit">{isPending ? "Отправляем…" : "Отправить на проверку"}</AiButton>
-              <AiButton type="button" variant="ghost" onClick={() => setPayoutOpen(false)}>Отмена</AiButton>
+              <AiButton disabled={isPending} type="submit">{isPending ? t("Отправляем…", "Submitting…") : t("Отправить на проверку", "Submit for review")}</AiButton>
+              <AiButton type="button" variant="ghost" onClick={() => setPayoutOpen(false)}>{t("Отмена", "Cancel")}</AiButton>
             </div>
           </form>
         </div>

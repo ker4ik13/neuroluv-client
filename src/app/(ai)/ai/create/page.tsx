@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 
+import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
 import { CreateStudioPage } from "@/widgets/ai-pages";
 
-export const metadata: Metadata = {
-  title: "Создать",
-  alternates: { canonical: "/ai" },
-  robots: { index: false, follow: true },
-};
+export function generateMetadata(): Promise<Metadata> {
+  return buildAiPageMetadata("/ai/create", {
+    title: "Создать",
+    description: "Выберите тип AI-генерации.",
+  });
+}
 
 export default function Page() {
   return <CreateStudioPage kind="entry" />;

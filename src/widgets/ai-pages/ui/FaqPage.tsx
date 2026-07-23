@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { FiHelpCircle, FiMessageCircle, FiSearch } from "react-icons/fi";
 
 import { type AiFaqItem } from "@/shared/api/ai";
+import { useAiLocale } from "@/features/ai-locale";
 
 import { useAiResource } from "../model/api";
 import { AiCard, AiLinkButton, AiPage, AiPageHeader, AsyncState } from "./AiUi";
 import styles from "./AiPages.module.scss";
 
 export function FaqPage() {
+  const { locale, t } = useAiLocale();
   const faq = useAiResource<AiFaqItem[]>("/catalog/faq");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -21,46 +23,42 @@ export function FaqPage() {
     [faq.data],
   );
   const filtered = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("ru-RU");
+    const query = search.trim().toLocaleLowerCase(locale);
     return (faq.data || [])
       .filter((item) => !category || item.category === category)
       .filter(
         (item) =>
           !query ||
-          item.question.toLocaleLowerCase("ru-RU").includes(query) ||
-          item.answer.toLocaleLowerCase("ru-RU").includes(query),
+          item.question.toLocaleLowerCase(locale).includes(query) ||
+          item.answer.toLocaleLowerCase(locale).includes(query),
       )
       .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-  }, [category, faq.data, search]);
+  }, [category, faq.data, locale, search]);
 
   return (
     <AiPage>
-      <AiPageHeader
-        eyebrow="Помощь"
-        title="Частые вопросы"
-        description="Ответы публикуются командой Нейролюба и обновляются без релиза приложения."
-      />
+      <AiPageHeader title={t("Частые вопросы", "Frequently asked questions")} />
 
       <AiCard className={styles.faqSearchCard}>
         <label className={styles.searchField}>
           <FiSearch aria-hidden="true" />
-          <span className={styles.visuallyHidden}>Поиск по вопросам</span>
+          <span className={styles.visuallyHidden}>{t("Поиск по вопросам", "Search questions")}</span>
           <input
-            placeholder="Например: когда вернутся кредиты"
+            placeholder={t("Например: когда вернутся кредиты", "For example: when are credits returned")}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
         {categories.length ? (
-          <div className={styles.categoryTabs} aria-label="Категории вопросов">
+          <div className={styles.categoryTabs} aria-label={t("Категории вопросов", "Question categories")}>
             <button
               aria-pressed={!category}
               className={!category ? styles.categoryActive : ""}
               type="button"
               onClick={() => setCategory("")}
             >
-              Все
+              {t("Все", "All")}
             </button>
             {categories.map((item) => (
               <button
@@ -70,7 +68,7 @@ export function FaqPage() {
                 type="button"
                 onClick={() => setCategory(item)}
               >
-                {item}
+                {faqCategoryLabel(item, t)}
               </button>
             ))}
           </div>
@@ -81,8 +79,8 @@ export function FaqPage() {
         error={faq.error}
         isEmpty={!filtered.length}
         isLoading={faq.isLoading}
-        emptyTitle={faq.data?.length ? "По вашему запросу ничего нет" : "Вопросы пока не опубликованы"}
-        emptyDescription={faq.data?.length ? "Попробуйте сократить запрос или выбрать другую категорию." : "Раздел появится после публикации материалов в админке."}
+        emptyTitle={faq.data?.length ? t("По вашему запросу ничего нет", "No matches found") : t("Вопросы пока не опубликованы", "No questions have been published yet")}
+        emptyDescription={faq.data?.length ? t("Попробуйте сократить запрос или выбрать другую категорию.", "Try shortening your query or choosing another category.") : t("Раздел появится после публикации материалов в админке.", "This section will appear after content is published in the admin panel.")}
         onRetry={faq.reload}
       >
         <div className={styles.faqList}>
@@ -105,10 +103,24 @@ export function FaqPage() {
 
       <AiCard className={styles.supportCard}>
         <span><FiMessageCircle aria-hidden="true" /></span>
-        <div><h2>Не нашли ответ?</h2><p>Напишите команде поддержки и приложите ID запуска или платежа.</p></div>
-        <AiLinkButton href="https://t.me/neuroluv" variant="secondary">Написать в Telegram</AiLinkButton>
+        <div><h2>{t("Не нашли ответ?", "Didn't find an answer?")}</h2><p>{t("Напишите команде поддержки и приложите ID запуска или платежа.", "Contact support and include the run or payment ID.")}</p></div>
+        <AiLinkButton href="https://t.me/neuroluv" variant="secondary">{t("Написать в Telegram", "Message us on Telegram")}</AiLinkButton>
       </AiCard>
     </AiPage>
   );
 }
 
+function faqCategoryLabel(
+  category: string,
+  t: (russian: string, english: string) => string,
+): string {
+  const labels: Record<string, [string, string]> = {
+    generation: ["Генерации", "Generation"],
+    privacy: ["Приватность", "Privacy"],
+    storage: ["Хранение", "Storage"],
+    billing: ["Оплата", "Billing"],
+    support: ["Поддержка", "Support"],
+  };
+  const copy = labels[category];
+  return copy ? t(copy[0], copy[1]) : category;
+}

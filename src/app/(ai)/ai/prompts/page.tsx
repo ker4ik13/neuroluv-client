@@ -1,29 +1,13 @@
 import type { Metadata } from "next";
 
-import { hasAiPublicPrompts } from "@/shared/api/ai/public";
+import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
 import { PromptsPage } from "@/widgets/ai-pages";
 
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}): Promise<Metadata> {
-  const query = await searchParams;
-  const hasFilters = Object.values(query).some((value) => value !== undefined);
-  const indexable = !hasFilters && (await hasAiPublicPrompts());
-
-  return {
+export async function generateMetadata(): Promise<Metadata> {
+  return buildAiPageMetadata("/ai/prompts", {
     title: "Каталог промптов",
     description: "Готовые AI-промпты редакции Нейролюба.",
-    alternates: { canonical: "/ai/prompts" },
-    openGraph: {
-      title: "Каталог AI-промптов — Нейролюб",
-      description: "Готовые AI-промпты редакции Нейролюба.",
-      url: "/ai/prompts",
-      type: "website",
-    },
-    robots: { index: indexable, follow: indexable },
-  };
+  });
 }
 
 export default async function Page({

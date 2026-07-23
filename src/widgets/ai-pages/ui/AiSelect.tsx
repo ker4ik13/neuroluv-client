@@ -3,6 +3,7 @@
 import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -11,20 +12,30 @@ import {
 } from "react";
 import { FiCheck, FiChevronDown } from "react-icons/fi";
 
+import { useAiLocale } from "@/features/ai-locale";
+
 import styles from "./AiSelect.module.scss";
 
 type AiSelectValue = string | number;
 
+export type AiSelectOptionGroup = {
+  key: string;
+  label: string;
+};
+
 export type AiSelectOption<Value extends AiSelectValue = string> = {
   value: Value;
   label: string;
+  selectedLabel?: string;
   description?: string;
+  visual?: ReactNode;
   disabled?: boolean;
+  group?: AiSelectOptionGroup;
 };
 
 export type AiSelectProps<Value extends AiSelectValue = string> = {
   id: string;
-  label: string;
+  label?: string;
   options: readonly AiSelectOption<Value>[];
   value?: Value | null;
   onChange: (value: Value) => void;
@@ -35,6 +46,8 @@ export type AiSelectProps<Value extends AiSelectValue = string> = {
   name?: string;
   placeholder?: string;
   required?: boolean;
+  compact?: boolean;
+  labelVisuallyHidden?: boolean;
 };
 
 const TYPEAHEAD_RESET_MS = 700;
@@ -59,9 +72,12 @@ export function AiSelect<Value extends AiSelectValue = string>({
   disabled = false,
   error,
   name,
-  placeholder = "Выберите значение",
+  placeholder,
   required = false,
+  compact = false,
+  labelVisuallyHidden = false,
 }: AiSelectProps<Value>) {
+  const { locale, t } = useAiLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [listboxLayout, setListboxLayout] = useState<ListboxLayout>({
@@ -87,6 +103,8 @@ export function AiSelect<Value extends AiSelectValue = string>({
     [options, value],
   );
   const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : null;
+  const resolvedPlaceholder = placeholder || t("Выберите значение", "Choose a value");
+  const optionSections = useMemo(() => groupOptions(options), [options]);
   const resolvedActiveIndex =
     activeIndex >= 0 && options[activeIndex] && !options[activeIndex].disabled
       ? activeIndex
@@ -269,7 +287,7 @@ export function AiSelect<Value extends AiSelectValue = string>({
   }
 
   function handleTypeahead(key: string) {
-    const normalizedKey = key.toLocaleLowerCase("ru-RU");
+    const normalizedKey = key.toLocaleLowerCase(locale);
     const nextQuery = `${typeaheadRef.current}${normalizedKey}`;
     let matchIndex = findTypeaheadMatch(options, nextQuery, resolvedActiveIndex);
 
@@ -360,13 +378,16 @@ export function AiSelect<Value extends AiSelectValue = string>({
 
   return (
     <div
-      className={`${styles.root} ${isOpen ? styles.rootOpen : ""} ${error ? styles.rootInvalid : ""} ${className}`}
+      className={`${styles.root} ${compact ? styles.rootCompact : ""} ${isOpen ? styles.rootOpen : ""} ${error ? styles.rootInvalid : ""} ${className}`}
       ref={rootRef}
     >
-      <label className={styles.label} htmlFor={triggerId} id={labelId}>
+      {label &&
+
+      <label className={`${styles.label} ${labelVisuallyHidden ? styles.visuallyHidden : ""}`} htmlFor={triggerId} id={labelId}>
         {label}
         {required ? <span aria-hidden="true"> *</span> : null}
       </label>
+      }
 
       <div className={styles.control}>
         <button
@@ -390,13 +411,20 @@ export function AiSelect<Value extends AiSelectValue = string>({
           }}
           onKeyDown={handleKeyDown}
         >
-          <span className={styles.triggerContent} id={valueId}>
-            <span className={selectedOption ? styles.value : styles.placeholder}>
-              {selectedOption?.label || placeholder}
-            </span>
-            {selectedOption?.description ? (
-              <span className={styles.valueDescription}>{selectedOption.description}</span>
+          <span className={styles.selectionMain} id={valueId}>
+            {selectedOption?.visual ? (
+              <span aria-hidden="true" className={styles.optionVisual}>
+                {selectedOption.visual}
+              </span>
             ) : null}
+            <span className={styles.triggerContent}>
+              <span className={selectedOption ? styles.value : styles.placeholder}>
+                {selectedOption?.selectedLabel || selectedOption?.label || resolvedPlaceholder}
+              </span>
+              {selectedOption?.description ? (
+                <span className={styles.valueDescription}>{selectedOption.description}</span>
+              ) : null}
+            </span>
           </span>
           <FiChevronDown aria-hidden="true" className={styles.chevron} />
         </button>
@@ -411,35 +439,66 @@ export function AiSelect<Value extends AiSelectValue = string>({
             role="listbox"
             style={{ maxHeight: listboxLayout.maxHeight } as CSSProperties}
           >
-            {options.map((option, index) => (
-              <li
-                aria-disabled={option.disabled || undefined}
-                aria-selected={index === selectedIndex}
-                className={`${styles.option} ${index === resolvedActiveIndex ? styles.optionActive : ""} ${index === selectedIndex ? styles.optionSelected : ""} ${option.disabled ? styles.optionDisabled : ""}`}
-                id={getOptionId(id, index)}
-                key={`${typeof option.value}:${String(option.value)}`}
-                ref={(element) => {
-                  if (element) optionRefs.current.set(index, element);
-                  else optionRefs.current.delete(index);
-                }}
-                role="option"
-                onClick={() => selectOption(index)}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseMove={() => {
-                  if (!option.disabled) setActiveIndex(index);
-                }}
-              >
-                <span className={styles.optionContent}>
-                  <span className={styles.optionLabel}>{option.label}</span>
-                  {option.description ? (
-                    <span className={styles.optionDescription}>{option.description}</span>
-                  ) : null}
-                </span>
-                <span aria-hidden="true" className={styles.checkSlot}>
-                  {index === selectedIndex ? <FiCheck /> : null}
-                </span>
-              </li>
-            ))}
+            {optionSections.map((section, sectionIndex) => {
+              const renderedOptions = section.options.map(({ option, index }) => (
+                <li
+                  aria-disabled={option.disabled || undefined}
+                  aria-selected={index === selectedIndex}
+                  className={`${styles.option} ${index === resolvedActiveIndex ? styles.optionActive : ""} ${index === selectedIndex ? styles.optionSelected : ""} ${option.disabled ? styles.optionDisabled : ""}`}
+                  id={getOptionId(id, index)}
+                  key={`${typeof option.value}:${String(option.value)}`}
+                  ref={(element) => {
+                    if (element) optionRefs.current.set(index, element);
+                    else optionRefs.current.delete(index);
+                  }}
+                  role="option"
+                  onClick={() => selectOption(index)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseMove={() => {
+                    if (!option.disabled) setActiveIndex(index);
+                  }}
+                >
+                  <span className={styles.selectionMain}>
+                    {option.visual ? (
+                      <span aria-hidden="true" className={styles.optionVisual}>
+                        {option.visual}
+                      </span>
+                    ) : null}
+                    <span className={styles.optionContent}>
+                      <span className={styles.optionLabel}>{option.label}</span>
+                      {option.description ? (
+                        <span className={styles.optionDescription}>{option.description}</span>
+                      ) : null}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className={styles.checkSlot}>
+                    {index === selectedIndex ? <FiCheck /> : null}
+                  </span>
+                </li>
+              ));
+
+              if (!section.group) return renderedOptions;
+
+              const groupLabelId = `${id}-group-${sectionIndex}-label`;
+              return (
+                <li
+                  className={styles.optionGroup}
+                  key={`group:${section.group.key}`}
+                  role="presentation"
+                >
+                  <span className={styles.optionGroupLabel} id={groupLabelId}>
+                    {section.group.label}
+                  </span>
+                  <ul
+                    aria-labelledby={groupLabelId}
+                    className={styles.optionGroupList}
+                    role="group"
+                  >
+                    {renderedOptions}
+                  </ul>
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </div>
@@ -487,13 +546,51 @@ function findTypeaheadMatch<Value extends AiSelectValue>(
     if (
       option &&
       !option.disabled &&
-      option.label.toLocaleLowerCase("ru-RU").startsWith(query)
+      [option.label, option.selectedLabel, option.group?.label].some((candidate) =>
+        candidate?.toLocaleLowerCase().startsWith(query),
+      )
     ) {
       return index;
     }
   }
 
   return -1;
+}
+
+type IndexedOption<Value extends AiSelectValue> = {
+  option: AiSelectOption<Value>;
+  index: number;
+};
+
+type OptionSection<Value extends AiSelectValue> = {
+  group: AiSelectOptionGroup | null;
+  options: IndexedOption<Value>[];
+};
+
+function groupOptions<Value extends AiSelectValue>(
+  options: readonly AiSelectOption<Value>[],
+): OptionSection<Value>[] {
+  const sections: OptionSection<Value>[] = [];
+  const groupedSections = new Map<string, OptionSection<Value>>();
+
+  options.forEach((option, index) => {
+    if (!option.group) {
+      sections.push({ group: null, options: [{ option, index }] });
+      return;
+    }
+
+    const existing = groupedSections.get(option.group.key);
+    if (existing) {
+      existing.options.push({ option, index });
+      return;
+    }
+
+    const section = { group: option.group, options: [{ option, index }] };
+    groupedSections.set(option.group.key, section);
+    sections.push(section);
+  });
+
+  return sections;
 }
 
 function getOptionId(id: string, index: number): string {

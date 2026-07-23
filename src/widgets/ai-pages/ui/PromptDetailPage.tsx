@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { FiArrowRight, FiBookmark, FiCheck, FiImage } from "react-icons/fi";
+import { FiArrowRight, FiBookmark, FiImage } from "react-icons/fi";
 
 import { useAiSession } from "@/features/ai-session";
+import { useAiLocale } from "@/features/ai-locale";
 import {
   aiApiFetch,
   type AiPromptDetail,
@@ -21,12 +23,16 @@ import {
   AsyncState,
   FieldMessage,
 } from "./AiUi";
+import { AiSelect } from "./AiSelect";
+import { AiModelLogo } from "./AiModelLogo";
 import styles from "./AiPages.module.scss";
 
 type PromptVariableValue = string | number | boolean;
 
 export function PromptDetailPage({ slug }: { slug: string }) {
+  const router = useRouter();
   const { session } = useAiSession();
+  const { t } = useAiLocale();
   const prompt = useAiResource<AiPromptDetail>(
     `/catalog/prompts/${encodeURIComponent(slug)}`,
   );
@@ -36,6 +42,7 @@ export function PromptDetailPage({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isFavoritePending, setIsFavoritePending] = useState(false);
   const draftKey = `neuroluv-ai:prompt-draft:${slug}`;
+  const isLocked = prompt.data?.access === "subscription";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -71,8 +78,12 @@ export function PromptDetailPage({ slug }: { slug: string }) {
 
   function handleUse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLocked) {
+      setError(t("Этот промпт пока закрыт", "This prompt is currently locked"));
+      return;
+    }
     if (!prompt.data || !selectedModelId) {
-      setError("Для этого промпта пока нет доступной модели");
+      setError(t("Для этого промпта пока нет доступной модели", "No compatible model is currently available for this prompt"));
       return;
     }
 
@@ -83,6 +94,11 @@ export function PromptDetailPage({ slug }: { slug: string }) {
       ]),
     );
     const model = compatibleModels.find((item) => item.id === selectedModelId);
+    const preparedPrompt = renderPromptTemplate(
+      prompt.data.promptTemplate,
+      prompt.data.variablesSchema?.fields || [],
+      variables,
+    );
     const target =
       model?.modality === "video"
         ? "/ai/create/video"
@@ -93,12 +109,18 @@ export function PromptDetailPage({ slug }: { slug: string }) {
     writeLocalJson(
       "neuroluv-ai:create-preset",
       {
-        promptConfigId: prompt.data.id,
+        promptId: Number(prompt.data.id),
+        promptTitle: prompt.data.title,
         modelId: selectedModelId,
-        toolValues: variables,
+        prompt: preparedPrompt,
+        aspectRatio: prompt.data.defaultAspectRatio || "",
+        promptMinimumReferenceFiles: prompt.data.minimumReferenceFiles,
+        promptMaximumReferenceFiles: prompt.data.maximumReferenceFiles,
+        catalogPromptOverride: prompt.data.allowUserPromptEdit,
+        toolValues: {},
       },
     );
-    window.location.assign(target);
+    router.push(target);
   }
 
   function updateDraft(
@@ -113,7 +135,7 @@ export function PromptDetailPage({ slug }: { slug: string }) {
   async function toggleFavorite() {
     if (!prompt.data) return;
     if (!session.authenticated) {
-      window.location.assign(`/ai/auth?returnTo=${encodeURIComponent(`/ai/prompts/${slug}`)}`);
+      router.push(`/ai/auth?returnTo=${encodeURIComponent(`/ai/prompts/${slug}`)}`);
       return;
     }
 
@@ -132,21 +154,19 @@ export function PromptDetailPage({ slug }: { slug: string }) {
   }
 
   return (
-    <AiPage>
+    <AiPage className={styles.promptDetailPage}>
       <AsyncState
         error={prompt.error}
         isEmpty={!prompt.data}
         isLoading={prompt.isLoading}
-        emptyTitle="Промпт не найден"
+        emptyTitle={t("Промпт не найден", "Prompt not found")}
         onRetry={prompt.reload}
       >
         {prompt.data ? (
           <>
             <AiPageHeader
               backHref="/ai/prompts"
-              eyebrow={prompt.data.category || "Промпт редакции"}
               title={prompt.data.title}
-              description={prompt.data.description || prompt.data.excerpt || undefined}
               actions={
                 <AiButton
                   disabled={isFavoritePending}
@@ -158,7 +178,7 @@ export function PromptDetailPage({ slug }: { slug: string }) {
                     aria-hidden="true"
                     fill={prompt.data.favorite ? "currentColor" : "none"}
                   />
-                  {prompt.data.favorite ? "В избранном" : "Сохранить"}
+                  {prompt.data.favorite ? t("В избранном", "Saved") : t("Сохранить", "Save")}
                 </AiButton>
               }
             />
@@ -168,32 +188,57 @@ export function PromptDetailPage({ slug }: { slug: string }) {
                 <div className={styles.detailMedia}>
                   {prompt.data.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- backend/CDN URL with unknown host
-                    <img alt="Пример результата" src={prompt.data.imageUrl} />
+                    <img alt={t("Пример результата", "Result example")} src={prompt.data.imageUrl} />
                   ) : (
                     <span className={styles.mediaPlaceholder}>
                       <FiImage aria-hidden="true" />
                     </span>
                   )}
                 </div>
-                <div className={styles.detailFeatures}>
-                  <span><FiCheck aria-hidden="true" /> Переменные проверяются до запуска</span>
-                  <span><FiCheck aria-hidden="true" /> Цена рассчитывается сервером</span>
-                  <span><FiCheck aria-hidden="true" /> Результат по умолчанию приватный</span>
-                </div>
+                {prompt.data.description || prompt.data.excerpt ? (
+                  <p className={styles.promptDescription}>
+                    {prompt.data.description || prompt.data.excerpt}
+                  </p>
+                ) : null}
               </AiCard>
 
               <AiCard className={styles.promptConfigurator}>
-                <h2>Настроить промпт</h2>
-                <p>Заполните параметры и выберите совместимую модель.</p>
+                <h2>{t("Настроить промпт", "Configure prompt")}</h2>
+                <p>{t("Заполните параметры и выберите совместимую модель.", "Fill in the parameters and choose a compatible model.")}</p>
                 <form className={styles.formStack} onSubmit={handleUse}>
-                  {(prompt.data.variablesSchema?.fields || []).map((field) => (
-                    <label className={styles.field} key={field.code}>
-                      <span>{field.label}</span>
-                      {field.type === "textarea" ? (
+                  {(prompt.data.variablesSchema?.fields || []).map((field) =>
+                    field.type === "select" ? (
+                      <AiSelect
+                        compact
+                        id={`prompt-variable-${field.code}`}
+                        key={field.code}
+                        label={field.label}
+                        name={field.code}
+                        options={[
+                          { value: "", label: t("Выберите значение", "Choose a value") },
+                          ...(field.options?.map((option, index) => ({
+                            value: String(index),
+                            label: option.label,
+                          })) || []),
+                        ]}
+                        required={false}
+                        value={selectedOptionToken(field.options, variableValues[field.code])}
+                        onChange={(optionToken) => {
+                          const option = field.options?.[Number(optionToken)];
+                          updateDraft(selectedModelId, {
+                            ...variableValues,
+                            [field.code]: option?.value ?? "",
+                          });
+                        }}
+                      />
+                    ) : (
+                      <label className={styles.field} key={field.code}>
+                        <span>{field.label}</span>
+                        {field.type === "textarea" ? (
                         <textarea
                           name={field.code}
                           placeholder={field.placeholder || ""}
-                          required={field.required}
+                          required={false}
                           rows={4}
                           value={String(variableValues[field.code] ?? "")}
                           onChange={(event) =>
@@ -203,34 +248,11 @@ export function PromptDetailPage({ slug }: { slug: string }) {
                             })
                           }
                         />
-                      ) : field.type === "select" ? (
-                        <select
-                          name={field.code}
-                          required={field.required}
-                          value={selectedOptionToken(field.options, variableValues[field.code])}
-                          onChange={(event) => {
-                            const option = field.options?.[Number(event.target.value)];
-                            updateDraft(selectedModelId, {
-                              ...variableValues,
-                              [field.code]: option?.value ?? "",
-                            });
-                          }}
-                        >
-                          <option value="">Выберите значение</option>
-                          {field.options?.map((option, index) => (
-                            <option
-                              key={`${index}:${typeof option.value}:${String(option.value)}`}
-                              value={index}
-                            >
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
+                        ) : (
                         <input
                           name={field.code}
                           placeholder={field.placeholder || ""}
-                          required={field.required}
+                          required={false}
                           type={field.type === "number" ? "number" : "text"}
                           value={String(variableValues[field.code] ?? "")}
                           onChange={(event) =>
@@ -243,30 +265,33 @@ export function PromptDetailPage({ slug }: { slug: string }) {
                             })
                           }
                         />
-                      )}
-                    </label>
-                  ))}
+                        )}
+                      </label>
+                    ),
+                  )}
 
-                  <label className={styles.field}>
-                    <span>Модель</span>
-                    <select
-                      disabled={models.isLoading || compatibleModels.length === 0}
-                      required
-                      value={selectedModelId}
-                      onChange={(event) => updateDraft(event.target.value, variableValues)}
-                    >
-                      {compatibleModels.map((model) => (
-                        <option key={model.id} value={model.id}>{model.name}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <AiSelect
+                    disabled={models.isLoading || compatibleModels.length === 0}
+                    id="prompt-compatible-model"
+                    label={t("Модель", "Model")}
+                    options={compatibleModels.map((model) => ({
+                      value: model.id,
+                      label: model.name,
+                      visual: <AiModelLogo label={model.name} logoUrl={model.logoUrl} />,
+                    }))}
+                    required
+                    value={selectedModelId}
+                    onChange={(nextModelId) => updateDraft(nextModelId, variableValues)}
+                  />
 
                   {error ? <FieldMessage>{error}</FieldMessage> : null}
                   {models.error ? <FieldMessage>{models.error}</FieldMessage> : null}
 
-                  <AiButton disabled={!selectedModelId} type="submit">
-                    Продолжить в генераторе
-                    <FiArrowRight aria-hidden="true" />
+                  <AiButton disabled={!selectedModelId || isLocked} type="submit">
+                    {isLocked
+                      ? t("Промпт пока закрыт", "Prompt is currently locked")
+                      : t("Продолжить в генераторе", "Continue in generator")}
+                    {!isLocked ? <FiArrowRight aria-hidden="true" /> : null}
                   </AiButton>
                 </form>
               </AiCard>
@@ -286,4 +311,25 @@ function selectedOptionToken(
     (option) => typeof option.value === typeof value && option.value === value,
   );
   return index === undefined || index < 0 ? "" : String(index);
+}
+
+function renderPromptTemplate(
+  template: string,
+  fields: NonNullable<AiPromptDetail["variablesSchema"]>["fields"],
+  values: Record<string, PromptVariableValue>,
+): string {
+  let rendered = template;
+  for (const field of fields || []) {
+    const value = values[field.code];
+    if (value === undefined || value === null || String(value).trim() === "") continue;
+    const replacement = String(value);
+    const tokens = [
+      field.templateToken,
+      `{{${field.code}}}`,
+    ].filter((token): token is string => Boolean(token));
+    tokens.forEach((token) => {
+      rendered = rendered.split(token).join(replacement);
+    });
+  }
+  return rendered;
 }

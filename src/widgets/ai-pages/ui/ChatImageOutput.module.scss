@@ -3,20 +3,25 @@
 
 .root {
 	display: grid;
+	width: fit-content;
+	max-width: 100%;
 	min-width: 0;
+	justify-self: start;
 	gap: rem(8);
 	margin: 0;
 }
 
 .imageButton {
 	display: block;
-	width: 100%;
+	width: fit-content;
+	max-width: 100%;
+	justify-self: start;
 	padding: 0;
 	line-height: 0;
-	background: #eef3f6;
+	background: transparent;
 	border: 0;
 	border-radius: rem(14);
-	cursor: zoom-in;
+	cursor: pointer;
 	overflow: hidden;
 
 	&:focus-visible {
@@ -26,9 +31,10 @@
 
 .image {
 	display: block;
-	width: 100%;
+	width: auto;
+	height: auto;
+	max-width: 100%;
 	max-height: rem(620);
-	object-fit: contain;
 }
 
 .caption {
@@ -99,6 +105,39 @@
 	white-space: nowrap;
 }
 
+.mediaDetails,
+.creditUsage {
+	display: inline-flex;
+	min-width: 0;
+	align-items: center;
+	gap: rem(6);
+}
+
+.mediaDetails {
+	justify-content: flex-end;
+	color: var(--ai-muted);
+	font-size: rem(12);
+	font-weight: 650;
+	line-height: 1.35;
+}
+
+.creditUsage {
+	flex: 0 0 auto;
+	white-space: nowrap;
+
+	svg {
+		width: rem(14);
+		height: rem(14);
+		color: var(--ai-primary);
+	}
+}
+
+.fullscreenCharacteristics {
+	display: flex;
+	align-items: center;
+	gap: rem(8);
+}
+
 .copyError {
 	color: #b42318;
 	font-size: rem(12);
@@ -127,8 +166,10 @@
 	height: 100vh;
 	height: 100dvh;
 	place-items: center;
-	padding: max(rem(16), env(safe-area-inset-top)) max(rem(16), env(safe-area-inset-right))
-		max(rem(16), env(safe-area-inset-bottom)) max(rem(16), env(safe-area-inset-left));
+	padding: max(rem(16), env(safe-area-inset-top))
+		max(rem(16), env(safe-area-inset-right))
+		max(rem(16), env(safe-area-inset-bottom))
+		max(rem(16), env(safe-area-inset-left));
 	background: rgba(7, 18, 29, 0.9);
 	backdrop-filter: blur(rem(8));
 }
@@ -154,6 +195,17 @@
 	filter: drop-shadow(0 rem(14) rem(36) rgba(0, 0, 0, 0.32));
 }
 
+.fullscreenDocument {
+	display: block;
+	width: min(100%, rem(1180));
+	height: 100%;
+	min-height: 0;
+	background: #fff;
+	border: 0;
+	border-radius: rem(14);
+	box-shadow: 0 rem(14) rem(36) rgba(0, 0, 0, 0.32);
+}
+
 .closeButton {
 	position: absolute;
 	z-index: 1;
@@ -177,7 +229,321 @@
 	text-align: center;
 }
 
-@media (max-width: 560px) {
+.galleryBackdrop {
+	position: fixed;
+	z-index: 10000;
+	inset: 0;
+	display: grid;
+	width: 100vw;
+	height: 100vh;
+	height: 100dvh;
+	place-items: stretch;
+	overflow: hidden;
+	background:
+		radial-gradient(circle at 50% 48%, rgba(28, 126, 214, 0.14), transparent 44%),
+		rgba(6, 16, 26, 0.94);
+	isolation: isolate;
+}
+
+.galleryBackdropImage {
+	position: absolute;
+	z-index: -1;
+	inset: rem(-70);
+	overflow: hidden;
+	pointer-events: none;
+
+	&::after {
+		position: absolute;
+		inset: 0;
+		background: rgba(5, 15, 24, 0.74);
+		content: '';
+	}
+
+	img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		filter: blur(rem(54)) saturate(0.82);
+		opacity: 0.44;
+		transform: scale(1.08);
+	}
+}
+
+.galleryDialog {
+	position: relative;
+	display: grid;
+	box-sizing: border-box;
+	width: min(100%, rem(1640));
+	height: 100%;
+	max-height: 100vh;
+	max-height: 100dvh;
+	min-width: 0;
+	min-height: 0;
+	grid-template-rows: minmax(0, 1fr) auto auto;
+	place-self: center;
+	gap: rem(10);
+	padding:
+		max(rem(52), env(safe-area-inset-top))
+		max(rem(18), env(safe-area-inset-right))
+		max(rem(14), env(safe-area-inset-bottom))
+		max(rem(18), env(safe-area-inset-left));
+	outline: none;
+}
+
+.galleryCloseButton,
+.galleryArrow,
+.galleryInfo a,
+.galleryThumbnail {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	color: rgba(255, 255, 255, 0.82);
+	background: rgba(17, 35, 50, 0.7);
+	border: rem(1) solid rgba(255, 255, 255, 0.16);
+	cursor: pointer;
+	transition:
+		color 160ms ease,
+		background-color 160ms ease,
+		border-color 160ms ease,
+		transform 160ms ease,
+		opacity 160ms ease;
+	backdrop-filter: blur(rem(14));
+
+	&:hover:not(:disabled) {
+		color: #fff;
+		background: rgba(15, 133, 226, 0.9);
+		border-color: rgba(115, 201, 255, 0.74);
+	}
+
+	&:focus-visible {
+		outline: rem(2) solid rgba(122, 203, 255, 0.94);
+		outline-offset: rem(2);
+	}
+}
+
+.galleryCloseButton {
+	position: absolute;
+	z-index: 3;
+	top: max(rem(14), env(safe-area-inset-top));
+	right: max(rem(18), env(safe-area-inset-right));
+	width: rem(38);
+	height: rem(38);
+	font-size: rem(21);
+	border-radius: rem(12);
+}
+
+.galleryStage {
+	display: grid;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	grid-template-columns: rem(46) minmax(0, 1fr) rem(46);
+	align-items: center;
+	gap: rem(14);
+	overflow: hidden;
+}
+
+.galleryArrow {
+	width: rem(42);
+	height: rem(54);
+	font-size: rem(25);
+	border-radius: rem(14);
+
+	&:hover:not(:disabled) {
+		transform: translateY(rem(-1));
+	}
+
+	&:disabled {
+		cursor: default;
+		opacity: 0.2;
+	}
+}
+
+.galleryMainImageFrame {
+	position: relative;
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	height: 100%;
+	max-height: 100%;
+	min-width: 0;
+	min-height: 0;
+	place-self: center;
+	overflow: hidden;
+	border-radius: rem(12);
+	contain: layout size paint;
+}
+
+.galleryMainImage {
+	position: absolute;
+	inset: 0;
+	display: block;
+	min-width: 0;
+	min-height: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	object-position: center;
+	box-shadow: 0 rem(18) rem(52) rgba(0, 0, 0, 0.42);
+	transition: opacity 180ms ease;
+}
+
+.galleryMainImageLoading {
+	opacity: 0;
+}
+
+.gallerySpinner,
+.galleryThumbnailSpinner {
+	display: block;
+	border: rem(2) solid rgba(255, 255, 255, 0.28);
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: gallery-spin 700ms linear infinite;
+}
+
+.gallerySpinner {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	z-index: 1;
+	width: rem(30);
+	height: rem(30);
+	margin: rem(-15) 0 0 rem(-15);
+}
+
+.galleryInfo {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	justify-content: center;
+	gap: rem(10);
+	color: rgba(255, 255, 255, 0.76);
+	font-size: rem(12);
+	font-weight: 650;
+	line-height: 1.35;
+
+	span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	a {
+		width: rem(32);
+		height: rem(32);
+		flex: 0 0 auto;
+		font-size: rem(16);
+		border-radius: rem(10);
+	}
+}
+
+.galleryDetails {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: rem(8);
+
+	strong {
+		overflow: hidden;
+		color: #fff;
+		font-size: rem(13);
+		font-weight: 700;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	span {
+		color: rgba(255, 255, 255, 0.62);
+		font-weight: 550;
+	}
+}
+
+.galleryThumbnailsViewport {
+	width: min(100%, rem(900));
+	max-width: 100%;
+	min-width: 0;
+	justify-self: center;
+	place-self: center;
+	overflow-x: auto;
+	overflow-y: hidden;
+	overscroll-behavior-inline: contain;
+	scrollbar-width: none;
+	touch-action: pan-x;
+	-webkit-overflow-scrolling: touch;
+	contain: inline-size layout paint;
+
+	&::-webkit-scrollbar {
+		display: none;
+		width: 0;
+		height: 0;
+	}
+}
+
+.galleryThumbnails {
+	display: flex;
+	box-sizing: border-box;
+	width: max-content;
+	min-width: max-content;
+	max-width: none;
+	align-items: center;
+	justify-content: center;
+	gap: rem(8);
+	padding: rem(3) rem(3) rem(7);
+	margin-inline: auto;
+}
+
+.gallerySentinel {
+	display: grid;
+	width: rem(36);
+	height: rem(66);
+	flex: 0 0 rem(36);
+	place-items: center;
+}
+
+.galleryThumbnailSpinner {
+	width: rem(18);
+	height: rem(18);
+}
+
+.galleryThumbnail {
+	width: rem(62);
+	height: rem(62);
+	flex: 0 0 rem(62);
+	overflow: hidden;
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: rem(11);
+	opacity: 0.72;
+
+	img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	&:hover {
+		opacity: 1;
+	}
+}
+
+.galleryThumbnailActive {
+	border-color: #28a9f2;
+	box-shadow:
+		0 0 0 rem(2) rgba(21, 153, 234, 0.96),
+		0 rem(8) rem(24) rgba(0, 0, 0, 0.24);
+	opacity: 1;
+}
+
+@keyframes gallery-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (max-width: 900px) {
 	.caption {
 		align-items: flex-start;
 		flex-direction: column;
@@ -188,15 +554,145 @@
 		text-align: left;
 	}
 
+	.mediaDetails {
+		max-width: 100%;
+		justify-content: flex-start;
+		flex-wrap: wrap;
+	}
+
 	.backdrop {
-		padding: max(rem(10), env(safe-area-inset-top)) max(rem(10), env(safe-area-inset-right))
-			max(rem(10), env(safe-area-inset-bottom)) max(rem(10), env(safe-area-inset-left));
+		padding: max(rem(10), env(safe-area-inset-top))
+			max(rem(10), env(safe-area-inset-right))
+			max(rem(10), env(safe-area-inset-bottom))
+			max(rem(10), env(safe-area-inset-left));
+	}
+
+	.galleryDialog {
+		width: 100%;
+		max-width: 100vw;
+		grid-template-columns: minmax(0, 1fr);
+		gap: rem(8);
+		overflow: hidden;
+		padding:
+			max(rem(48), env(safe-area-inset-top))
+			max(rem(8), env(safe-area-inset-right))
+			max(rem(8), env(safe-area-inset-bottom))
+			max(rem(8), env(safe-area-inset-left));
+	}
+
+	.galleryCloseButton {
+		top: max(rem(8), env(safe-area-inset-top));
+		right: max(rem(8), env(safe-area-inset-right));
+	}
+
+	.galleryStage {
+		position: relative;
+		width: 100%;
+		max-width: 100%;
+		height: 100%;
+		max-height: 100%;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+		contain: layout size;
+	}
+
+	.galleryArrow {
+		position: absolute;
+		z-index: 2;
+		top: 50%;
+		width: rem(36);
+		height: rem(48);
+		transform: translateY(-50%);
+
+		&:first-child {
+			left: rem(4);
+		}
+
+		&:last-child {
+			right: rem(4);
+		}
+
+		&:hover:not(:disabled) {
+			transform: translateY(-50%);
+		}
+	}
+
+	.galleryMainImageFrame {
+		width: 100%;
+		max-width: 100%;
+		height: 100%;
+		max-height: 100%;
+		grid-column: 1;
+		grid-row: 1;
+		overflow: hidden;
+		contain: strict;
+	}
+
+	.galleryMainImage {
+		width: 100%;
+		max-width: 100%;
+		height: 100%;
+		max-height: 100%;
+		object-fit: scale-down;
+	}
+
+	.galleryInfo {
+		width: 100%;
+		max-width: 100%;
+		font-size: rem(11);
+		overflow: hidden;
+	}
+
+	.galleryDetails {
+		max-width: calc(100% - rem(42));
+		gap: rem(6);
+		overflow: hidden;
+
+		strong,
+		span {
+			min-width: 0;
+		}
+
+		strong {
+			max-width: 48vw;
+			font-size: rem(12);
+		}
+	}
+
+	.galleryThumbnailsViewport {
+		width: 100%;
+		max-width: 100%;
+		justify-self: stretch;
+	}
+
+	.galleryThumbnails {
+		justify-content: flex-start;
+	}
+
+	.gallerySentinel {
+		height: rem(56);
+	}
+
+	.galleryThumbnail {
+		width: rem(52);
+		height: rem(52);
+		flex-basis: rem(52);
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.iconButton,
-	.closeButton {
+	.closeButton,
+	.galleryCloseButton,
+	.galleryArrow,
+	.galleryInfo a,
+	.galleryThumbnail,
+	.galleryMainImage {
 		transition: none;
+	}
+
+	.gallerySpinner,
+	.galleryThumbnailSpinner {
+		animation-duration: 1.4s;
 	}
 }

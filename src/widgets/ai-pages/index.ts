@@ -1,4 +1,5 @@
 export { AuthPage } from './ui/AuthPage';
+export { AccountEmailActionPage } from './ui/AccountEmailActionPage';
 export { BalancePage } from './ui/BalancePage';
 export { CreateStudioPage } from './ui/CreateStudioPage';
 export { FaqPage } from './ui/FaqPage';

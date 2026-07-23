@@ -7,10 +7,18 @@ type AiFetchOptions = Omit<RequestInit, 'body'> & {
 	csrf?: boolean;
 };
 
+type AiApiCacheEntry = {
+	data: unknown;
+	expiresAt: number;
+};
+
 let csrfToken: string | null = null;
 let csrfExpiresAt = 0;
 let csrfRequest: Promise<string> | null = null;
 const CSRF_REQUEST_TIMEOUT_MS = 10_000;
+const MAX_AI_API_CACHE_ENTRIES = 50;
+const aiApiCache = new Map<string, AiApiCacheEntry>();
+const aiApiRequests = new Map<string, Promise<unknown>>();
 
 export class AiApiError extends Error {
 	readonly problem: AiApiProblem;
@@ -116,9 +124,55 @@ export async function aiApiFetch<T>(
 	}
 }
 
+export function readAiApiCache<T>(path: string): T | undefined {
+	const cacheKey = normalizePath(path);
+	const cached = aiApiCache.get(cacheKey);
+	if (!cached) return undefined;
+	if (cached.expiresAt <= Date.now()) {
+		aiApiCache.delete(cacheKey);
+		return undefined;
+	}
+	return cached.data as T;
+}
+
+export async function aiApiFetchCached<T>(
+	path: string,
+	ttlMs: number,
+): Promise<T> {
+	const normalizedTtl = Number.isFinite(ttlMs) ? Math.max(0, ttlMs) : 0;
+	if (normalizedTtl === 0) return aiApiFetch<T>(path);
+
+	const cacheKey = normalizePath(path);
+	const cached = readAiApiCache<T>(cacheKey);
+	if (cached !== undefined) return cached;
+
+	const pending = aiApiRequests.get(cacheKey);
+	if (pending) return pending as Promise<T>;
+
+	const request = aiApiFetch<T>(cacheKey, { method: 'GET', csrf: false })
+		.then((data) => {
+			setAiApiCache(cacheKey, data, normalizedTtl);
+			return data;
+		})
+		.finally(() => {
+			aiApiRequests.delete(cacheKey);
+		});
+	aiApiRequests.set(cacheKey, request);
+	return request;
+}
+
+export function invalidateAiApiCache(path?: string): void {
+	if (path) {
+		aiApiCache.delete(normalizePath(path));
+		return;
+	}
+	aiApiCache.clear();
+}
+
 export function clearAiCsrfToken(): void {
 	csrfToken = null;
 	csrfExpiresAt = 0;
+	aiApiCache.clear();
 }
 
 async function getCsrfToken(): Promise<string> {
@@ -186,6 +240,16 @@ function isMutatingMethod(method: string): boolean {
 
 function normalizePath(path: string): string {
 	return path.startsWith('/') ? path : `/${path}`;
+}
+
+function setAiApiCache(path: string, data: unknown, ttlMs: number): void {
+	const cacheKey = normalizePath(path);
+	if (!aiApiCache.has(cacheKey) && aiApiCache.size >= MAX_AI_API_CACHE_ENTRIES) {
+		const oldestKey = aiApiCache.keys().next().value;
+		if (typeof oldestKey === 'string') aiApiCache.delete(oldestKey);
+	}
+	aiApiCache.delete(cacheKey);
+	aiApiCache.set(cacheKey, { data, expiresAt: Date.now() + ttlMs });
 }
 
 function serializeBody(body: unknown, headers: Headers): BodyInit | undefined {

@@ -211,6 +211,87 @@ $ai-header-menu-breakpoint: 1160;
 	background-color: rgba($color-cyan, 0.1);
 }
 
+.navGroup {
+	position: relative;
+	display: flex;
+	align-items: center;
+
+	> .navLink {
+		padding-right: rem(34);
+	}
+
+	&:hover .navDropdown,
+	&:focus-within .navDropdown {
+		pointer-events: auto;
+		visibility: visible;
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+
+	&:hover .navGroupToggle svg,
+	&:focus-within .navGroupToggle svg {
+		transform: rotate(180deg);
+	}
+}
+
+.navGroupToggle {
+	position: absolute;
+	right: rem(7);
+	display: inline-flex;
+	width: rem(28);
+	height: rem(34);
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	color: var(--ai-muted);
+	background: transparent;
+	border: 0;
+	border-radius: rem(8);
+	cursor: pointer;
+
+	svg {
+		transition: transform 160ms ease;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.navGroupToggleActive {
+	color: var(--ai-primary);
+}
+
+.navDropdown {
+	position: absolute;
+	top: calc(100% + rem(7));
+	left: 50%;
+	z-index: 5;
+	display: grid;
+	min-width: rem(190);
+	gap: rem(4);
+	padding: rem(7);
+	pointer-events: none;
+	visibility: hidden;
+	background: var(--ai-surface);
+	border: rem(1) solid var(--ai-border);
+	border-radius: rem(14);
+	box-shadow: var(--ai-shadow);
+	opacity: 0;
+	transform: translate(-50%, rem(-6));
+	transition:
+		opacity 150ms ease,
+		transform 150ms ease,
+		visibility 150ms ease;
+
+	.navLink {
+		width: 100%;
+		min-height: rem(38);
+		padding: rem(8) rem(10);
+		font-size: rem(15);
+	}
+}
+
 .navIcon {
 	display: flex;
 	width: rem(22);
@@ -413,6 +494,20 @@ $ai-header-menu-breakpoint: 1160;
 			order: 2;
 		}
 	}
+
+	.mobileNavGroup {
+		display: grid;
+		justify-items: end;
+		gap: rem(2);
+	}
+
+	.mobileNavChild .navLink {
+		min-height: rem(36);
+		padding-top: rem(5);
+		padding-bottom: rem(5);
+		color: var(--ai-muted);
+		font-size: rem(15);
+	}
 }
 
 @media (max-width: em(640)) {
@@ -524,6 +619,8 @@ $ai-header-menu-breakpoint: 1160;
 
 @media (prefers-reduced-motion: reduce) {
 	.navLink,
+	.navDropdown,
+	.navGroupToggle svg,
 	.mobilePanel,
 	.menuLine {
 		transition: none;

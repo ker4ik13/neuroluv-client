@@ -4,18 +4,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
+  type CSSProperties,
+  type DragEvent,
   type FormEvent,
+  type UIEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import {
   FiArrowLeft,
+  FiChevronDown,
   FiCheck,
   FiClock,
   FiCopy,
+  FiDownload,
+  FiExternalLink,
   FiFileText,
   FiImage,
   FiMessageCircle,
@@ -25,18 +32,20 @@ import {
   FiRefreshCw,
   FiSend,
   FiSettings,
-  FiVideo,
+  FiTrash2,
   FiX,
   FiZap,
 } from "react-icons/fi";
 import { RiSparkling2Fill } from "react-icons/ri";
 
 import { useAiSession } from "@/features/ai-session";
+import { useAiLocale } from "@/features/ai-locale";
 import {
   aiApiFetch,
   type AiApiEnvelope,
   type AiConversation,
   type AiConversationKind,
+  type AiCitation,
   type AiMessageAttachment,
   type AiModelModality,
   type AiPage as AiPageResponse,
@@ -47,28 +56,38 @@ import {
   type AiRunOutput,
   type AiRunSummary,
   type AiToolField,
+  type AiUploadResult,
   type AiWorkDetail,
   type AiWorkOutput,
 } from "@/shared/api/ai";
 import { useFocusTrap } from "@/shared/lib/dom/useFocusTrap";
 import { writeClipboardText } from "@/shared/lib/dom/writeClipboardText";
-import {
-  formatCreditNumber,
-  formatCredits,
-} from "@/shared/lib/formatCredits";
+import { formatCreditNumber, formatCredits } from "@/shared/lib/formatCredits";
 import { useDebouncedValue } from "@/shared/lib/react";
 
 import { getAiErrorMessage, unwrapAiData, useAiResource } from "../model/api";
 import { resolveGenerationOperation } from "../model/generationOperation";
-import { readLocalJson, removeLocalValue, writeLocalJson } from "../model/storage";
-import { AiSelect, type AiSelectOption } from "./AiSelect";
-import { ChatImageOutput } from "./ChatImageOutput";
 import {
-  AiCard,
-  AiPage,
-  AsyncState,
-  FieldMessage,
-} from "./AiUi";
+  formatMediaCharacteristics,
+  type MediaSize,
+  normalizeMediaDimension,
+} from "../model/mediaCharacteristics";
+import { readLocalJson, removeLocalValue, writeLocalJson } from "../model/storage";
+import { useAdaptivePolling } from "../model/useAdaptivePolling";
+import { useAiLiveSync } from "../model/useAiLiveSync";
+import { AiMarkdown } from "./AiMarkdown";
+import { AiModelLogo } from "./AiModelLogo";
+import { AiSelect, type AiSelectOption } from "./AiSelect";
+import {
+  ChatImageOutput,
+  ImageGalleryProvider,
+  ImageLightbox,
+} from "./ChatImageOutput";
+import { AiCard, AiPage, AsyncState, FieldMessage } from "./AiUi";
+import {
+  PromptComposerEditor,
+  type PromptComposerMention,
+} from "./PromptComposerEditor";
 import styles from "./GenerationChatPage.module.scss";
 
 export type GenerationChatKind = "image" | "video" | "text" | "photo-to-prompt";
@@ -77,7 +96,11 @@ type Draft = {
   idempotencyKey: string;
   conversationId: string;
   contextEnabled: boolean;
-  promptConfigId: string;
+  catalogPromptOverride: boolean;
+  promptId: number | null;
+  promptMinimumReferenceFiles: number;
+  promptMaximumReferenceFiles: number;
+  promptTitle: string;
   publicShareDraftToken: string;
   repeatRunId: string;
   replaceReference: boolean;
@@ -90,6 +113,8 @@ type Draft = {
   resolution: string;
   quality: string;
   sound: boolean;
+  reasoningMode: string;
+  videoMode: string;
   toolValues: Record<string, string | number | boolean>;
 };
 
@@ -100,6 +125,7 @@ type ChatTurn = {
   outputs: AiRunOutput[];
   inputFiles: ChatMessageAttachment[];
   createdAt: string;
+  modelId: string;
   modelName: string;
   submissionState: "submitting" | "active" | "failed";
   submitError?: string | null;
@@ -112,7 +138,7 @@ type ChatMessageAttachment = AiMessageAttachment & {
 type QuotePayload = {
   operation: string;
   modelId: string;
-  promptConfigId?: string;
+  promptId?: number;
   toolId?: string;
   conversationId?: string;
   contextEnabled?: boolean;
@@ -126,11 +152,19 @@ type PendingReference = {
   previewUrl: string;
 };
 
+type VideoModeCapability = NonNullable<
+  AiPublicModel["capabilities"]["videoModes"]
+>[number];
+
 const EMPTY_DRAFT: Draft = {
   idempotencyKey: "",
   conversationId: "",
   contextEnabled: true,
-  promptConfigId: "",
+  catalogPromptOverride: false,
+  promptId: null,
+  promptMinimumReferenceFiles: 0,
+  promptMaximumReferenceFiles: 0,
+  promptTitle: "",
   publicShareDraftToken: "",
   repeatRunId: "",
   replaceReference: false,
@@ -143,6 +177,8 @@ const EMPTY_DRAFT: Draft = {
   resolution: "",
   quality: "",
   sound: false,
+  reasoningMode: "",
+  videoMode: "",
   toolValues: {},
 };
 
@@ -159,30 +195,44 @@ const SAFE_TEXT_REFERENCE_MIME_TYPES = new Set([
 ]);
 const PLATFORM_REFERENCE_FILE_LIMIT = 5;
 const PLATFORM_REFERENCE_TOTAL_BYTES_LIMIT = 40 * 1024 * 1024;
-const TERMINAL_RUN_STATUSES = new Set([
-  "succeeded",
-  "partially_succeeded",
-  "failed",
-  "cancelled",
-]);
+const TERMINAL_RUN_STATUSES = new Set(["succeeded", "partially_succeeded", "failed", "cancelled"]);
 const PRICE_PREVIEW_PROMPT = "Предварительный расчёт стоимости";
+const CATALOG_CACHE_TTL_MS = 5 * 60_000;
+const VARIABLE_QUOTE_DEBOUNCE_MS = 250;
+
+function toPersistedDraft(draft: Draft): Draft {
+  return {
+    ...draft,
+    catalogPromptOverride: false,
+    promptId: null,
+    promptMinimumReferenceFiles: 0,
+    promptMaximumReferenceFiles: 0,
+    promptTitle: "",
+    publicShareDraftToken: "",
+    repeatRunId: "",
+    replaceReference: false,
+  };
+}
 
 export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   const router = useRouter();
+  const { locale, isEnglish, t } = useAiLocale();
   const { session } = useAiSession();
   const modality = getModality(kind);
   const isTool = kind === "photo-to-prompt";
-  const supportsContext = kind === "text" || kind === "image";
+  const canUseContext = kind === "text" || kind === "image";
   const models = useAiResource<AiPublicModel[]>(
     `/catalog/models?modality=${encodeURIComponent(modality)}`,
+    null,
+    { cacheTtlMs: CATALOG_CACHE_TTL_MS },
   );
   const tools = useAiResource<AiPublicTool[]>(
     isTool ? "/catalog/tools?code=photo-to-prompt" : null,
+    null,
+    { cacheTtlMs: CATALOG_CACHE_TTL_MS },
   );
   const conversationHistory = useAiResource<AiPageResponse<AiConversation>>(
-    session.authenticated
-      ? "/conversations?status=active&page=1&pageSize=100"
-      : null,
+    session.authenticated ? "/conversations?status=active&page=1&pageSize=100" : null,
   );
   const tool = tools.data?.[0] || null;
   const availableModels = useMemo(() => {
@@ -193,8 +243,16 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
 
   const [draft, setDraft] = useState<Draft>({
     ...EMPTY_DRAFT,
-    contextEnabled: supportsContext,
+    contextEnabled: canUseContext,
   });
+  const selectedModel = useMemo(
+    () => availableModels.find((model) => model.id === draft.modelId) || null,
+    [availableModels, draft.modelId],
+  );
+  const capabilities = selectedModel?.capabilities;
+  const supportsContext =
+    kind === "text" ||
+    (kind === "image" && (!selectedModel || capabilities?.supportsContext === true));
   const [draftReady, setDraftReady] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [references, setReferences] = useState<PendingReference[]>([]);
@@ -211,22 +269,44 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isConversationLoading, setIsConversationLoading] = useState(false);
   const [isContextSaving, setIsContextSaving] = useState(false);
+  const [isValidReferenceDrag, setIsValidReferenceDrag] = useState(false);
+  const [draggedReferenceId, setDraggedReferenceId] = useState<string | null>(null);
+  const [attachmentStatus, setAttachmentStatus] = useState("");
   const [conversationError, setConversationError] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState(getCreateTitle(kind, isEnglish));
+  const [conversationTitleDraft, setConversationTitleDraft] = useState("");
+  const [isConversationTitleEditing, setIsConversationTitleEditing] = useState(false);
+  const [isConversationTitleSaving, setIsConversationTitleSaving] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const [historyMutationError, setHistoryMutationError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const referencesRef = useRef<PendingReference[]>([]);
-  const composerInput = useRef<HTMLTextAreaElement>(null);
+  const chatForm = useRef<HTMLFormElement>(null);
   const thread = useRef<HTMLDivElement>(null);
+  const threadContent = useRef<HTMLDivElement>(null);
+  const threadPinnedToBottom = useRef(true);
+  const initialThreadScrollPending = useRef(true);
   const settingsRef = useRef<HTMLElement>(null);
   const historyRef = useRef<HTMLElement>(null);
   const hydratedRetryRun = useRef<string | null>(null);
   const hydratedConversation = useRef<string | null>(null);
   const quoteRequestSequence = useRef(0);
   const submitLock = useRef(false);
+  const retryLock = useRef(false);
   const viewEpoch = useRef(0);
+  const conversationSyncSequence = useRef(0);
+  const lastSyncedConversationVersion = useRef("");
+  const broadcastedTerminalRuns = useRef(new Set<string>());
+  const activeConversationId = useRef("");
   const storageKey = `neuroluv-ai:create-draft:${kind}`;
 
   useFocusTrap(isSettingsOpen, settingsRef);
   useFocusTrap(isHistoryOpen, historyRef);
+
+  useEffect(() => {
+    activeConversationId.current = draft.conversationId;
+  }, [draft.conversationId]);
 
   const visibleConversations = useMemo(
     () =>
@@ -236,53 +316,155 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     [conversationHistory.data?.data, kind],
   );
 
+  const applyConversationSnapshot = useCallback(
+    (conversation: AiConversation) => {
+      setConversationTitle(conversation.title || getCreateTitle(kind, isEnglish));
+      setTurns((current) =>
+        mergeConversationTurns(
+          current,
+          (conversation.turns || []).map(toChatTurn),
+        ),
+      );
+      setDraft((current) => ({
+        ...current,
+        contextEnabled: supportsContext ? conversation.contextEnabled : false,
+      }));
+      lastSyncedConversationVersion.current = conversationVersion(conversation);
+    },
+    [isEnglish, kind, supportsContext],
+  );
+
+  const synchronizeConversation = useCallback(
+    async (conversationId: string) => {
+      const sequence = ++conversationSyncSequence.current;
+      try {
+        const payload = await aiApiFetch<
+          AiConversation | AiApiEnvelope<AiConversation>
+        >(`/conversations/${encodeURIComponent(conversationId)}`);
+        if (sequence !== conversationSyncSequence.current) return;
+        const conversation = unwrapAiData(payload);
+        applyConversationSnapshot(conversation);
+        setConversationError(null);
+      } catch (error) {
+        if (sequence === conversationSyncSequence.current) {
+          setConversationError(getAiErrorMessage(error));
+        }
+      }
+    },
+    [applyConversationSnapshot],
+  );
+
+  const publishLiveSync = useAiLiveSync({
+    enabled: session.authenticated,
+    onMessage: (message) => {
+      void conversationHistory.refresh();
+      if (
+        message.conversationId &&
+        message.conversationId === draft.conversationId
+      ) {
+        void synchronizeConversation(message.conversationId);
+      }
+    },
+  });
+
+  const broadcastConversationChange = useCallback(
+    (
+      conversationId?: string | null,
+      reason: "conversation" | "started" | "terminal" = "conversation",
+    ) => {
+      publishLiveSync({
+        type: "conversation-changed",
+        conversationId: conversationId || null,
+        kind: getConversationKind(kind),
+        reason,
+      });
+    },
+    [kind, publishLiveSync],
+  );
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
         const saved = readLocalJson<Partial<Draft>>(storageKey, {});
         const preset = readLocalJson<{
-          promptConfigId?: string;
+          promptId?: number;
+          promptTitle?: string;
+          promptMinimumReferenceFiles?: number;
+          promptMaximumReferenceFiles?: number;
+          catalogPromptOverride?: boolean;
           publicShareDraftToken?: string;
           repeatRunId?: string;
           replaceReference?: boolean;
           prompt?: string;
           negativePrompt?: string;
           modelId?: string;
+          aspectRatio?: string;
           operation?: string;
           toolValues?: Record<string, string | number | boolean>;
         } | null>("neuroluv-ai:create-preset", null);
         const nextDraft = {
           ...EMPTY_DRAFT,
-          contextEnabled: supportsContext,
+          contextEnabled: canUseContext,
           ...saved,
+          // Sources from the prompt catalog, public works and retries are one-shot.
+          // Persisting them makes an ordinary new chat inherit incompatible input.
+          catalogPromptOverride: false,
+          promptId: null,
+          promptMinimumReferenceFiles: 0,
+          promptMaximumReferenceFiles: 0,
+          promptTitle: "",
+          publicShareDraftToken: "",
+          repeatRunId: "",
+          replaceReference: false,
         } as Draft;
 
-        if (!supportsContext) nextDraft.contextEnabled = false;
+        if (!canUseContext) nextDraft.contextEnabled = false;
         if (preset) {
-          nextDraft.prompt = preset.prompt || nextDraft.prompt;
-          nextDraft.negativePrompt = preset.negativePrompt || nextDraft.negativePrompt;
-          nextDraft.promptConfigId = preset.promptConfigId || nextDraft.promptConfigId;
+          // Every external preset starts a clean conversation. Otherwise a saved
+          // draft can overwrite the preset model or mix a catalog prompt with an
+          // unrelated existing chat.
+          nextDraft.conversationId = "";
+          if (preset.promptId) {
+            nextDraft.prompt = "";
+            nextDraft.negativePrompt = "";
+            nextDraft.toolValues = {};
+          }
+          nextDraft.prompt = preset.prompt ?? nextDraft.prompt;
+          nextDraft.negativePrompt = preset.negativePrompt ?? nextDraft.negativePrompt;
+          nextDraft.promptId = preset.promptId || nextDraft.promptId;
+          nextDraft.promptTitle = preset.promptTitle || "";
+          nextDraft.promptMinimumReferenceFiles = normalizePresetReferenceLimit(
+            preset.promptMinimumReferenceFiles,
+          );
+          nextDraft.promptMaximumReferenceFiles = normalizePresetReferenceLimit(
+            preset.promptMaximumReferenceFiles,
+          );
+          nextDraft.catalogPromptOverride = preset.catalogPromptOverride === true;
           nextDraft.publicShareDraftToken = preset.publicShareDraftToken || "";
           nextDraft.repeatRunId = preset.repeatRunId || "";
           nextDraft.replaceReference = Boolean(preset.replaceReference);
           nextDraft.modelId = preset.modelId || nextDraft.modelId;
-          nextDraft.toolValues = { ...nextDraft.toolValues, ...preset.toolValues };
+          nextDraft.aspectRatio = preset.aspectRatio || nextDraft.aspectRatio;
+          nextDraft.toolValues = {
+            ...nextDraft.toolValues,
+            ...preset.toolValues,
+          };
           removeLocalValue("neuroluv-ai:create-preset");
         }
         setDraft(nextDraft);
       } catch {
-        setDraft({ ...EMPTY_DRAFT, contextEnabled: supportsContext });
+        setDraft({ ...EMPTY_DRAFT, contextEnabled: canUseContext });
       } finally {
         setDraftReady(true);
       }
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [storageKey, supportsContext]);
+  }, [canUseContext, storageKey]);
 
   useEffect(() => {
     if (!draftReady) return;
-    writeLocalJson(storageKey, draft);
+    writeLocalJson(storageKey, toPersistedDraft(draft));
   }, [draft, draftReady, storageKey]);
 
   useEffect(() => {
@@ -316,7 +498,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     hydratedRetryRun.current = runId;
     void aiApiFetch<AiRunDetail | AiApiEnvelope<AiRunDetail>>(
       `/runs/${encodeURIComponent(runId)}`,
-      { signal: controller.signal },
+      {
+        signal: controller.signal,
+      },
     )
       .then((payload) => {
         const preset = unwrapAiData(payload).retryPreset;
@@ -327,7 +511,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                 ...current,
                 ...patch,
                 modelId: preset.modelId,
-                promptConfigId: preset.promptConfigId || "",
+                promptId: preset.promptId || null,
               }
             : current,
         );
@@ -369,10 +553,22 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           capability.qualities?.includes(value.quality) && value.quality
             ? value.quality
             : String(capability.qualities?.[0] || ""),
+        reasoningMode:
+          capability.reasoning?.modes.includes(value.reasoningMode) && value.reasoningMode
+            ? value.reasoningMode
+            : String(capability.reasoning?.defaultMode || ""),
+        videoMode:
+          capability.videoModes?.some((mode) => mode.code === value.videoMode) && value.videoMode
+            ? value.videoMode
+            : String(capability.videoModes?.[0]?.code || ""),
+        contextEnabled:
+          kind === "image" && capability.supportsContext !== true
+            ? false
+            : value.contextEnabled,
       }));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [availableModels, draft.modelId]);
+  }, [availableModels, draft.modelId, kind]);
 
   useEffect(() => {
     if (
@@ -394,22 +590,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     )
       .then((payload) => {
         const conversation = unwrapAiData(payload);
-        setTurns(
-          (conversation.turns || []).map((turn) => ({
-            id: turn.run.id,
-            run: turn.run,
-            prompt: turn.userText,
-            outputs: turn.outputs,
-            inputFiles: turn.inputFiles || [],
-            createdAt: turn.run.createdAt,
-            modelName: turn.run.modelName,
-            submissionState: "active" as const,
-          })),
-        );
-        setDraft((current) => ({
-          ...current,
-          contextEnabled: supportsContext ? conversation.contextEnabled : false,
-        }));
+        applyConversationSnapshot(conversation);
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
@@ -422,54 +603,117 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         if (!controller.signal.aborted) setIsConversationLoading(false);
       });
     return () => controller.abort();
-  }, [draft.conversationId, draftReady, session.authenticated, supportsContext]);
+  }, [
+    applyConversationSnapshot,
+    draft.conversationId,
+    draftReady,
+    session.authenticated,
+  ]);
 
   useEffect(() => {
     return () => {
-      referencesRef.current.forEach((reference) =>
-        URL.revokeObjectURL(reference.previewUrl),
-      );
+      referencesRef.current.forEach((reference) => URL.revokeObjectURL(reference.previewUrl));
     };
   }, []);
 
+  const scrollThreadToBottom = useCallback(() => {
+    const chatThread = thread.current;
+    if (!chatThread) return;
+    chatThread.scrollTop = chatThread.scrollHeight;
+    setShowScrollToBottom(false);
+  }, []);
+
+  const smoothlyScrollThreadToBottom = useCallback(() => {
+    const chatThread = thread.current;
+    if (!chatThread) return;
+    threadPinnedToBottom.current = true;
+    chatThread.scrollTo({ top: chatThread.scrollHeight, behavior: "smooth" });
+    setShowScrollToBottom(false);
+  }, []);
+
+  useLayoutEffect(() => {
+    initialThreadScrollPending.current = true;
+    threadPinnedToBottom.current = true;
+    scrollThreadToBottom();
+    const frame = window.requestAnimationFrame(scrollThreadToBottom);
+    return () => window.cancelAnimationFrame(frame);
+  }, [draft.conversationId, scrollThreadToBottom]);
+
+  useLayoutEffect(() => {
+    if (isConversationLoading) return;
+    if (initialThreadScrollPending.current || threadPinnedToBottom.current) {
+      scrollThreadToBottom();
+    }
+  }, [isConversationLoading, scrollThreadToBottom, turns.length]);
+
   useEffect(() => {
-    if (!turns.length) return;
-    window.requestAnimationFrame(() => {
-      const chatThread = thread.current;
-      if (chatThread) chatThread.scrollTo({ top: chatThread.scrollHeight });
+    const content = threadContent.current;
+    const chatThread = thread.current;
+    if (!content || !chatThread || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      if (initialThreadScrollPending.current || threadPinnedToBottom.current) {
+        scrollThreadToBottom();
+      }
     });
-  }, [turns.length]);
+    observer.observe(content);
+    observer.observe(chatThread);
+    return () => observer.disconnect();
+  }, [scrollThreadToBottom]);
 
-  useEffect(() => {
-    const input = composerInput.current;
-    if (!input) return;
-    input.style.height = "auto";
-    const configuredMaxHeight = Number.parseFloat(window.getComputedStyle(input).maxHeight);
-    const maxHeight = Number.isFinite(configuredMaxHeight) ? configuredMaxHeight : 144;
-    const nextHeight = Math.min(input.scrollHeight, maxHeight);
-    input.style.height = `${nextHeight}px`;
-    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, [draft.prompt, models.isLoading, tools.isLoading]);
+  const handleThreadScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    const chatThread = event.currentTarget;
+    const distanceToBottom =
+      chatThread.scrollHeight - chatThread.scrollTop - chatThread.clientHeight;
+    if (initialThreadScrollPending.current) {
+      threadPinnedToBottom.current = true;
+      setShowScrollToBottom(false);
+      return;
+    }
+    threadPinnedToBottom.current = distanceToBottom <= 48;
+    setShowScrollToBottom(distanceToBottom > 96);
+  }, []);
 
-  const selectedModel = useMemo(
-    () => availableModels.find((model) => model.id === draft.modelId) || null,
-    [availableModels, draft.modelId],
+  const markThreadAsUserControlled = useCallback(() => {
+    initialThreadScrollPending.current = false;
+  }, []);
+
+  const automaticVideoModes = useMemo(
+    () => getAutomaticVideoModes(capabilities?.videoModes),
+    [capabilities?.videoModes],
   );
-  const capabilities = selectedModel?.capabilities;
-  const maxReferenceFiles = Math.min(
+  const configuredVideoMode =
+    capabilities?.videoModes?.find((mode) => mode.code === draft.videoMode) ||
+    capabilities?.videoModes?.[0] ||
+    null;
+  const referenceVideoMode = automaticVideoModes?.frame || configuredVideoMode;
+  const capabilityMaxReferenceFiles = Math.min(
     PLATFORM_REFERENCE_FILE_LIMIT,
-    Math.max(1, isTool ? 1 : capabilities?.maxReferenceFiles ?? 1),
+    Math.max(
+      1,
+      isTool
+        ? 1
+        : kind === "video" && referenceVideoMode
+          ? referenceVideoMode.maxReferenceFiles
+        : (capabilities?.maxReferenceFiles ?? 1),
+    ),
   );
-  const maxReferenceFileBytes =
-    capabilities?.maxUploadBytes || 20 * 1024 * 1024;
+  const maxReferenceFiles =
+    draft.promptId && draft.promptMaximumReferenceFiles > 0
+      ? Math.min(capabilityMaxReferenceFiles, draft.promptMaximumReferenceFiles)
+      : capabilityMaxReferenceFiles;
+  const promptMinimumReferenceFiles = draft.promptId
+    ? Math.min(
+        maxReferenceFiles,
+        Math.max(0, draft.promptMinimumReferenceFiles),
+      )
+    : 0;
+  const maxReferenceFileBytes = capabilities?.maxUploadBytes || 20 * 1024 * 1024;
   const acceptedReferenceMimeTypes =
-    kind === "text"
-      ? SAFE_TEXT_REFERENCE_MIME_TYPES
-      : SAFE_IMAGE_REFERENCE_MIME_TYPES;
+    kind === "text" ? SAFE_TEXT_REFERENCE_MIME_TYPES : SAFE_IMAGE_REFERENCE_MIME_TYPES;
   const acceptsPdf = kind === "text";
-  const currentContextEpoch = [...turns]
-    .reverse()
-    .find((turn) => turn.run?.contextEpoch != null)?.run?.contextEpoch;
+  const currentContextEpoch = [...turns].reverse().find((turn) => turn.run?.contextEpoch != null)
+    ?.run?.contextEpoch;
   const hasContextImage = turns.some(
     (turn) =>
       turn.run != null &&
@@ -486,8 +730,39 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   );
   const hasRemoteReference = Boolean(
     draft.publicShareDraftToken ||
-      (draft.repeatRunId && !draft.replaceReference) ||
+      (draft.repeatRunId &&
+        !draft.replaceReference &&
+        (kind !== "video" || configuredVideoMode?.operation === "image_to_video")) ||
       (kind === "image" && draft.contextEnabled && hasContextImage),
+  );
+  const referencePromptTags = useMemo(() => {
+    const template = capabilities?.referencePromptTag;
+    if (
+      kind !== "video" ||
+      referenceVideoMode?.imageInput !== "input_references" ||
+      !template?.includes("{index}")
+    ) {
+      return [];
+    }
+    const count = references.length || (hasRemoteReference ? 1 : 0);
+    return Array.from({ length: count }, (_, index) =>
+      template.replace("{index}", String(index + 1)),
+    );
+  }, [
+    capabilities?.referencePromptTag,
+    hasRemoteReference,
+    kind,
+    referenceVideoMode?.imageInput,
+    references.length,
+  ]);
+  const referenceMentions = useMemo<PromptComposerMention[]>(
+    () =>
+      referencePromptTags.map((tag, index) => ({
+        tag,
+        name: references[index]?.file.name || tag,
+        previewUrl: references[index]?.previewUrl || null,
+      })),
+    [referencePromptTags, references],
   );
   const referenceInputVisible = Boolean(
     isTool ||
@@ -495,29 +770,45 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       (kind === "text" && capabilities?.acceptsReference) ||
       (kind === "video" &&
         capabilities?.acceptsReference &&
-        capabilities.operations.includes("image_to_video")) ||
+        Boolean(referenceVideoMode?.maxReferenceFiles)) ||
       draft.replaceReference ||
-      (draft.promptConfigId && capabilities?.acceptsReference),
+      (draft.promptId && capabilities?.acceptsReference),
   );
+  const attachmentStatusId = `ai-chat-attachment-status-${kind}`;
+  const dropTitle = acceptsPdf
+    ? t("Отпустите файлы, чтобы прикрепить", "Drop files to attach")
+    : t("Отпустите изображения, чтобы прикрепить", "Drop images to attach");
+  const dropDescription = acceptsPdf
+    ? `PDF, JPG, PNG ${t("или", "or")} WebP · ${t("максимум", "up to")} ${isEnglish ? `${maxReferenceFiles} files` : formatFileCount(maxReferenceFiles)}`
+    : `JPG, PNG ${t("или", "or")} WebP · ${t("максимум", "up to")} ${isEnglish ? `${maxReferenceFiles} images` : formatImageCount(maxReferenceFiles)}`;
   const activeReferences = useMemo(
-    () =>
-      referenceInputVisible
-        ? references.map((reference) => reference.file)
-        : [],
+    () => (referenceInputVisible ? references.map((reference) => reference.file) : []),
     [referenceInputVisible, references],
   );
-  const hasReferenceIntent = activeReferences.length > 0 || hasRemoteReference;
-  const resolvedOperation = resolveGenerationOperation({
-    kind,
-    supportedOperations: capabilities?.operations || [],
-    hasReference: hasReferenceIntent,
-    requiresImageToImage: Boolean(draft.publicShareDraftToken),
-  });
-  const referenceRequired = isReferenceRequired(
-    resolvedOperation,
-    isTool,
-    draft.replaceReference,
+  const activeReferenceCount = Math.max(
+    activeReferences.length,
+    hasRemoteReference ? 1 : 0,
   );
+  const hasReferenceIntent = activeReferences.length > 0 || hasRemoteReference;
+  const effectiveVideoMode = automaticVideoModes
+    ? hasReferenceIntent
+      ? automaticVideoModes.frame
+      : automaticVideoModes.text
+    : configuredVideoMode;
+  const resolvedOperation =
+    kind === "video" && capabilities?.videoModes?.length
+      ? effectiveVideoMode && capabilities.operations.includes(effectiveVideoMode.operation)
+        ? effectiveVideoMode.operation
+        : null
+      : resolveGenerationOperation({
+          kind,
+          supportedOperations: capabilities?.operations || [],
+          hasReference: hasReferenceIntent,
+          requiresImageToImage: Boolean(draft.publicShareDraftToken),
+        });
+  const referenceRequired =
+    promptMinimumReferenceFiles > 0 ||
+    isReferenceRequired(resolvedOperation, isTool, draft.replaceReference);
   const useConversationReference = Boolean(
     kind === "image" &&
       capabilities?.acceptsReference === true &&
@@ -531,30 +822,61 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   );
   const referenceVisibilityMessage =
     references.length > 0 && !referenceInputVisible
-      ? `Выбранная модель не принимает прикреплённые ${acceptsPdf ? "файлы" : "изображения"}`
+      ? t(`Выбранная модель не принимает прикреплённые ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept attached ${acceptsPdf ? "files" : "images"}`)
       : null;
   const referenceCapabilityMessage =
     activeReferences.length > 0 && capabilities?.acceptsReference !== true
-      ? `Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`
+      ? t(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsPdf ? "files" : "images"}`)
       : null;
   const referenceLimitMessage =
-    activeReferences.length > maxReferenceFiles
-      ? `Для выбранной модели можно приложить не более ${acceptsPdf ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`
+    activeReferenceCount > maxReferenceFiles
+      ? t(`Для выбранной модели можно приложить не более ${acceptsPdf ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`, `You can attach up to ${maxReferenceFiles} ${acceptsPdf ? "files" : "images"} for the selected model`)
       : null;
-  const referenceBlockMessage =
-    (!resolvedOperation
-      ? "Выбранная модель не поддерживает нужный формат генерации"
-      : null) ||
+  const videoReferenceMinimumMessage =
+    kind === "video" &&
+    effectiveVideoMode &&
+    effectiveVideoMode.minReferenceFiles > 0 &&
+    activeReferenceCount < effectiveVideoMode.minReferenceFiles
+      ? t(
+          `Для выбранного режима прикрепите минимум ${formatImageCount(effectiveVideoMode.minReferenceFiles)}`,
+          `Upload at least ${effectiveVideoMode.minReferenceFiles} ${effectiveVideoMode.minReferenceFiles === 1 ? "image" : "images"} for this mode`,
+        )
+      : null;
+  const promptReferenceMinimumMessage =
+    promptMinimumReferenceFiles > 0 &&
+    activeReferenceCount < promptMinimumReferenceFiles
+      ? t(
+          `Для этого промпта прикрепите минимум ${formatImageCount(promptMinimumReferenceFiles)}`,
+          `Upload at least ${promptMinimumReferenceFiles} ${promptMinimumReferenceFiles === 1 ? "image" : "images"} for this prompt`,
+        )
+      : null;
+  const operationBlockMessage = !resolvedOperation
+    ? t(
+        "Выбранная модель не поддерживает нужный формат генерации",
+        "The selected model does not support this generation format",
+      )
+    : null;
+  const quoteBlockMessage =
+    operationBlockMessage ||
     referenceVisibilityMessage ||
     referenceCapabilityMessage ||
-    referenceLimitMessage ||
+    referenceLimitMessage;
+  const referenceBlockMessage =
+    quoteBlockMessage ||
+    promptReferenceMinimumMessage ||
+    videoReferenceMinimumMessage ||
     (referenceRequired
       ? capabilities?.acceptsReference !== true
-        ? "Выбранная модель не принимает исходные изображения для этой генерации"
+        ? t("Выбранная модель не принимает исходные изображения для этой генерации", "The selected model does not accept source images for this generation")
         : !hasReferenceIntent
-          ? "Для генерации загрузите исходное изображение"
+          ? t("Для генерации загрузите исходное изображение", "Upload a source image for this generation")
           : null
       : null);
+  const composerReferenceBlockMessage =
+    referenceBlockMessage === videoReferenceMinimumMessage ||
+    referenceBlockMessage === promptReferenceMinimumMessage
+      ? null
+      : referenceBlockMessage;
   const hasPendingTurn = turns.some(
     (turn) =>
       turn.submissionState === "submitting" ||
@@ -563,24 +885,134 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           (["succeeded", "partially_succeeded"].includes(turn.run.status) &&
             turn.outputs.length === 0))),
   );
-  const promptReady = isTool || Boolean(draft.prompt.trim());
+
+  useAdaptivePolling({
+    enabled: session.authenticated,
+    hasActiveWork: hasPendingTurn,
+    activeIntervalMs: 5_000,
+    idleIntervalMs: 15_000,
+    onPoll: conversationHistory.refresh,
+  });
+
+  useEffect(() => {
+    if (!draft.conversationId || isConversationLoading) return;
+    const currentConversation = conversationHistory.data?.data.find(
+      (conversation) => conversation.id === draft.conversationId,
+    );
+    if (!currentConversation) return;
+
+    const version = conversationVersion(currentConversation);
+    if (!lastSyncedConversationVersion.current) {
+      lastSyncedConversationVersion.current = version;
+      return;
+    }
+    if (lastSyncedConversationVersion.current === version) return;
+
+    lastSyncedConversationVersion.current = version;
+    void synchronizeConversation(currentConversation.id);
+  }, [
+    conversationHistory.data?.data,
+    draft.conversationId,
+    isConversationLoading,
+    synchronizeConversation,
+  ]);
+  const unresolvedPromptVariables = useMemo(
+    () => extractPromptVariables(draft.prompt),
+    [draft.prompt],
+  );
+  const promptVariablesMessage =
+    draft.promptId && unresolvedPromptVariables.length > 0
+      ? t(
+          `Замените выделенные переменные: ${unresolvedPromptVariables.join(", ")}`,
+          `Replace the highlighted variables: ${unresolvedPromptVariables.join(", ")}`,
+        )
+      : null;
+  const promptReady =
+    isTool ||
+    (Boolean(draft.prompt.trim()) && !promptVariablesMessage);
+  const missingPromptReferenceSlots = Math.max(
+    0,
+    promptMinimumReferenceFiles - activeReferenceCount,
+  );
   const pricingBehaviorKey =
-    selectedModel && resolvedOperation
-      ? `${selectedModel.id}:${resolvedOperation}`
-      : "";
+    selectedModel && resolvedOperation ? `${selectedModel.id}:${resolvedOperation}` : "";
   const pricingCalculation = pricingBehaviorKey
     ? pricingCalculationByKey[pricingBehaviorKey]
     : undefined;
+
+  const canAcceptReferenceDrag = useCallback(
+    (data: DataTransfer) => {
+      if (
+        !hasFileTransfer(data) ||
+        !referenceInputVisible ||
+        capabilities?.acceptsReference !== true
+      ) {
+        return false;
+      }
+
+      const itemTypes = Array.from(data.items)
+        .filter((item) => item.kind === "file")
+        .map((item) => item.type);
+      const transferredFiles = getDataTransferFiles(data);
+      const incomingCount = transferredFiles.length || itemTypes.length;
+      if (incomingCount === 0) return false;
+
+      const mimeTypes = transferredFiles.length
+        ? transferredFiles.map((file) => file.type)
+        : itemTypes;
+      if (mimeTypes.some((mimeType) => !mimeType || !acceptedReferenceMimeTypes.has(mimeType))) {
+        return false;
+      }
+
+      const current = referencesRef.current;
+      const retainedReferences =
+        maxReferenceFiles === 1 && current.length === 1 && incomingCount > 0 ? [] : current;
+      if (incomingCount > maxReferenceFiles - retainedReferences.length) {
+        return false;
+      }
+
+      if (transferredFiles.length === 0) return true;
+      const existingFingerprints = new Set(
+        retainedReferences.map((reference) => getFileFingerprint(reference.file)),
+      );
+      let totalBytes = retainedReferences.reduce((sum, reference) => sum + reference.file.size, 0);
+
+      for (const file of transferredFiles) {
+        if (
+          file.size > maxReferenceFileBytes ||
+          existingFingerprints.has(getFileFingerprint(file))
+        ) {
+          return false;
+        }
+        totalBytes += file.size;
+        if (totalBytes > PLATFORM_REFERENCE_TOTAL_BYTES_LIMIT) return false;
+        existingFingerprints.add(getFileFingerprint(file));
+      }
+
+      return true;
+    },
+    [
+      acceptedReferenceMimeTypes,
+      capabilities?.acceptsReference,
+      maxReferenceFileBytes,
+      maxReferenceFiles,
+      referenceInputVisible,
+    ],
+  );
 
   const addReferenceFiles = useCallback(
     (incomingFiles: readonly File[]) => {
       if (incomingFiles.length === 0) return;
       if (!referenceInputVisible) {
-        setQuoteError(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`);
+        const message = t(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsPdf ? "files" : "images"}`);
+        setQuoteError(message);
+        setAttachmentStatus(message);
         return;
       }
       if (capabilities?.acceptsReference !== true) {
-        setQuoteError(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`);
+        const message = t(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsPdf ? "files" : "images"}`);
+        setQuoteError(message);
+        setAttachmentStatus(message);
         return;
       }
 
@@ -612,25 +1044,16 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       });
 
       let retainedReferences = current;
-      if (
-        maxReferenceFiles === 1 &&
-        current.length === 1 &&
-        acceptedFiles.length > 0
-      ) {
-        URL.revokeObjectURL(current[0].previewUrl);
+      let replacedReference: PendingReference | null = null;
+      if (maxReferenceFiles === 1 && current.length === 1 && acceptedFiles.length > 0) {
+        replacedReference = current[0];
         retainedReferences = [];
       }
 
-      const availableSlots = Math.max(
-        0,
-        maxReferenceFiles - retainedReferences.length,
-      );
+      const availableSlots = Math.max(0, maxReferenceFiles - retainedReferences.length);
       const countLimitedFiles = acceptedFiles.slice(0, availableSlots);
       const hasExceededLimit = acceptedFiles.length > availableSlots;
-      let totalBytes = retainedReferences.reduce(
-        (sum, reference) => sum + reference.file.size,
-        0,
-      );
+      let totalBytes = retainedReferences.reduce((sum, reference) => sum + reference.file.size, 0);
       let hasExceededTotalSize = false;
       const filesToAdd = countLimitedFiles.filter((file) => {
         if (totalBytes + file.size > PLATFORM_REFERENCE_TOTAL_BYTES_LIMIT) {
@@ -642,6 +1065,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       });
 
       if (filesToAdd.length > 0) {
+        if (replacedReference) URL.revokeObjectURL(replacedReference.previewUrl);
         const additions = filesToAdd.map((file) => ({
           id: crypto.randomUUID(),
           file,
@@ -653,26 +1077,30 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         setDraft((currentDraft) => ({
           ...currentDraft,
           publicShareDraftToken: "",
-          replaceReference: currentDraft.repeatRunId
-            ? true
-            : currentDraft.replaceReference,
+          replaceReference: currentDraft.repeatRunId ? true : currentDraft.replaceReference,
         }));
       }
 
       const validationMessage = hasUnsupportedType
         ? acceptsPdf
-          ? "Поддерживаются файлы PDF и изображения JPG, PNG, WebP"
-          : "Поддерживаются только изображения JPG, PNG и WebP"
+          ? t("Поддерживаются файлы PDF и изображения JPG, PNG, WebP", "PDF files and JPG, PNG or WebP images are supported")
+          : t("Поддерживаются только изображения JPG, PNG и WebP", "Only JPG, PNG and WebP images are supported")
         : hasOversizedFile
-          ? `Один из ${acceptsPdf ? "файлов" : "изображений"} превышает лимит выбранной модели`
+          ? t(`Один из ${acceptsPdf ? "файлов" : "изображений"} превышает лимит выбранной модели`, `One of the attached ${acceptsPdf ? "files" : "images"} exceeds the selected model's limit`)
           : hasExceededTotalSize
-            ? "Общий размер прикреплённых файлов не должен превышать 40 МБ"
+            ? t("Общий размер прикреплённых файлов не должен превышать 40 МБ", "The total attachment size must not exceed 40 MB")
             : hasExceededLimit
-            ? `Для выбранной модели можно приложить не более ${acceptsPdf ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`
+            ? t(`Для выбранной модели можно приложить не более ${acceptsPdf ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`, `You can attach up to ${maxReferenceFiles} ${acceptsPdf ? "files" : "images"} for the selected model`)
             : hasDuplicate
-              ? `Этот ${acceptsPdf ? "файл" : "рисунок"} уже прикреплён`
+              ? t(`Этот ${acceptsPdf ? "файл" : "рисунок"} уже прикреплён`, `This ${acceptsPdf ? "file" : "image"} is already attached`)
               : null;
       setQuoteError(validationMessage);
+      const addedMessage = filesToAdd.length
+        ? t(`Прикреплено: ${acceptsPdf ? formatFileCount(filesToAdd.length) : formatImageCount(filesToAdd.length)}`, `Attached: ${filesToAdd.length} ${acceptsPdf ? filesToAdd.length === 1 ? "file" : "files" : filesToAdd.length === 1 ? "image" : "images"}`)
+        : null;
+      setAttachmentStatus(
+        [addedMessage, validationMessage].filter(Boolean).join(". ") || t("Файлы не были прикреплены", "No files were attached"),
+      );
       if (fileInput.current) fileInput.current.value = "";
     },
     [
@@ -682,18 +1110,15 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       maxReferenceFileBytes,
       maxReferenceFiles,
       referenceInputVisible,
+      t,
     ],
   );
 
   useEffect(() => {
     const handleClipboardPaste = (event: ClipboardEvent) => {
       if (event.defaultPrevented) return;
-      const clipboardFiles = getClipboardFiles(event.clipboardData);
+      const clipboardFiles = getDataTransferFiles(event.clipboardData);
       if (clipboardFiles.length === 0) return;
-      if (!referenceInputVisible) {
-        setQuoteError(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`);
-        return;
-      }
 
       event.preventDefault();
       addReferenceFiles(clipboardFiles);
@@ -701,7 +1126,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
 
     document.addEventListener("paste", handleClipboardPaste);
     return () => document.removeEventListener("paste", handleClipboardPaste);
-  }, [acceptsPdf, addReferenceFiles, referenceInputVisible]);
+  }, [addReferenceFiles]);
 
   const quotePayload = useMemo<QuotePayload | null>(() => {
     if (
@@ -709,37 +1134,57 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       !selectedModel?.available ||
       !resolvedOperation ||
       hasPendingTurn ||
-      referenceBlockMessage ||
+      quoteBlockMessage ||
       (isTool && !tool)
     ) {
       return null;
     }
 
-    const pricingDraft =
+    const basePricingDraft =
       promptReady && pricingCalculation === "variable"
         ? draft
         : { ...draft, prompt: PRICE_PREVIEW_PROMPT };
+    const pricingDraft = effectiveVideoMode
+      ? { ...basePricingDraft, videoMode: effectiveVideoMode.code }
+      : basePricingDraft;
 
     return buildQuotePayload({
       operation: resolvedOperation,
-      draft: session.authenticated
-        ? pricingDraft
-        : { ...pricingDraft, conversationId: "" },
+      draft: session.authenticated ? pricingDraft : { ...pricingDraft, conversationId: "" },
       model: selectedModel,
       tool,
       references: activeReferences,
       supportsContext,
       useConversationReference,
+      assumedReferenceCount:
+        referenceRequired &&
+        activeReferenceCount <
+          Math.max(
+            1,
+            promptMinimumReferenceFiles,
+            kind === "video" ? (effectiveVideoMode?.minReferenceFiles ?? 0) : 0,
+          )
+          ? Math.max(
+              1,
+              promptMinimumReferenceFiles,
+              kind === "video" ? (effectiveVideoMode?.minReferenceFiles ?? 0) : 0,
+            )
+          : 0,
     });
   }, [
+    activeReferenceCount,
     activeReferences,
     draft,
     draftReady,
+    effectiveVideoMode,
     hasPendingTurn,
     isTool,
+    kind,
     promptReady,
+    promptMinimumReferenceFiles,
     pricingCalculation,
-    referenceBlockMessage,
+    quoteBlockMessage,
+    referenceRequired,
     resolvedOperation,
     selectedModel,
     session.authenticated,
@@ -748,7 +1193,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     useConversationReference,
   ]);
   const quoteFingerprint = quotePayload ? JSON.stringify(quotePayload) : "";
-  const debouncedQuoteFingerprint = useDebouncedValue(quoteFingerprint, 700);
+  const quoteDebounceMs =
+    promptReady && pricingCalculation === "variable" ? VARIABLE_QUOTE_DEBOUNCE_MS : 0;
+  const debouncedQuoteFingerprint = useDebouncedValue(quoteFingerprint, quoteDebounceMs);
 
   useEffect(() => {
     let active = true;
@@ -807,12 +1254,76 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   const updateTurn = useCallback((run: AiRunSummary, outputs?: AiRunOutput[]) => {
     setTurns((current) =>
       current.map((turn) =>
-        turn.run?.id === run.id
-          ? { ...turn, run, outputs: outputs ?? turn.outputs }
-          : turn,
+        turn.run?.id === run.id ? { ...turn, run, outputs: outputs ?? turn.outputs } : turn,
       ),
     );
-  }, []);
+    if (
+      TERMINAL_RUN_STATUSES.has(run.status) &&
+      !broadcastedTerminalRuns.current.has(run.id)
+    ) {
+      broadcastedTerminalRuns.current.add(run.id);
+      broadcastConversationChange(
+        run.conversationId || activeConversationId.current,
+        "terminal",
+      );
+    }
+  }, [broadcastConversationChange]);
+
+  async function retryFailedTurn(turn: ChatTurn): Promise<void> {
+    const sourceRun = turn.run;
+    if (!sourceRun || sourceRun.status !== "failed") return;
+    if (retryLock.current || hasPendingTurn) {
+      throw new Error(
+        t(
+          "Дождитесь ответа на текущую генерацию",
+          "Wait for the current generation to finish",
+        ),
+      );
+    }
+
+    retryLock.current = true;
+    const submissionEpoch = viewEpoch.current;
+    try {
+      const payload = await aiApiFetch<AiRunSummary | AiApiEnvelope<AiRunSummary>>(
+        `/runs/${encodeURIComponent(sourceRun.id)}/retry`,
+        {
+          method: "POST",
+          body: {
+            idempotencyKey: crypto.randomUUID(),
+            reuseInputFiles: true,
+          },
+          timeoutMs: 30_000,
+        },
+      );
+      const nextRun = unwrapAiData(payload);
+      if (viewEpoch.current !== submissionEpoch) return;
+
+      setTurns((current) => {
+        if (current.some((currentTurn) => currentTurn.run?.id === nextRun.id)) return current;
+        return [
+          ...current,
+          {
+            id: nextRun.id,
+            run: nextRun,
+            prompt: turn.prompt,
+            outputs: [],
+            inputFiles: turn.inputFiles,
+            createdAt: nextRun.createdAt,
+            modelId: turn.modelId,
+            modelName: nextRun.modelName || turn.modelName,
+            submissionState: "active",
+          },
+        ];
+      });
+      conversationHistory.reload();
+      broadcastConversationChange(
+        nextRun.conversationId || draft.conversationId,
+        "started",
+      );
+    } finally {
+      retryLock.current = false;
+    }
+  }
 
   async function ensureConversation(
     submittedDraft: Draft,
@@ -827,16 +1338,20 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         body: {
           kind: getConversationKind(kind),
           contextEnabled: supportsContext ? submittedDraft.contextEnabled : false,
-          title: getConversationTitle(firstMessage, getCreateTitle(kind)),
+          title: getConversationTitle(firstMessage, getCreateTitle(kind, isEnglish)),
         },
       },
     );
     const conversation = unwrapAiData(payload);
     if (viewEpoch.current === submissionEpoch) {
       setDraft((current) => ({ ...current, conversationId: conversation.id }));
+      setConversationTitle(
+        conversation.title || getConversationTitle(firstMessage, getCreateTitle(kind, isEnglish)),
+      );
       hydratedConversation.current = conversation.id;
     }
     conversationHistory.reload();
+    broadcastConversationChange(conversation.id);
     return conversation.id;
   }
 
@@ -895,19 +1410,21 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       return;
     }
     if (isConversationLoading) {
-      setQuoteError("Дождитесь загрузки чата");
+      setQuoteError(t("Дождитесь загрузки чата", "Wait for the chat to load"));
       return;
     }
     if (hasPendingTurn) {
-      setQuoteError("Дождитесь ответа на предыдущее сообщение");
+      setQuoteError(t("Дождитесь ответа на предыдущее сообщение", "Wait for the previous response"));
       return;
     }
     if (!promptReady) {
-      setQuoteError("Введите сообщение");
+      setQuoteError(
+        promptVariablesMessage || t("Введите сообщение", "Enter a message"),
+      );
       return;
     }
     if (!resolvedOperation) {
-      setQuoteError("Выбранная модель не поддерживает нужный формат генерации");
+      setQuoteError(t("Выбранная модель не поддерживает нужный формат генерации", "The selected model does not support this generation format"));
       return;
     }
     if (referenceBlockMessage) {
@@ -915,20 +1432,21 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       return;
     }
     if (!selectedModel || (isTool && !tool)) {
-      setQuoteError("Выберите доступную модель");
+      setQuoteError(t("Выберите доступную модель", "Choose an available model"));
       return;
     }
 
     const submittedDraft: Draft = {
       ...draft,
+      ...(effectiveVideoMode ? { videoMode: effectiveVideoMode.code } : {}),
       toolValues: { ...draft.toolValues },
     };
-    const submittedReferences = referenceInputVisible
-      ? [...referencesRef.current]
-      : [];
+    const submittedReferences = referenceInputVisible ? [...referencesRef.current] : [];
     const submittedFiles = submittedReferences.map((reference) => reference.file);
     const submittedPrompt =
-      submittedDraft.prompt.trim() || getToolMessage(submittedDraft.toolValues);
+      submittedDraft.prompt.trim() ||
+      submittedDraft.promptTitle ||
+      getToolMessage(submittedDraft.toolValues, isEnglish);
     const submittedModel = selectedModel;
     const submittedOperation = resolvedOperation;
     const submittedTool = tool;
@@ -941,6 +1459,8 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     const inputFiles = submittedReferences.map(toLocalMessageAttachment);
 
     submitLock.current = true;
+    initialThreadScrollPending.current = false;
+    threadPinnedToBottom.current = true;
 
     setIsSubmitting(true);
     setQuoteError(null);
@@ -953,6 +1473,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         outputs: [],
         inputFiles,
         createdAt: submittedAt,
+        modelId: submittedModel.id,
         modelName: submittedModel.name,
         submissionState: "submitting",
       },
@@ -962,6 +1483,11 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       ...current,
       idempotencyKey: "",
       prompt: "",
+      catalogPromptOverride: false,
+      promptId: null,
+      promptMinimumReferenceFiles: 0,
+      promptMaximumReferenceFiles: 0,
+      promptTitle: "",
       publicShareDraftToken: "",
       repeatRunId: "",
       replaceReference: false,
@@ -986,24 +1512,40 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       });
       if (!freshQuote.supported) {
         throw new Error(
-          freshQuote.unavailableReasons[0] || "Генерация с этими параметрами недоступна",
+          freshQuote.unavailableReasons[0] || t("Генерация с этими параметрами недоступна", "Generation is unavailable with these parameters"),
         );
       }
 
-      const inputFileIds = await Promise.all(
+      const uploadedFiles = await Promise.all(
         submittedReferences.map(async (reference) => {
           const upload = new FormData();
           upload.set("file", reference.file);
           const uploadPayload = await aiApiFetch<
-            { id: string } | AiApiEnvelope<{ id: string }>
-          >("/uploads", { method: "POST", body: upload, timeoutMs: 60_000 });
-          return unwrapAiData(uploadPayload).id;
+            AiUploadResult | AiApiEnvelope<AiUploadResult>
+          >(
+            "/uploads",
+            {
+              method: "POST",
+              body: upload,
+              timeoutMs: 60_000,
+            },
+          );
+          return unwrapAiData(uploadPayload);
         }),
       );
+      const inputFileIds = uploadedFiles.map((file) => file.id);
+      const cloudInputFiles = submittedReferences.map((reference, index) =>
+        toUploadedMessageAttachment(reference, uploadedFiles[index]),
+      );
+      if (viewEpoch.current === submissionEpoch) {
+        setTurns((current) =>
+          current.map((turn) =>
+            turn.id === clientId ? { ...turn, inputFiles: cloudInputFiles } : turn,
+          ),
+        );
+      }
 
-      const runPayload = await aiApiFetch<AiRunSummary | AiApiEnvelope<AiRunSummary>>(
-        "/runs",
-        {
+      const runPayload = await aiApiFetch<AiRunSummary | AiApiEnvelope<AiRunSummary>>("/runs", {
           method: "POST",
           body: {
             idempotencyKey,
@@ -1012,18 +1554,14 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             modelId: submittedDraft.modelId,
             conversationId,
             contextEnabled: supportsContext ? submittedDraft.contextEnabled : false,
-            ...(submittedUseConversationReference
-              ? { useConversationReference: true }
-              : {}),
-            ...(submittedDraft.promptConfigId
-              ? { promptConfigId: submittedDraft.promptConfigId }
+          ...(submittedUseConversationReference ? { useConversationReference: true } : {}),
+            ...(submittedDraft.promptId
+              ? { promptId: submittedDraft.promptId }
               : {}),
             ...(submittedDraft.publicShareDraftToken
               ? { publicShareDraftToken: submittedDraft.publicShareDraftToken }
               : {}),
-            ...(submittedDraft.repeatRunId
-              ? { retryRunId: submittedDraft.repeatRunId }
-              : {}),
+          ...(submittedDraft.repeatRunId ? { retryRunId: submittedDraft.repeatRunId } : {}),
             ...(submittedTool ? { toolId: submittedTool.id } : {}),
             parameters: buildParameters(
               submittedDraft,
@@ -1034,8 +1572,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             inputFileIds,
           },
           timeoutMs: 30_000,
-        },
-      );
+      });
       const nextRun = unwrapAiData(runPayload);
       if (viewEpoch.current === submissionEpoch) {
         setTurns((current) =>
@@ -1053,6 +1590,10 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         );
       }
       conversationHistory.reload();
+      broadcastConversationChange(
+        nextRun.conversationId || conversationId,
+        "started",
+      );
     } catch (error) {
       const message = getAiErrorMessage(error);
       if (viewEpoch.current === submissionEpoch) {
@@ -1075,27 +1616,106 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     addReferenceFiles(Array.from(event.target.files || []));
   }
 
+  function handleReferenceDragEnter(event: DragEvent<HTMLElement>) {
+    if (!hasFileTransfer(event.dataTransfer)) return;
+    event.preventDefault();
+    const canAccept = canAcceptReferenceDrag(event.dataTransfer);
+    event.dataTransfer.dropEffect = canAccept ? "copy" : "none";
+    setIsValidReferenceDrag(canAccept);
+    setAttachmentStatus(
+      canAccept
+        ? `${dropTitle}. ${dropDescription}`
+        : t("Эти файлы нельзя прикрепить к выбранной модели", "These files cannot be attached to the selected model"),
+    );
+  }
+
+  function handleReferenceDragOver(event: DragEvent<HTMLElement>) {
+    if (!hasFileTransfer(event.dataTransfer)) return;
+    event.preventDefault();
+    const canAccept = canAcceptReferenceDrag(event.dataTransfer);
+    event.dataTransfer.dropEffect = canAccept ? "copy" : "none";
+    setIsValidReferenceDrag(canAccept);
+  }
+
+  function handleReferenceDragLeave(event: DragEvent<HTMLElement>) {
+    const nextTarget = event.relatedTarget as Node | null;
+    if (nextTarget && event.currentTarget.contains(nextTarget)) return;
+    setIsValidReferenceDrag(false);
+  }
+
+  function handleReferenceDrop(event: DragEvent<HTMLElement>) {
+    if (!hasFileTransfer(event.dataTransfer)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsValidReferenceDrag(false);
+
+    const droppedFiles = getDataTransferFiles(event.dataTransfer);
+    if (droppedFiles.length === 0) {
+      setAttachmentStatus(t("Не удалось прочитать перетаскиваемые файлы", "Unable to read dropped files"));
+      return;
+    }
+    addReferenceFiles(droppedFiles);
+  }
+
   function removeReference(referenceId: string) {
     const current = referencesRef.current;
-    const removed = current.find((reference) => reference.id === referenceId);
+    const removedIndex = current.findIndex((reference) => reference.id === referenceId);
+    const removed = current[removedIndex];
     if (!removed) return;
 
     URL.revokeObjectURL(removed.previewUrl);
-    const nextReferences = current.filter(
-      (reference) => reference.id !== referenceId,
-    );
+    const nextReferences = current.filter((reference) => reference.id !== referenceId);
     referencesRef.current = nextReferences;
     setReferences(nextReferences);
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      prompt: remapReferencePromptTags(
+        currentDraft.prompt,
+        capabilities?.referencePromptTag,
+        current,
+        nextReferences,
+      ),
+    }));
     setQuoteError(null);
+    setAttachmentStatus(t(`Файл ${removed.file.name} удалён`, `File ${removed.file.name} removed`));
     if (fileInput.current) fileInput.current.value = "";
   }
 
-  function clearReferences() {
-    referencesRef.current.forEach((reference) =>
-      URL.revokeObjectURL(reference.previewUrl),
+  function reorderReferences(sourceId: string, targetId: string) {
+    if (sourceId === targetId) return;
+    const current = referencesRef.current;
+    const sourceIndex = current.findIndex((reference) => reference.id === sourceId);
+    const targetIndex = current.findIndex((reference) => reference.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+
+    const nextReferences = [...current];
+    const [moved] = nextReferences.splice(sourceIndex, 1);
+    nextReferences.splice(targetIndex, 0, moved);
+    referencesRef.current = nextReferences;
+    setReferences(nextReferences);
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      prompt: remapReferencePromptTags(
+        currentDraft.prompt,
+        capabilities?.referencePromptTag,
+        current,
+        nextReferences,
+      ),
+    }));
+    setAttachmentStatus(
+      t(
+        `Изображение перемещено на позицию ${targetIndex + 1}`,
+        `Image moved to position ${targetIndex + 1}`,
+      ),
     );
+  }
+
+  function clearReferences() {
+    referencesRef.current.forEach((reference) => URL.revokeObjectURL(reference.previewUrl));
     referencesRef.current = [];
     setReferences([]);
+    setIsValidReferenceDrag(false);
+    setAttachmentStatus("");
     if (fileInput.current) fileInput.current.value = "";
   }
 
@@ -1117,6 +1737,8 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         method: "PATCH",
         body: { contextEnabled },
       });
+      conversationHistory.reload();
+      broadcastConversationChange(draft.conversationId);
     } catch (error) {
       setDraft((current) => ({ ...current, contextEnabled: previous }));
       setConversationError(getAiErrorMessage(error));
@@ -1125,8 +1747,56 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     }
   }
 
+  function beginConversationTitleEditing() {
+    if (!draft.conversationId || isConversationTitleSaving) return;
+    setConversationTitleDraft(conversationTitle);
+    setConversationError(null);
+    setIsConversationTitleEditing(true);
+  }
+
+  function cancelConversationTitleEditing() {
+    if (isConversationTitleSaving) return;
+    setConversationTitleDraft("");
+    setIsConversationTitleEditing(false);
+  }
+
+  async function saveConversationTitle() {
+    if (!draft.conversationId || isConversationTitleSaving) return;
+    const nextTitle = conversationTitleDraft.replace(/\s+/g, " ").trim();
+    if (!nextTitle) {
+      setConversationError(t("Название чата не может быть пустым", "The chat title cannot be empty"));
+      return;
+    }
+    if (nextTitle === conversationTitle) {
+      cancelConversationTitleEditing();
+      return;
+    }
+
+    setIsConversationTitleSaving(true);
+    setConversationError(null);
+    try {
+      const payload = await aiApiFetch<AiConversation | AiApiEnvelope<AiConversation>>(
+        `/conversations/${encodeURIComponent(draft.conversationId)}`,
+        {
+          method: "PATCH",
+          body: { title: nextTitle },
+        },
+      );
+      const conversation = unwrapAiData(payload);
+      setConversationTitle(conversation.title);
+      setConversationTitleDraft("");
+      setIsConversationTitleEditing(false);
+      conversationHistory.reload();
+      broadcastConversationChange(conversation.id);
+    } catch (error) {
+      setConversationError(getAiErrorMessage(error));
+    } finally {
+      setIsConversationTitleSaving(false);
+    }
+  }
+
   function startNewChat() {
-    if (hasPendingTurn && !window.confirm("Текущая генерация ещё выполняется. Начать новый чат?")) {
+    if (hasPendingTurn && !window.confirm(t("Текущая генерация ещё выполняется. Начать новый чат?", "A generation is still in progress. Start a new chat?"))) {
       return;
     }
     viewEpoch.current += 1;
@@ -1134,6 +1804,8 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     clearReferences();
     setIsConversationLoading(false);
     setTurns([]);
+    setConversationTitle(getCreateTitle(kind, isEnglish));
+    setIsConversationTitleEditing(false);
     setConversationError(null);
     setIsHistoryOpen(false);
     setDraft((current) => ({
@@ -1141,6 +1813,11 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       conversationId: "",
       idempotencyKey: "",
       prompt: "",
+      catalogPromptOverride: false,
+      promptId: null,
+      promptMinimumReferenceFiles: 0,
+      promptMaximumReferenceFiles: 0,
+      promptTitle: "",
       publicShareDraftToken: "",
       repeatRunId: "",
       replaceReference: false,
@@ -1150,15 +1827,25 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   function selectConversation(conversationId: string) {
     if (conversationId === draft.conversationId) {
       setIsHistoryOpen(false);
+      threadPinnedToBottom.current = true;
+      scrollThreadToBottom();
       return;
     }
-    if (hasPendingTurn && !window.confirm("Текущая генерация ещё выполняется. Открыть другой чат?")) {
+    if (
+      hasPendingTurn &&
+      !window.confirm(t("Текущая генерация ещё выполняется. Открыть другой чат?", "A generation is still in progress. Open another chat?"))
+    ) {
       return;
     }
     viewEpoch.current += 1;
     clearReferences();
     hydratedConversation.current = null;
     setTurns([]);
+    setConversationTitle(
+      visibleConversations.find((conversation) => conversation.id === conversationId)?.title ||
+        getCreateTitle(kind, isEnglish),
+    );
+    setIsConversationTitleEditing(false);
     setConversationError(null);
     setIsConversationLoading(true);
     setIsHistoryOpen(false);
@@ -1167,21 +1854,131 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       conversationId,
       idempotencyKey: "",
       prompt: "",
+      catalogPromptOverride: false,
+      promptId: null,
+      promptMinimumReferenceFiles: 0,
+      promptMaximumReferenceFiles: 0,
+      promptTitle: "",
       publicShareDraftToken: "",
       repeatRunId: "",
       replaceReference: false,
     }));
   }
 
+  async function deleteConversation(conversation: AiConversation) {
+    if (
+      conversation.id === draft.conversationId &&
+      hasPendingTurn
+    ) {
+      setHistoryMutationError(
+        t(
+          "Дождитесь завершения текущей генерации перед удалением этого чата.",
+          "Wait for the current generation to finish before deleting this chat.",
+        ),
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        t(
+          `Удалить чат «${conversation.title || "Без названия"}»?`,
+          `Delete “${conversation.title || "Untitled chat"}”?`,
+        ),
+      )
+    ) {
+      return;
+    }
+
+    setDeletingConversationId(conversation.id);
+    setHistoryMutationError(null);
+    try {
+      await aiApiFetch(`/conversations/${encodeURIComponent(conversation.id)}`, {
+        method: "DELETE",
+      });
+      conversationHistory.update((current) =>
+        current
+          ? {
+              ...current,
+              data: current.data.filter((entry) => entry.id !== conversation.id),
+              total: Math.max(0, current.total - 1),
+            }
+          : current,
+      );
+      setHistoryMutationError(null);
+      broadcastConversationChange(conversation.id);
+      if (conversation.id === draft.conversationId) startNewChat();
+    } catch (error) {
+      setHistoryMutationError(getAiErrorMessage(error));
+    } finally {
+      setDeletingConversationId(null);
+    }
+  }
+
   const requiresToolConfig = isTool && !tools.isLoading && !tool;
-  const modelOptions: AiSelectOption<string>[] = availableModels.map((model) => ({
-    value: model.id,
-    label: model.name,
-    description: model.available
-      ? model.description || getModalityLabel(model.modality)
-      : model.unavailableReason || "Временно недоступна",
-    disabled: !model.available,
-  }));
+  const modelFamilies = useMemo(
+    () => createModelFamilies(availableModels),
+    [availableModels],
+  );
+  const selectedModelFamily = useMemo(
+    () =>
+      modelFamilies.find((family) =>
+        family.entries.some(({ model }) => model.id === draft.modelId),
+      ) || modelFamilies[0] || null,
+    [draft.modelId, modelFamilies],
+  );
+  const modelFamilyOptions = useMemo<AiSelectOption<string>[]>(
+    () =>
+      modelFamilies.map((family) => ({
+        value: family.key,
+        label: family.label,
+        disabled: family.entries.every(({ model }) => !model.available),
+        visual: (
+          <AiModelLogo
+            label={family.label}
+            logoUrl={
+              family.entries.find(({ model }) => model.available)?.model.logoUrl ||
+              family.entries[0]?.model.logoUrl
+            }
+          />
+        ),
+      })),
+    [modelFamilies],
+  );
+  const modelVersionOptions = useMemo<AiSelectOption<string>[]>(
+    () => createModelVersionOptions(selectedModelFamily, isEnglish),
+    [isEnglish, selectedModelFamily],
+  );
+
+  function selectModelFamily(familyKey: string) {
+    const family = modelFamilies.find((candidate) => candidate.key === familyKey);
+    const model =
+      family?.entries.find((entry) => entry.model.available)?.model ||
+      family?.entries[0]?.model;
+    if (!model) return;
+    setQuoteError(null);
+    setDraft((current) => ({
+      ...current,
+      modelId: model.id,
+      catalogPromptOverride: false,
+      promptId: null,
+      promptMinimumReferenceFiles: 0,
+      promptMaximumReferenceFiles: 0,
+      promptTitle: "",
+    }));
+  }
+
+  function selectModelVersion(modelId: string) {
+    setQuoteError(null);
+    setDraft((current) => ({
+      ...current,
+      modelId,
+      catalogPromptOverride: false,
+      promptId: null,
+      promptMinimumReferenceFiles: 0,
+      promptMaximumReferenceFiles: 0,
+      promptTitle: "",
+    }));
+  }
 
   return (
     <AiPage className={styles.workspacePage}>
@@ -1189,10 +1986,10 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         <div className={styles.compactHeader}>
           <Link className={styles.compactBack} href="/ai/create">
             <FiArrowLeft aria-hidden="true" />
-            <span>Назад</span>
+            <span>{t("Назад", "Back")}</span>
           </Link>
           <span aria-hidden="true" className={styles.compactDivider} />
-          <h1>{getCreateTitle(kind)}</h1>
+          <h1>{getCreateTitle(kind, isEnglish)}</h1>
         </div>
 
         <div className={styles.workspaceBody}>
@@ -1200,21 +1997,24 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             error={models.error || (isTool ? tools.error : null)}
             isEmpty={!availableModels.length || requiresToolConfig}
             isLoading={models.isLoading || (isTool && tools.isLoading)}
-            emptyTitle={requiresToolConfig ? "Инструмент пока не настроен" : "Нет доступных моделей"}
+            emptyTitle={
+              requiresToolConfig ? t("Инструмент пока не настроен", "Tool is not configured yet") : t("Нет доступных моделей", "No models available")
+            }
             emptyDescription={
               requiresToolConfig
-                ? "Администратор должен опубликовать конфигурацию полей и связать модели."
-                : "Включите модель и её маршрут в настройках AI-контура."
+                ? t("Администратор должен опубликовать конфигурацию полей и связать модели.", "An administrator must publish the field configuration and connect models.")
+                : t("Подходящие модели временно недоступны.", "Compatible models are temporarily unavailable.")
             }
             onRetry={() => {
               models.reload();
               tools.reload();
             }}
           >
-            <form className={styles.layout} onSubmit={handleSubmit}>
+            <ImageGalleryProvider>
+              <form className={styles.layout} ref={chatForm} onSubmit={handleSubmit}>
           {isHistoryOpen ? (
             <button
-              aria-label="Закрыть историю чатов"
+              aria-label={t("Закрыть историю чатов", "Close chat history")}
               className={styles.historyBackdrop}
               type="button"
               onClick={() => setIsHistoryOpen(false)}
@@ -1222,7 +2022,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           ) : null}
 
           <aside
-            aria-label="История чатов"
+            aria-label={t("История чатов", "Chat history")}
             aria-modal={isHistoryOpen ? true : undefined}
             className={`${styles.history} ${isHistoryOpen ? styles.historyOpen : ""}`}
             id={`ai-chat-history-${kind}`}
@@ -1233,10 +2033,10 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             <AiCard className={styles.historyCard}>
               <div className={styles.historyHeading}>
                 <div>
-                  <h2>История чатов</h2>
+                  <h2>{t("История чатов", "Chat history")}</h2>
                 </div>
                 <button
-                  aria-label="Закрыть историю чатов"
+                  aria-label={t("Закрыть историю чатов", "Close chat history")}
                   className={styles.historyClose}
                   type="button"
                   onClick={() => setIsHistoryOpen(false)}
@@ -1244,33 +2044,36 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   <FiX aria-hidden="true" />
                 </button>
               </div>
-              <button
-                className={styles.historyNewChat}
-                type="button"
-                onClick={startNewChat}
-              >
-                <FiPlus aria-hidden="true" /> Новый чат
+                  <button className={styles.historyNewChat} type="button" onClick={startNewChat}>
+                <FiPlus aria-hidden="true" /> {t("Новый чат", "New chat")}
               </button>
 
               <div className={styles.historyListArea} aria-live="polite">
+                {historyMutationError ? (
+                  <p className={styles.historyMutationError} role="alert">
+                    {historyMutationError}
+                  </p>
+                ) : null}
                 {!session.authenticated ? (
                   <div className={styles.historyState}>
                     <FiMessageCircle aria-hidden="true" />
-                    <p>Войдите, чтобы сохранять и открывать историю чатов.</p>
-                    <Link href={`/ai/auth?returnTo=${encodeURIComponent(`/ai/create/${kind}`)}`}>
-                      Войти
+                    <p>{t("Войдите, чтобы сохранять и открывать историю чатов.", "Sign in to save and open chat history.")}</p>
+                        <Link
+                          href={`/ai/auth?returnTo=${encodeURIComponent(`/ai/create/${kind}`)}`}
+                        >
+                      {t("Войти", "Sign in")}
                     </Link>
                   </div>
                 ) : conversationHistory.isLoading ? (
                   <div className={styles.historyState} role="status">
                     <FiRefreshCw aria-hidden="true" className={styles.spinningIcon} />
-                    <p>Загружаем чаты…</p>
+                    <p>{t("Загружаем чаты…", "Loading chats…")}</p>
                   </div>
                 ) : conversationHistory.error ? (
                   <div className={styles.historyState} role="alert">
                     <p>{conversationHistory.error}</p>
                     <button type="button" onClick={conversationHistory.reload}>
-                      Повторить
+                      {t("Повторить", "Retry")}
                     </button>
                   </div>
                 ) : visibleConversations.length ? (
@@ -1278,20 +2081,39 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                     {visibleConversations.map((conversation) => {
                       const isActive = conversation.id === draft.conversationId;
                       return (
-                        <li key={conversation.id}>
+                        <li className={styles.historyItemRow} key={conversation.id}>
                           <button
                             aria-current={isActive ? "page" : undefined}
-                            className={isActive ? styles.historyItemActive : ""}
+                            className={`${styles.historyOpenButton} ${isActive ? styles.historyItemActive : ""}`}
                             type="button"
                             onClick={() => selectConversation(conversation.id)}
                           >
-                            <span><FiMessageCircle aria-hidden="true" /></span>
+                                <span>
+                                  <FiMessageCircle aria-hidden="true" />
+                                </span>
                             <span>
-                              <strong>{conversation.title || "Чат без названия"}</strong>
+                              <strong>{conversation.title || t("Чат без названия", "Untitled chat")}</strong>
                               <time dateTime={conversation.updatedAt}>
-                                {formatConversationDate(conversation.updatedAt)}
+                                {formatConversationDate(conversation.updatedAt, locale)}
                               </time>
                             </span>
+                          </button>
+                          <button
+                            aria-label={t(
+                              `Удалить чат ${conversation.title || "без названия"}`,
+                              `Delete chat ${conversation.title || "without a title"}`,
+                            )}
+                            className={styles.historyDeleteButton}
+                            disabled={deletingConversationId === conversation.id}
+                            title={t("Удалить чат", "Delete chat")}
+                            type="button"
+                            onClick={() => void deleteConversation(conversation)}
+                          >
+                            {deletingConversationId === conversation.id ? (
+                              <FiRefreshCw aria-hidden="true" className={styles.spinningIcon} />
+                            ) : (
+                              <FiTrash2 aria-hidden="true" />
+                            )}
                           </button>
                         </li>
                       );
@@ -1300,27 +2122,91 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                 ) : (
                   <div className={styles.historyState}>
                     <FiMessageCircle aria-hidden="true" />
-                    <p>Здесь появятся ваши сохранённые чаты.</p>
+                    <p>{t("Здесь появятся ваши сохранённые чаты.", "Your saved chats will appear here.")}</p>
                   </div>
                 )}
               </div>
             </AiCard>
           </aside>
 
-          <AiCard className={styles.chat}>
+          <AiCard
+            className={styles.chat}
+            onDragEnd={() => setIsValidReferenceDrag(false)}
+            onDragEnter={handleReferenceDragEnter}
+            onDragLeave={handleReferenceDragLeave}
+            onDragOver={handleReferenceDragOver}
+            onDrop={handleReferenceDrop}
+          >
+            {isValidReferenceDrag ? (
+              <div aria-hidden="true" className={styles.dropOverlay}>
+                <span>
+                  <FiPaperclip />
+                </span>
+                <strong>{dropTitle}</strong>
+                <small>{dropDescription}</small>
+              </div>
+            ) : null}
             <div className={styles.chatToolbar}>
-              <div>
-                <span className={styles.onlineDot} aria-hidden="true" />
-                <strong>{selectedModel?.name || "AI-модель"}</strong>
-                {resolvedOperation ? (
-                  <small>{getOperationLabel(resolvedOperation)}</small>
-                ) : null}
+              <div className={styles.chatTitle}>
+                {isConversationTitleEditing ? (
+                  <div className={styles.chatTitleEditor}>
+                    <input
+                      aria-label={t("Название чата", "Chat title")}
+                      autoFocus
+                      disabled={isConversationTitleSaving}
+                      maxLength={160}
+                      value={conversationTitleDraft}
+                      onChange={(event) => setConversationTitleDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void saveConversationTitle();
+                        } else if (event.key === "Escape") {
+                          event.preventDefault();
+                          cancelConversationTitleEditing();
+                        }
+                      }}
+                    />
+                    <button
+                      aria-label={t("Сохранить название", "Save title")}
+                      className={styles.confirmChatTitleButton}
+                      disabled={isConversationTitleSaving}
+                      title={t("Сохранить название", "Save title")}
+                      type="button"
+                      onClick={() => void saveConversationTitle()}
+                    >
+                      {isConversationTitleSaving ? (
+                        <FiRefreshCw aria-hidden="true" className={styles.spinningIcon} />
+                      ) : (
+                        <FiCheck aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  draft.conversationId ? (
+                    <button
+                      aria-label={t("Переименовать чат", "Rename chat")}
+                      className={styles.chatTitleTrigger}
+                      title={t("Нажмите, чтобы переименовать чат", "Click to rename chat")}
+                      type="button"
+                      onClick={beginConversationTitleEditing}
+                    >
+                      {draft.conversationId
+                        ? conversationTitle
+                        : getCreateTitle(kind, isEnglish)}
+                    </button>
+                  ) : (
+                    <strong>{getCreateTitle(kind, isEnglish)}</strong>
+                  )
+                )}
               </div>
               <div className={styles.mobileToolbarActions}>
                 <button
+                  aria-label={t("Открыть историю", "Open history")}
                   aria-controls={`ai-chat-history-${kind}`}
                   aria-expanded={isHistoryOpen}
                   className={styles.mobileHistoryButton}
+                  title={t("История", "History")}
                   type="button"
                   onClick={() => {
                     setIsSettingsOpen(false);
@@ -1328,12 +2214,13 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   }}
                 >
                   <FiMessageCircle aria-hidden="true" />
-                  История
                 </button>
                 <button
+                  aria-label={t("Открыть настройки", "Open settings")}
                   aria-controls={`ai-chat-settings-${kind}`}
                   aria-expanded={isSettingsOpen}
                   className={styles.mobileSettingsButton}
+                  title={t("Настройки", "Settings")}
                   type="button"
                   onClick={() => {
                     setIsHistoryOpen(false);
@@ -1341,47 +2228,78 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   }}
                 >
                   <FiSettings aria-hidden="true" />
-                  Настройки
                 </button>
               </div>
             </div>
 
-            <div aria-live="polite" className={styles.thread} ref={thread}>
-              {isConversationLoading ? (
-                <div className={styles.conversationLoading} role="status">
-                  <FiRefreshCw aria-hidden="true" />
-                  Загружаем чат…
+            <div className={styles.threadShell}>
+              <div
+                aria-live="polite"
+                className={styles.thread}
+                ref={thread}
+                onPointerDown={markThreadAsUserControlled}
+                onScroll={handleThreadScroll}
+                onTouchStart={markThreadAsUserControlled}
+                onWheel={markThreadAsUserControlled}
+              >
+                <div className={styles.threadContent} ref={threadContent}>
+                {isConversationLoading ? (
+                  <div className={styles.conversationLoading} role="status">
+                    <FiRefreshCw aria-hidden="true" />
+                    {t("Загружаем чат…", "Loading chat…")}
+                  </div>
+                ) : turns.length ? (
+                  turns.map((turn) => (
+                    <ChatTurnMessage
+                      createdAt={turn.createdAt}
+                      initialOutputs={turn.outputs}
+                      inputFiles={turn.inputFiles}
+                      key={turn.id}
+                      modelLogoUrl={
+                        availableModels.find(
+                          (model) => model.id === (turn.run?.modelId || turn.modelId),
+                        )?.logoUrl
+                      }
+                      modelName={turn.modelName}
+                      prompt={turn.prompt}
+                      run={turn.run}
+                      submissionState={turn.submissionState}
+                      submitError={turn.submitError}
+                      onUpdate={updateTurn}
+                      onRetry={() => retryFailedTurn(turn)}
+                      retryDisabled={hasPendingTurn}
+                    />
+                  ))
+                ) : (
+                  <div className={styles.emptyChat}>
+                    <span>
+                      <RiSparkling2Fill aria-hidden="true" />
+                    </span>
+                    <h2>{t("Начните диалог", "Start a conversation")}</h2>
+                    <p>
+                      {kind === "image"
+                        ? t("Опишите изображение. Следующий запрос сможет учитывать предыдущий результат.", "Describe an image. The next request can use the previous result.")
+                        : kind === "video"
+                          ? t("Опишите ролик — каждый запрос будет самостоятельной генерацией.", "Describe a video — every request is generated independently.")
+                          : isTool
+                            ? t("Добавьте фотографию и выберите формат результата в настройках.", "Add a photo and choose an output format in settings.")
+                            : t("Задайте вопрос или опишите задачу — ответ появится прямо здесь.", "Ask a question or describe a task — the answer will appear here.")}
+                    </p>
+                  </div>
+                )}
                 </div>
-              ) : turns.length ? (
-                turns.map((turn) => (
-                  <ChatTurnMessage
-                    createdAt={turn.createdAt}
-                    initialOutputs={turn.outputs}
-                    inputFiles={turn.inputFiles}
-                    key={turn.id}
-                    modelName={turn.modelName}
-                    prompt={turn.prompt}
-                    run={turn.run}
-                    submissionState={turn.submissionState}
-                    submitError={turn.submitError}
-                    onUpdate={updateTurn}
-                  />
-                ))
-              ) : (
-                <div className={styles.emptyChat}>
-                  <span><RiSparkling2Fill aria-hidden="true" /></span>
-                  <h2>Начните диалог</h2>
-                  <p>
-                    {kind === "image"
-                      ? "Опишите изображение. Следующий запрос сможет учитывать предыдущий результат."
-                      : kind === "video"
-                        ? "Опишите ролик — каждый запрос будет самостоятельной генерацией."
-                        : isTool
-                          ? "Добавьте фотографию и выберите формат результата в настройках."
-                          : "Задайте вопрос или опишите задачу — ответ появится прямо здесь."}
-                  </p>
-                </div>
-              )}
+              </div>
+              {showScrollToBottom ? (
+                <button
+                  aria-label={t("Прокрутить к последнему сообщению", "Scroll to the latest message")}
+                  className={styles.scrollToBottomButton}
+                  title={t("Вниз", "Down")}
+                  type="button"
+                  onClick={smoothlyScrollThreadToBottom}
+                >
+                  <FiChevronDown aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
 
             <div className={styles.composer}>
@@ -1390,31 +2308,103 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   <FiCheck aria-hidden="true" />
                   <span>
                     {kind === "image" && draft.contextEnabled && hasContextImage
-                      ? "Прикреплён последний результат этого чата"
+                      ? t("Прикреплён последний результат этого чата", "The latest result from this chat is attached")
                       : draft.publicShareDraftToken
-                        ? "Прикреплено изображение из публичной работы"
-                        : "Прикреплён исходный файл генерации"}
+                        ? t("Прикреплено изображение из публичной работы", "An image from the public work is attached")
+                        : t("Прикреплён исходный файл генерации", "The original generation file is attached")}
                   </span>
                 </div>
               ) : null}
-              {references.length ? (
+              {references.length || missingPromptReferenceSlots > 0 ? (
                 <ul
-                  aria-label={`Прикреплено: ${acceptsPdf ? formatFileCount(references.length) : formatImageCount(references.length)}`}
+                  aria-label={t(`Прикреплено: ${acceptsPdf ? formatFileCount(references.length) : formatImageCount(references.length)}`, `Attached: ${references.length} ${acceptsPdf ? references.length === 1 ? "file" : "files" : references.length === 1 ? "image" : "images"}`)}
                   aria-live="polite"
                   className={styles.composerAttachments}
                 >
                   {references.map((reference) => (
-                    <li className={styles.composerAttachment} key={reference.id}>
-                      {reference.file.type.startsWith("image/") ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- local object URL
-                        <img alt="" src={reference.previewUrl} />
-                      ) : (
-                        <FiFileText aria-hidden="true" />
+                    <li
+                      aria-label={t(
+                        `Вложение ${reference.file.name}. Перетаскивайте для изменения порядка`,
+                        `Attachment ${reference.file.name}. Drag to reorder`,
                       )}
-                      <span>{reference.file.name}</span>
-                      <small>{formatFileSize(reference.file.size)}</small>
+                      aria-roledescription={t("перетаскиваемое вложение", "draggable attachment")}
+                      className={`${styles.composerAttachmentTile} ${
+                        draggedReferenceId === reference.id
+                          ? styles.composerAttachmentDragging
+                          : ""
+                      }`}
+                      draggable
+                      key={reference.id}
+                      tabIndex={0}
+                      onDragEnd={() => setDraggedReferenceId(null)}
+                      onDragOver={(event) => {
+                        if (!draggedReferenceId || draggedReferenceId === reference.id) return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.dataTransfer.dropEffect = "move";
+                      }}
+                      onDragStart={(event) => {
+                        event.stopPropagation();
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData(
+                          "application/x-neuroluv-reference",
+                          reference.id,
+                        );
+                        setDraggedReferenceId(reference.id);
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const sourceId =
+                          event.dataTransfer.getData(
+                            "application/x-neuroluv-reference",
+                          ) || draggedReferenceId;
+                        if (sourceId) reorderReferences(sourceId, reference.id);
+                        setDraggedReferenceId(null);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) {
+                          return;
+                        }
+                        event.preventDefault();
+                        const currentIndex = references.findIndex(
+                          (item) => item.id === reference.id,
+                        );
+                        const nextIndex =
+                          event.key === "ArrowLeft"
+                            ? Math.max(0, currentIndex - 1)
+                            : Math.min(references.length - 1, currentIndex + 1);
+                        const target = references[nextIndex];
+                        if (target) reorderReferences(reference.id, target.id);
+                      }}
+                    >
+                      <ImageLightbox
+                        alt={reference.file.name}
+                        fileName={reference.file.name}
+                        fullUrl={reference.previewUrl}
+                        kind={
+                          reference.file.type.startsWith("image/")
+                            ? "image"
+                            : "document"
+                        }
+                        previewUrl={reference.previewUrl}
+                        triggerClassName={styles.composerAttachmentPreview}
+                      >
+                        {reference.file.type.startsWith("image/") ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
+                            <img alt="" draggable={false} src={reference.previewUrl} />
+                          </>
+                        ) : (
+                          <FiFileText aria-hidden="true" />
+                        )}
+                      </ImageLightbox>
+                      <small className={styles.composerAttachmentSize}>
+                        {formatFileSize(reference.file.size, locale)}
+                      </small>
                       <button
-                        aria-label={`Удалить файл ${reference.file.name}`}
+                        aria-label={`${t("Удалить файл", "Remove file")} ${reference.file.name}`}
+                        className={styles.composerAttachmentRemove}
                         type="button"
                         onClick={() => removeReference(reference.id)}
                       >
@@ -1422,10 +2412,38 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                       </button>
                     </li>
                   ))}
+                  {Array.from(
+                    { length: missingPromptReferenceSlots },
+                    (_, slotIndex) => {
+                      const referenceIndex =
+                        activeReferenceCount + slotIndex + 1;
+                      return (
+                        <li
+                          className={styles.composerAttachmentSlotItem}
+                          key={`prompt-reference-slot-${referenceIndex}`}
+                        >
+                          <button
+                            aria-controls={`ai-chat-file-input-${kind}`}
+                            aria-label={t(
+                              `Добавить обязательное фото ${referenceIndex}`,
+                              `Add required image ${referenceIndex}`,
+                            )}
+                            className={styles.composerAttachmentSlot}
+                            type="button"
+                            onClick={() => fileInput.current?.click()}
+                          >
+                            <FiImage aria-hidden="true" />
+                            <span>{t(`Фото ${referenceIndex}`, `Image ${referenceIndex}`)}</span>
+                          </button>
+                        </li>
+                      );
+                    },
+                  )}
                 </ul>
               ) : null}
               <input
                 ref={fileInput}
+                id={`ai-chat-file-input-${kind}`}
                 accept={
                   acceptsPdf
                     ? "image/jpeg,image/png,image/webp,application/pdf"
@@ -1438,42 +2456,33 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                 onChange={handleReference}
               />
               {!isTool ? (
-                <label className={styles.composerField}>
-                  <span className={styles.visuallyHidden}>Сообщение</span>
-                  <textarea
-                    ref={composerInput}
-                    maxLength={10_000}
-                    placeholder={getComposerPlaceholder(kind)}
-                    required
-                    rows={3}
-                    value={draft.prompt}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, prompt: event.target.value }))
-                    }
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter" &&
-                        !event.shiftKey &&
-                        !event.nativeEvent.isComposing
-                      ) {
-                        event.preventDefault();
-                        event.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                  />
-                </label>
+                <PromptComposerEditor
+                  maxLength={10_000}
+                  mentions={referenceMentions}
+                  placeholder={getComposerPlaceholder(kind, isEnglish)}
+                  value={draft.prompt}
+                  onChange={(prompt) =>
+                    setDraft((current) => ({
+                      ...current,
+                      prompt,
+                    }))
+                  }
+                  onSubmit={() => chatForm.current?.requestSubmit()}
+                />
               ) : (
                 <p className={styles.toolComposerText}>
-                  Настройте формат результата и прикрепите фото, затем отправьте сообщение.
+                  {t("Настройте формат результата и прикрепите фото, затем отправьте сообщение.", "Configure the output format, attach a photo and send the message.")}
                 </p>
               )}
               <div className={styles.composerActions}>
                 {referenceInputVisible ? (
                   <button
+                    aria-controls={`ai-chat-file-input-${kind}`}
+                    aria-describedby={attachmentStatusId}
                     aria-label={
                       maxReferenceFiles > 1
-                        ? `Прикрепить ${acceptsPdf ? "файлы" : "изображения"}, максимум ${maxReferenceFiles}`
-                        : `Прикрепить ${acceptsPdf ? "файл" : "изображение"}`
+                        ? t(`Прикрепить ${acceptsPdf ? "файлы" : "изображения"}, максимум ${maxReferenceFiles}`, `Attach ${acceptsPdf ? "files" : "images"}, up to ${maxReferenceFiles}`)
+                        : t(`Прикрепить ${acceptsPdf ? "файл" : "изображение"}`, `Attach ${acceptsPdf ? "a file" : "an image"}`)
                     }
                     className={styles.attachButton}
                     type="button"
@@ -1483,21 +2492,29 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   </button>
                 ) : null}
                 <div
-                  aria-label={getQuoteAriaLabel(quote, quoteState)}
+                  aria-label={getQuoteAriaLabel(quote, quoteState, locale, isEnglish)}
                   aria-live="polite"
                   className={styles.composerPrice}
                 >
                   {quote ? (
                     <>
                       <FiZap aria-hidden="true" />
-                      <strong>{formatCreditNumber(quote.reserveCredits)}</strong>
+                      <strong>{formatCreditNumber(quote.reserveCredits, locale)}</strong>
                     </>
                   ) : quoteState === "debouncing" || quoteState === "loading" ? (
                     <span aria-hidden="true" className={styles.quoteSpinner} />
                   ) : null}
                 </div>
+                <span className={styles.composerShortcutHint}>
+                  <span>
+                    <kbd>Enter</kbd> — {t("отправить", "send")}
+                  </span>
+                  <span>
+                    <kbd>Shift + Enter</kbd> — {t("новая строка", "new line")}
+                  </span>
+                </span>
                 <button
-                  aria-label={session.authenticated ? "Отправить сообщение" : "Войти и отправить"}
+                  aria-label={session.authenticated ? t("Отправить сообщение", "Send message") : t("Войти и отправить", "Sign in and send")}
                   className={styles.sendButton}
                   disabled={
                     isSubmitting ||
@@ -1510,20 +2527,35 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   }
                   type="submit"
                 >
-                  {isSubmitting ? <FiClock aria-hidden="true" /> : <FiSend aria-hidden="true" />}
+                  {isSubmitting ? (
+                    <FiClock aria-hidden="true" />
+                  ) : (
+                    <FiSend aria-hidden="true" />
+                  )}
                 </button>
               </div>
-              {referenceBlockMessage ? (
-                <FieldMessage>{referenceBlockMessage}</FieldMessage>
-              ) : quoteError ? (
+              {promptVariablesMessage ? (
+                <FieldMessage>{promptVariablesMessage}</FieldMessage>
+              ) : composerReferenceBlockMessage ? (
+                <FieldMessage>{composerReferenceBlockMessage}</FieldMessage>
+              ) : quoteError && quoteError !== videoReferenceMinimumMessage ? (
                 <FieldMessage>{quoteError}</FieldMessage>
               ) : null}
+              <p
+                aria-atomic="true"
+                aria-live="polite"
+                className={styles.visuallyHidden}
+                id={attachmentStatusId}
+                role="status"
+              >
+                {attachmentStatus}
+              </p>
             </div>
           </AiCard>
 
           {isSettingsOpen ? (
             <button
-              aria-label="Закрыть настройки"
+              aria-label={t("Закрыть настройки", "Close settings")}
               className={styles.settingsBackdrop}
               type="button"
               onClick={() => setIsSettingsOpen(false)}
@@ -1531,7 +2563,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           ) : null}
 
           <aside
-            aria-label="Настройки генерации"
+            aria-label={t("Настройки генерации", "Generation settings")}
             className={`${styles.settings} ${isSettingsOpen ? styles.settingsOpen : ""}`}
             id={`ai-chat-settings-${kind}`}
             ref={settingsRef}
@@ -1542,11 +2574,10 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             <AiCard className={styles.settingsCard}>
               <div className={styles.settingsHeading}>
                 <div>
-                  <span>Параметры</span>
-                  <h2>Настройки чата</h2>
+                  <h2>{t("Настройки чата", "Chat settings")}</h2>
                 </div>
                 <button
-                  aria-label="Закрыть настройки"
+                  aria-label={t("Закрыть настройки", "Close settings")}
                   className={styles.settingsClose}
                   type="button"
                   onClick={() => setIsSettingsOpen(false)}
@@ -1556,23 +2587,33 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
               </div>
 
               <AiSelect
-                id={`ai-model-${kind}`}
-                label="Нейросеть"
-                options={modelOptions}
+                compact
+                disabled={Boolean(draft.promptId)}
+                id={`ai-model-family-${kind}`}
+                label={t("Нейросеть", "AI model")}
+                options={modelFamilyOptions}
+                value={selectedModelFamily?.key || null}
+                onChange={selectModelFamily}
+              />
+
+              <AiSelect
+                compact
+                disabled={Boolean(draft.promptId)}
+                id={`ai-model-version-${kind}`}
+                label={t("Версия", "Version")}
+                options={modelVersionOptions}
                 value={draft.modelId}
-                onChange={(modelId) =>
-                  setDraft((current) => ({ ...current, modelId }))
-                }
+                onChange={selectModelVersion}
               />
 
               {supportsContext ? (
                 <label className={styles.contextToggle}>
                   <span>
-                    <strong>Сохранять контекст</strong>
+                    <strong>{t("Сохранять контекст", "Save context")}</strong>
                     <small>
                       {kind === "image"
-                        ? "Следующий запрос учтёт историю и последний успешный результат."
-                        : "Следующий ответ учтёт предыдущие сообщения этого чата."}
+                        ? t("Следующий запрос учтёт историю и последний успешный результат.", "The next request will use the history and latest successful result.")
+                        : t("Следующий ответ учтёт предыдущие сообщения этого чата.", "The next answer will use previous messages in this chat.")}
                     </small>
                   </span>
                   <input
@@ -1583,15 +2624,13 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   />
                   <i aria-hidden="true" />
                 </label>
-              ) : kind === "video" ? (
-                <div className={styles.contextNotice}>
-                  <FiVideo aria-hidden="true" />
-                  <p><strong>Видео без контекста</strong><span>Предыдущий ролик не отправляется модели.</span></p>
-                </div>
               ) : isTool ? (
                 <div className={styles.contextNotice}>
                   <FiImage aria-hidden="true" />
-                  <p><strong>Отдельный анализ</strong><span>В инструмент передаётся только выбранная фотография.</span></p>
+                      <p>
+                        <strong>{t("Отдельный анализ", "Independent analysis")}</strong>
+                        <span>{t("В инструмент передаётся только выбранная фотография.", "Only the selected photo is sent to the tool.")}</span>
+                      </p>
                 </div>
               ) : null}
 
@@ -1612,9 +2651,11 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
 
               {!isTool && capabilities?.acceptsNegativePrompt ? (
                 <label className={styles.field}>
-                  <span>Негативный промпт <em>необязательно</em></span>
+                      <span>
+                        {t("Негативный промпт", "Negative prompt")} <em>{t("необязательно", "optional")}</em>
+                      </span>
                   <textarea
-                    placeholder="Что не должно появиться в результате"
+                    placeholder={t("Что не должно появиться в результате", "What should not appear in the result")}
                     rows={3}
                     value={draft.negativePrompt}
                     onChange={(event) =>
@@ -1631,15 +2672,13 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                 <CapabilityFields
                   draft={draft}
                   model={selectedModel}
-                  onChange={(patch) =>
-                    setDraft((current) => ({ ...current, ...patch }))
-                  }
+                      onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
                 />
               ) : null}
-
             </AiCard>
           </aside>
-            </form>
+              </form>
+            </ImageGalleryProvider>
           </AsyncState>
         </div>
       </div>
@@ -1650,6 +2689,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
 function ChatTurnMessage({
   createdAt,
   inputFiles,
+  modelLogoUrl,
   modelName,
   prompt,
   run: initialRun,
@@ -1657,9 +2697,12 @@ function ChatTurnMessage({
   submissionState,
   submitError,
   onUpdate,
+  onRetry,
+  retryDisabled,
 }: {
   createdAt: string;
   inputFiles: ChatMessageAttachment[];
+  modelLogoUrl?: string | null;
   modelName: string;
   prompt: string;
   run: AiRunSummary | null;
@@ -1667,30 +2710,31 @@ function ChatTurnMessage({
   submissionState: ChatTurn["submissionState"];
   submitError?: string | null;
   onUpdate: (run: AiRunSummary, outputs?: AiRunOutput[]) => void;
+  onRetry: () => Promise<void>;
+  retryDisabled: boolean;
 }) {
   const { refresh } = useAiSession();
+  const { locale, t } = useAiLocale();
   const [polledRun, setPolledRun] = useState<AiRunSummary | null>(null);
   const [resolvedOutputs, setResolvedOutputs] = useState<{
     runId: string;
     outputs: AiRunOutput[];
   } | null>(null);
   const [work, setWork] = useState<AiWorkDetail | null>(null);
-  const [pollError, setPollError] = useState<string | null>(null);
-  const run =
-    initialRun && polledRun?.id === initialRun.id ? polledRun : initialRun;
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const run = initialRun && polledRun?.id === initialRun.id ? polledRun : initialRun;
   const runId = run?.id || null;
   const outputs =
-    runId && resolvedOutputs?.runId === runId
-      ? resolvedOutputs.outputs
-      : initialOutputs;
+    runId && resolvedOutputs?.runId === runId ? resolvedOutputs.outputs : initialOutputs;
   const isFinished = run ? TERMINAL_RUN_STATUSES.has(run.status) : false;
-  const isGenerating =
-    submissionState === "submitting" || Boolean(run && !isFinished);
+  const isGenerating = submissionState === "submitting" || Boolean(run && !isFinished);
   const hasSuccessfulResult = Boolean(
     run && ["succeeded", "partially_succeeded"].includes(run.status),
   );
   const messageCreatedAt = run?.createdAt || createdAt;
   const effectiveModelName = run?.modelName || modelName;
+  const galleryScope = runId || createdAt;
 
   useEffect(() => {
     return () => {
@@ -1727,13 +2771,17 @@ function ChatTurnMessage({
         const nextRun = unwrapAiData(payload);
         setPolledRun(nextRun);
         onUpdate(nextRun);
-        setPollError(null);
         failures = 0;
         if (!TERMINAL_RUN_STATUSES.has(nextRun.status)) schedule(2_500);
       } catch (error) {
         if (!active) return;
         failures += 1;
-        setPollError(getAiErrorMessage(error));
+        if (failures === 3) {
+          console.warn("AI run background polling failed", {
+            runId,
+            message: getAiErrorMessage(error),
+          });
+        }
         schedule(Math.min(30_000, 2_500 * 2 ** failures));
       }
     };
@@ -1749,7 +2797,9 @@ function ChatTurnMessage({
     const controller = new AbortController();
     void aiApiFetch<AiRunDetail | AiApiEnvelope<AiRunDetail>>(
       `/runs/${encodeURIComponent(runId)}`,
-      { signal: controller.signal },
+      {
+        signal: controller.signal,
+      },
     )
       .then(async (payload) => {
         const detail = unwrapAiData(payload);
@@ -1759,40 +2809,72 @@ function ChatTurnMessage({
         if (detail.workId) {
           const workPayload = await aiApiFetch<AiWorkDetail | AiApiEnvelope<AiWorkDetail>>(
             `/works/${encodeURIComponent(detail.workId)}`,
-            { signal: controller.signal },
+            {
+              signal: controller.signal,
+            },
           );
           setWork(unwrapAiData(workPayload));
         }
         await refresh();
       })
       .catch((error) => {
-        if (!controller.signal.aborted) setPollError(getAiErrorMessage(error));
+        if (!controller.signal.aborted) {
+          console.warn("AI run result synchronization failed", {
+            runId,
+            message: getAiErrorMessage(error),
+          });
+        }
       });
     return () => controller.abort();
   }, [isFinished, onUpdate, refresh, runId]);
 
   const copyableResult = getCopyableResult(outputs, work);
 
+  async function retry() {
+    if (isRetrying || retryDisabled) return;
+    setIsRetrying(true);
+    setRetryError(null);
+    try {
+      await onRetry();
+    } catch (error) {
+      setRetryError(getAiErrorMessage(error));
+    } finally {
+      setIsRetrying(false);
+    }
+  }
+
   return (
     <article className={styles.turn}>
       <div className={styles.userMessage}>
-        {inputFiles.length ? <ChatMessageAttachments files={inputFiles} /> : null}
-        <p>{prompt}</p>
+        <div
+          className={`${styles.userMessageContent} ${
+            inputFiles.length && prompt ? styles.userMessageContentCombined : ""
+          }`}
+        >
+          {inputFiles.length ? (
+            <ChatMessageAttachments files={inputFiles} />
+          ) : null}
+          {prompt ? <p className={styles.userMessageBubble}>{prompt}</p> : null}
+        </div>
         <div className={styles.userMessageMeta}>
-          <time dateTime={messageCreatedAt}>{formatMessageDate(messageCreatedAt)}</time>
-          <CopyMessageButton label="Скопировать запрос" text={prompt} tone="user" />
+          <time dateTime={messageCreatedAt}>{formatMessageDate(messageCreatedAt, locale)}</time>
+          <CopyMessageButton label={t("Скопировать запрос", "Copy prompt")} text={prompt} tone="user" />
         </div>
       </div>
       <div className={styles.assistantRow}>
-        <span className={styles.assistantAvatar}><RiSparkling2Fill aria-hidden="true" /></span>
+        <div className={styles.assistantIdentity}>
+          <AiModelLogo
+            label={effectiveModelName}
+            logoUrl={modelLogoUrl}
+            size="medium"
+          />
+          <strong>{effectiveModelName}</strong>
+        </div>
         <div
-          aria-label={isGenerating ? `${effectiveModelName} формирует ответ` : undefined}
+          aria-label={isGenerating ? `${effectiveModelName} ${t("формирует ответ", "is generating a response")}` : undefined}
           className={`${styles.assistantMessage} ${isGenerating ? styles.typingMessage : ""}`}
           role={isGenerating ? "status" : undefined}
         >
-          <div className={styles.messageMeta}>
-            <strong>{effectiveModelName}</strong>
-          </div>
           {isGenerating ? (
             <div aria-hidden="true" className={styles.typingIndicator}>
               <span />
@@ -1800,15 +2882,37 @@ function ChatTurnMessage({
               <span />
             </div>
           ) : null}
-          {hasSuccessfulResult ? <ChatOutputs outputs={outputs} work={work} /> : null}
+          {hasSuccessfulResult ? (
+            <ChatOutputs
+              chargedCredits={work?.chargedCredits ?? run?.chargedCredits}
+              galleryScope={galleryScope}
+              modelName={effectiveModelName}
+              outputs={outputs}
+              work={work}
+            />
+          ) : null}
           {submitError ? <FieldMessage>{submitError}</FieldMessage> : null}
           {run?.errorMessage ? <FieldMessage>{run.errorMessage}</FieldMessage> : null}
-          {pollError ? <FieldMessage>{pollError}</FieldMessage> : null}
+          {retryError ? <FieldMessage>{retryError}</FieldMessage> : null}
           {isFinished || submissionState === "failed" ? (
             <div className={styles.messageFooter}>
-              <time dateTime={messageCreatedAt}>{formatMessageDate(messageCreatedAt)}</time>
+              <time dateTime={messageCreatedAt}>{formatMessageDate(messageCreatedAt, locale)}</time>
+              {run?.status === "failed" ? (
+                <button
+                  className={styles.retryGenerationButton}
+                  disabled={isRetrying || retryDisabled}
+                  type="button"
+                  onClick={() => void retry()}
+                >
+                  <FiRefreshCw
+                    aria-hidden="true"
+                    className={isRetrying ? styles.spinningIcon : undefined}
+                  />
+                  {isRetrying ? t("Повторяем…", "Retrying…") : t("Повторить", "Retry")}
+                </button>
+              ) : null}
               {copyableResult ? (
-                <CopyMessageButton label="Скопировать результат" text={copyableResult} />
+                <CopyMessageButton label={t("Скопировать результат", "Copy result")} text={copyableResult} />
               ) : null}
             </div>
           ) : null}
@@ -1827,6 +2931,7 @@ function CopyMessageButton({
   label: string;
   tone?: "user" | "assistant";
 }) {
+  const { t } = useAiLocale();
   const [state, setState] = useState<"idle" | "copied" | "error">("idle");
   const resetTimer = useRef<number | null>(null);
 
@@ -1847,7 +2952,8 @@ function CopyMessageButton({
     resetTimer.current = window.setTimeout(() => setState("idle"), 2_000);
   }
 
-  const stateLabel = state === "copied" ? "Скопировано" : state === "error" ? "Не удалось" : "Копировать";
+  const stateLabel =
+    state === "copied" ? t("Скопировано", "Copied") : state === "error" ? t("Не удалось", "Failed") : t("Копировать", "Copy");
 
   return (
     <button
@@ -1863,13 +2969,19 @@ function CopyMessageButton({
   );
 }
 
-function ChatMessageAttachments({ files }: { files: ChatMessageAttachment[] }) {
+function ChatMessageAttachments({
+  files,
+}: {
+  files: ChatMessageAttachment[];
+}) {
+  const { locale, t } = useAiLocale();
   return (
-    <ul aria-label="Прикреплённые файлы" className={styles.messageAttachments}>
+    <ul aria-label={t("Прикреплённые файлы", "Attached files")} className={styles.messageAttachments}>
       {files.map((file) => {
         const isImage = file.mimeType?.startsWith("image/") && file.previewUrl;
-        const label = file.name || (isImage ? "Изображение" : "Файл");
-        const details = formatAttachmentDetails(file);
+        const label = file.name || (isImage ? t("Изображение", "Image") : t("Файл", "File"));
+        const details = formatAttachmentDetails(file, locale);
+        const downloadHref = file.downloadUrl || file.previewUrl;
         const content = (
           <>
             {isImage ? (
@@ -1888,19 +3000,39 @@ function ChatMessageAttachments({ files }: { files: ChatMessageAttachment[] }) {
         );
 
         return (
-          <li key={file.id}>
+          <li
+            className={`${styles.messageAttachmentItem} ${
+              isImage ? styles.messageAttachmentImage : ""
+            }`}
+            key={file.id}
+          >
             {file.assetAvailable !== false && file.previewUrl ? (
-              <a
-                aria-label={`Открыть файл ${label}`}
-                href={file.previewUrl}
-                rel="noreferrer"
-                target="_blank"
+              <ImageLightbox
+                alt={label}
+                characteristics={details}
+                downloadUrl={downloadHref}
+                fileName={label}
+                fullUrl={isImage ? downloadHref || file.previewUrl : file.previewUrl}
+                kind={isImage ? "image" : "document"}
+                previewUrl={file.previewUrl}
+                triggerClassName={styles.messageAttachmentPreview}
               >
                 {content}
-              </a>
+              </ImageLightbox>
             ) : (
-              <div>{content}</div>
+              <div className={styles.messageAttachmentPreview}>{content}</div>
             )}
+            {file.assetAvailable !== false && downloadHref ? (
+              <a
+                aria-label={`${t("Скачать файл", "Download file")} ${label}`}
+                className={styles.messageAttachmentDownload}
+                download={label}
+                href={downloadHref}
+                title={t("Скачать файл", "Download file")}
+              >
+                <FiDownload aria-hidden="true" />
+              </a>
+            ) : null}
           </li>
         );
       })}
@@ -1910,9 +3042,7 @@ function ChatMessageAttachments({ files }: { files: ChatMessageAttachment[] }) {
 
 function getCopyableResult(outputs: AiRunOutput[], work: AiWorkDetail | null): string {
   const workOutputs = work?.outputs || [];
-  const source: Array<AiRunOutput | AiWorkOutput> = workOutputs.length
-    ? workOutputs
-    : outputs;
+  const source: Array<AiRunOutput | AiWorkOutput> = workOutputs.length ? workOutputs : outputs;
   return source
     .filter(
       (output) =>
@@ -1926,37 +3056,90 @@ function getCopyableResult(outputs: AiRunOutput[], work: AiWorkDetail | null): s
     .join("\n\n");
 }
 
-function ChatOutputs({ outputs, work }: { outputs: AiRunOutput[]; work: AiWorkDetail | null }) {
+function ChatOutputs({
+  outputs,
+  work,
+  galleryScope,
+  modelName,
+  chargedCredits,
+}: {
+  outputs: AiRunOutput[];
+  work: AiWorkDetail | null;
+  galleryScope: string;
+  modelName: string;
+  chargedCredits?: number | null;
+}) {
   const workOutputs = work?.outputs || [];
   if (!outputs.length && !workOutputs.length) {
-    return <p className={styles.emptyOutput}>Результат сохранён в «Моих работах».</p>;
+    return null;
   }
   return (
     <div className={styles.outputList}>
-      {(workOutputs.length ? workOutputs : outputs).map((output) => (
-        <ChatOutput key={output.id} output={output} />
+      {(workOutputs.length ? workOutputs : outputs).map((output, index) => (
+        <ChatOutput
+          galleryId={`${galleryScope}:output:${index}`}
+          key={`${galleryScope}:output:${index}`}
+          modelName={modelName}
+          output={output}
+          chargedCredits={chargedCredits}
+        />
       ))}
     </div>
   );
 }
 
-function ChatOutput({ output }: { output: AiRunOutput | AiWorkOutput }) {
+function ChatOutput({
+  output,
+  galleryId,
+  modelName,
+  chargedCredits,
+}: {
+  output: AiRunOutput | AiWorkOutput;
+  galleryId: string;
+  modelName: string;
+  chargedCredits?: number | null;
+}) {
+  const { t } = useAiLocale();
   if (output.heldForReview) {
-    return <FieldMessage tone="notice">Результат ожидает проверки модерации.</FieldMessage>;
+    return <FieldMessage tone="notice">{t("Результат ожидает проверки модерации.", "The result is awaiting moderation.")}</FieldMessage>;
   }
   if (output.type === "text" && output.text) {
-    return <div className={styles.textOutput}>{output.text}</div>;
+    const citations = getOutputCitations(output.data);
+    return (
+      <div className={styles.textOutput}>
+        <AiMarkdown>{output.text}</AiMarkdown>
+        {citations.length ? (
+          <div className={styles.citationList}>
+            <strong>{t("Источники", "Sources")}</strong>
+            <ol>
+              {citations.map((citation) => (
+                <li key={citation.url}>
+                  <a href={citation.url} rel="noopener noreferrer" target="_blank">
+                    <span>{citation.title}</span>
+                    <FiExternalLink aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+      </div>
+    );
   }
   const media = getOutputMediaUrl(output);
   if (output.type === "image" && media) {
     const originalUrl = output.outputUrl || ("url" in output ? output.url : null) || media;
     return (
       <ChatImageOutput
-        alt="Результат генерации"
+        alt={t("Результат генерации", "Generation result")}
+        aspectRatio={output.aspectRatio}
+        chargedCredits={chargedCredits}
         copyUrl={output.copyUrl}
         downloadUrl={output.downloadUrl}
         fileName={getImageFileName(output)}
+        galleryId={galleryId}
         height={output.height}
+        modelName={modelName}
         previewUrl={output.previewUrl}
         url={originalUrl}
         width={output.width}
@@ -1964,12 +3147,115 @@ function ChatOutput({ output }: { output: AiRunOutput | AiWorkOutput }) {
     );
   }
   if (output.type === "video" && media) {
-    return <video className={styles.videoOutput} controls playsInline preload="metadata" src={media} />;
+    return (
+      <ChatVideoOutput
+        aspectRatio={output.aspectRatio}
+        chargedCredits={chargedCredits}
+        height={output.height}
+        url={media}
+        width={output.width}
+      />
+    );
   }
   if (("deletedByRetention" in output && output.deletedByRetention) || output.deletedAt) {
-    return <p className={styles.emptyOutput}>Файл удалён по сроку хранения.</p>;
+    return <p className={styles.emptyOutput}>{t("Файл удалён по сроку хранения.", "The file was deleted after its retention period.")}</p>;
   }
-  return <p className={styles.emptyOutput}>Результат доступен на странице работы.</p>;
+  return <p className={styles.emptyOutput}>{t("Результат доступен на странице работы.", "The result is available on the work page.")}</p>;
+}
+
+function ChatVideoOutput({
+  aspectRatio,
+  chargedCredits,
+  height,
+  url,
+  width,
+}: {
+  aspectRatio?: string | null;
+  chargedCredits?: number | null;
+  height?: number | null;
+  url: string;
+  width?: number | null;
+}) {
+  const { locale } = useAiLocale();
+  const [measuredSize, setMeasuredSize] = useState<MediaSize | null>(null);
+  const metadataSize = useMemo<MediaSize | null>(() => {
+    const normalizedWidth = normalizeMediaDimension(width);
+    const normalizedHeight = normalizeMediaDimension(height);
+    return normalizedWidth && normalizedHeight
+      ? { width: normalizedWidth, height: normalizedHeight }
+      : null;
+  }, [height, width]);
+  const characteristics = formatMediaCharacteristics(
+    metadataSize || measuredSize,
+    aspectRatio,
+  );
+  const showCredits =
+    typeof chargedCredits === "number" &&
+    Number.isFinite(chargedCredits) &&
+    chargedCredits >= 0;
+
+  return (
+    <figure className={styles.videoOutputRoot}>
+      <video
+        className={styles.videoOutput}
+        controls
+        playsInline
+        preload="metadata"
+        src={url}
+        onLoadedMetadata={(event) => {
+          if (metadataSize) return;
+          const video = event.currentTarget;
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            setMeasuredSize({
+              width: video.videoWidth,
+              height: video.videoHeight,
+            });
+          }
+        }}
+      />
+      {characteristics || showCredits ? (
+        <figcaption className={styles.videoOutputMeta}>
+          {characteristics ? <span>{characteristics}</span> : null}
+          {showCredits ? (
+            <span className={styles.videoCreditUsage}>
+              <FiZap aria-hidden="true" />
+              {formatCredits(chargedCredits, locale)}
+            </span>
+          ) : null}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+function getOutputCitations(data: unknown): AiCitation[] {
+  if (!data || typeof data !== "object" || Array.isArray(data) || !("citations" in data)) {
+    return [];
+  }
+  const citations = (data as { citations?: unknown }).citations;
+  if (!Array.isArray(citations)) return [];
+
+  const normalized = new Map<string, AiCitation>();
+  for (const value of citations) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const citation = value as { title?: unknown; url?: unknown };
+    if (typeof citation.url !== "string" || !isSafeExternalUrl(citation.url)) continue;
+    const title =
+      typeof citation.title === "string" && citation.title.trim()
+        ? citation.title.trim()
+        : citation.url;
+    normalized.set(citation.url, { title, url: citation.url });
+  }
+  return [...normalized.values()].slice(0, 20);
+}
+
+function isSafeExternalUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function getOutputMediaUrl(output: AiRunOutput | AiWorkOutput): string | null {
@@ -1978,6 +3264,228 @@ function getOutputMediaUrl(output: AiRunOutput | AiWorkOutput): string | null {
     ("url" in output ? output.url : null) ||
     null
   );
+}
+
+type ResolvedModelPresentation = {
+  family: string;
+  variant: string;
+  sort: number;
+};
+
+type ModelFamily = {
+  key: string;
+  label: string;
+  firstIndex: number;
+  entries: Array<{
+    model: AiPublicModel;
+    presentation: ResolvedModelPresentation;
+    sourceIndex: number;
+  }>;
+};
+
+const MODEL_FAMILY_FALLBACKS: Array<{
+  family: string;
+  identityPattern: RegExp;
+  namePattern: RegExp;
+}> = [
+  {
+    family: "Nano Banana",
+    identityPattern: /nano[\s_-]*banana/i,
+    namePattern: /^(?:google\s+)?nano[\s_-]*banana(?:\s+image)?/i,
+  },
+  {
+    family: "GPT Image",
+    identityPattern: /gpt[\s_-]*image/i,
+    namePattern: /^(?:openai\s+)?gpt[\s_-]*image/i,
+  },
+  {
+    family: "ChatGPT",
+    identityPattern: /(?:chat)?gpt/i,
+    namePattern: /^(?:openai\s+)?(?:chat)?gpt/i,
+  },
+  {
+    family: "Gemini",
+    identityPattern: /gemini/i,
+    namePattern: /^(?:google\s+)?gemini/i,
+  },
+  {
+    family: "Claude",
+    identityPattern: /claude/i,
+    namePattern: /^(?:anthropic\s+)?claude/i,
+  },
+  {
+    family: "Sora",
+    identityPattern: /sora/i,
+    namePattern: /^(?:openai\s+)?sora/i,
+  },
+  {
+    family: "Veo",
+    identityPattern: /\bveo[\s_-]*\d?/i,
+    namePattern: /^(?:google\s+)?veo/i,
+  },
+  {
+    family: "Kling",
+    identityPattern: /kling/i,
+    namePattern: /^(?:kuaishou\s+)?kling/i,
+  },
+  {
+    family: "Grok",
+    identityPattern: /grok/i,
+    namePattern: /^(?:xai\s+)?grok/i,
+  },
+  {
+    family: "DeepSeek",
+    identityPattern: /deep[\s_-]*seek/i,
+    namePattern: /^deep[\s_-]*seek/i,
+  },
+];
+
+function createModelFamilies(models: AiPublicModel[]): ModelFamily[] {
+  const groups = new Map<string, ModelFamily>();
+
+  models.forEach((model, sourceIndex) => {
+    const presentation = resolveModelPresentation(model, sourceIndex);
+    const groupKey = normalizeModelFamilyKey(presentation.family);
+    const group = groups.get(groupKey);
+    const entry = { model, presentation, sourceIndex };
+    if (group) {
+      group.entries.push(entry);
+    } else {
+      groups.set(groupKey, {
+        key: groupKey,
+        label: presentation.family,
+        firstIndex: sourceIndex,
+        entries: [entry],
+      });
+    }
+  });
+
+  return [...groups.values()]
+    .sort((left, right) => left.firstIndex - right.firstIndex)
+    .map((group) => ({
+      ...group,
+      entries: [...group.entries].sort(
+        (left, right) =>
+          left.presentation.sort - right.presentation.sort ||
+          left.sourceIndex - right.sourceIndex,
+      ),
+    }));
+}
+
+function createModelVersionOptions(
+  family: ModelFamily | null,
+  isEnglish: boolean,
+): AiSelectOption<string>[] {
+  if (!family) return [];
+
+  return family.entries.map(({ model, presentation }) => ({
+    value: model.id,
+    label: presentation.variant,
+    selectedLabel: presentation.variant,
+    visual: <AiModelLogo label={model.name} logoUrl={model.logoUrl} />,
+    description: model.available
+      ? undefined
+      : model.unavailableReason?.trim() ||
+        (isEnglish ? "Temporarily unavailable" : "Временно недоступна"),
+    disabled: !model.available,
+  }));
+}
+
+function resolveModelPresentation(
+  model: AiPublicModel,
+  sourceIndex: number,
+): ResolvedModelPresentation {
+  const fallback = inferModelPresentation(model);
+  const explicitSort = model.presentation?.sort;
+  return {
+    family: model.presentation?.family?.trim() || fallback.family,
+    variant: model.presentation?.variant?.trim() || fallback.variant,
+    sort:
+      typeof explicitSort === "number" && Number.isFinite(explicitSort)
+        ? explicitSort
+        : sourceIndex,
+  };
+}
+
+function inferModelPresentation(model: AiPublicModel): Pick<ResolvedModelPresentation, "family" | "variant"> {
+  const name = model.name.trim() || model.slug.trim() || "Модель";
+  const identity = `${name} ${model.slug}`;
+  const knownFamily = MODEL_FAMILY_FALLBACKS.find(({ identityPattern }) =>
+    identityPattern.test(identity),
+  );
+
+  if (knownFamily) {
+    const nameVariant = cleanModelVariant(name.replace(knownFamily.namePattern, ""));
+    const slugLeaf = model.slug.split("/").pop() || model.slug;
+    const slugVariant = cleanModelVariant(
+      slugLeaf.replace(knownFamily.identityPattern, ""),
+    );
+    return {
+      family: knownFamily.family,
+      variant: nameVariant || slugVariant || "Основная версия",
+    };
+  }
+
+  const versionMatch = name.match(/\b(?:v(?:er(?:sion)?)?[\s._-]*)?\d+(?:[._-]\d+)*(?:\s.*)?$/i);
+  if (versionMatch?.index && versionMatch.index > 0) {
+    const family = cleanModelVariant(name.slice(0, versionMatch.index));
+    const variant = cleanModelVariant(versionMatch[0]);
+    if (family && variant) return { family, variant };
+  }
+
+  const slugLeaf = cleanModelVariant(model.slug.split("/").pop() || "");
+  return {
+    family: name,
+    variant:
+      slugLeaf && normalizeModelFamilyKey(slugLeaf) !== normalizeModelFamilyKey(name)
+        ? slugLeaf
+        : "Основная версия",
+  };
+}
+
+function cleanModelVariant(value: string): string {
+  return value
+    .replace(/^[\s\-—–:·/()]+/, "")
+    .replace(/[\s\-—–:·/()]+$/, "")
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeModelFamilyKey(value: string): string {
+  return value
+    .toLocaleLowerCase("ru-RU")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "") || "model";
+}
+
+function getAutomaticVideoModes(modes: readonly VideoModeCapability[] | undefined): {
+  text: VideoModeCapability;
+  frame: VideoModeCapability;
+} | null {
+  if (modes?.length !== 2) return null;
+
+  const text = modes.find(
+    (mode) =>
+      mode.operation === "text_to_video" &&
+      mode.minReferenceFiles === 0 &&
+      mode.maxReferenceFiles === 0,
+  );
+  const frame = modes.find(
+    (mode) =>
+      mode.operation === "image_to_video" &&
+      mode.imageInput === "frame_images" &&
+      mode.minReferenceFiles > 0 &&
+      mode.maxReferenceFiles > 0,
+  );
+
+  return text && frame ? { text, frame } : null;
+}
+
+function shouldShowVideoModeSelector(
+  modes: readonly VideoModeCapability[] | undefined,
+): boolean {
+  return Boolean(modes && modes.length > 1 && !getAutomaticVideoModes(modes));
 }
 
 function CapabilityFields({
@@ -1989,32 +3497,105 @@ function CapabilityFields({
   model: AiPublicModel | null;
   onChange: (patch: Partial<Draft>) => void;
 }) {
+  const { t } = useAiLocale();
   if (!model) return null;
   const { capabilities } = model;
   const fields: React.ReactNode[] = [];
+  const videoModes = capabilities.videoModes;
+  if (videoModes && shouldShowVideoModeSelector(videoModes)) {
+    const selectedVideoMode =
+      videoModes.find((mode) => mode.code === draft.videoMode) || videoModes[0];
+    const referenceHint =
+      selectedVideoMode && selectedVideoMode.minReferenceFiles > 0
+        ? t(
+            `Прикрепите минимум ${formatImageCount(selectedVideoMode.minReferenceFiles)}, максимум ${formatImageCount(selectedVideoMode.maxReferenceFiles)}`,
+            `Attach at least ${selectedVideoMode.minReferenceFiles} ${selectedVideoMode.minReferenceFiles === 1 ? "image" : "images"} and up to ${selectedVideoMode.maxReferenceFiles}`,
+          )
+        : null;
+
+    fields.push(
+      <div className={styles.capabilityFieldGroup} key="video-mode">
+        <OptionField
+          id="video-mode"
+          label={t("Режим", "Mode")}
+          optionLabel={(value) => getVideoModeLabel(String(value), t)}
+          value={draft.videoMode}
+          values={videoModes.map((mode) => mode.code)}
+          onChange={(videoMode) => onChange({ videoMode })}
+        />
+        {referenceHint ? (
+          <p className={styles.videoReferenceHint}>{referenceHint}</p>
+        ) : null}
+      </div>,
+    );
+  }
+  const reasoning = capabilities.reasoning;
+  if (reasoning && reasoning.modes.length > 1) {
+    fields.push(
+      <OptionField
+        id="reasoning-mode"
+        key="reasoning-mode"
+        label={t("Размышление", "Reasoning")}
+        optionLabel={(value) => getReasoningModeLabel(String(value), t)}
+        value={draft.reasoningMode}
+        values={reasoning.modes}
+        onChange={(reasoningMode) => onChange({ reasoningMode })}
+      />,
+    );
+  }
   if (capabilities.aspectRatios?.length) {
     fields.push(
-      <OptionField id="aspect-ratio" key="aspect" label="Соотношение сторон" value={draft.aspectRatio} values={capabilities.aspectRatios} onChange={(aspectRatio) => onChange({ aspectRatio })} />,
+      <OptionField
+        id="aspect-ratio"
+        key="aspect"
+        label={t("Формат кадра", "Aspect ratio")}
+        optionLabel={(value) => getAspectRatioLabel(value, t)}
+        optionDescription={(value) => getAspectRatioDescription(value, t)}
+        optionVisual={(value) => <AspectRatioVisual ratio={String(value)} />}
+        value={draft.aspectRatio}
+        values={capabilities.aspectRatios}
+        onChange={(aspectRatio) => onChange({ aspectRatio })}
+      />,
     );
   }
   
   if (capabilities.durations?.length) {
     fields.push(
-      <OptionField id="duration" key="duration" label="Длительность, сек." value={draft.duration} values={capabilities.durations} onChange={(duration) => onChange({ duration })} />,
+      model.modality === "video" ? (
+        <DurationField
+          key="duration"
+          value={draft.duration}
+          values={capabilities.durations}
+          onChange={(duration) => onChange({ duration })}
+        />
+      ) : (
+        <OptionField id="duration" key="duration" label={t("Длительность, сек.", "Duration, sec.")} value={draft.duration} values={capabilities.durations} onChange={(duration) => onChange({ duration })} />
+      ),
     );
   }
   if (capabilities.resolutions?.length) {
     fields.push(
-      <OptionField id="resolution" key="resolution" label="Разрешение" value={draft.resolution} values={capabilities.resolutions} onChange={(resolution) => onChange({ resolution })} />,
+      <OptionField
+        disabled={
+          model.modality === "image" && new Set(capabilities.resolutions).size === 1
+        }
+        id="resolution"
+        key="resolution"
+        label={t("Разрешение", "Resolution")}
+        value={draft.resolution}
+        values={capabilities.resolutions}
+        onChange={(resolution) => onChange({ resolution })}
+      />,
     );
   }
   if (capabilities.qualities?.length) {
     fields.push(
       <OptionField
+        disabled={model.modality === "image" && new Set(capabilities.qualities).size === 1}
         id="quality"
         key="quality"
-        label="Детализация"
-        optionLabel={getDetailLabel}
+        label={t("Детализация", "Detail")}
+        optionLabel={(value) => getDetailLabel(value, t)}
         value={draft.quality}
         values={capabilities.qualities}
         onChange={(quality) => onChange({ quality })}
@@ -2024,16 +3605,24 @@ function CapabilityFields({
   if (capabilities.acceptsSound) {
     fields.push(
       <label className={styles.contextToggle} key="sound">
-        <span><strong>Создать со звуком</strong><small>Если модель поддерживает аудиодорожку.</small></span>
-        <input checked={draft.sound} type="checkbox" onChange={(event) => onChange({ sound: event.target.checked })} />
+        <span>
+          <strong>{t("Аудио", "Audio")}</strong>
+        </span>
+        <input
+          checked={draft.sound}
+          type="checkbox"
+          onChange={(event) => onChange({ sound: event.target.checked })}
+        />
         <i aria-hidden="true" />
       </label>,
     );
   }
-  const countField = capabilities.outputCounts?.length ? (
+  const outputCounts = capabilities.outputCounts ?? [];
+  const supportsMultipleOutputs = outputCounts.some((count) => count > 1);
+  const countField = supportsMultipleOutputs ? (
     <CountStepper
       value={draft.outputCount}
-      values={capabilities.outputCounts}
+      values={outputCounts}
       onChange={(outputCount) => onChange({ outputCount })}
     />
   ) : null;
@@ -2046,45 +3635,192 @@ function CapabilityFields({
   ) : null;
 }
 
+function getVideoModeLabel(
+  value: string,
+  t: (russian: string, english: string) => string,
+): string {
+  const labels: Record<string, [string, string]> = {
+    text_to_video: ["Текст → видео", "Text → video"],
+    image_to_video: ["Кадр → видео", "Image → video"],
+    reference_to_video: ["Референсы → видео", "References → video"],
+  };
+  const label = labels[value];
+  return label ? t(label[0], label[1]) : value;
+}
+
+function getReasoningModeLabel(
+  value: string,
+  t: (russian: string, english: string) => string,
+): string {
+  const labels: Record<string, [string, string]> = {
+    none: ["Без размышления", "No reasoning"],
+    auto: ["Автоматически", "Automatic"],
+    minimal: ["Минимальное", "Minimal"],
+    low: ["Низкое", "Low"],
+    medium: ["Среднее", "Medium"],
+    high: ["Высокое", "High"],
+    xhigh: ["Очень высокое", "Very high"],
+    max: ["Максимальное", "Maximum"],
+  };
+  const label = labels[value];
+  return label ? t(label[0], label[1]) : value;
+}
+
+function DurationField({
+  value,
+  values,
+  onChange,
+}: {
+  value: string;
+  values: number[];
+  onChange: (value: string) => void;
+}) {
+  const { isEnglish, t } = useAiLocale();
+  const allowedValues = [...new Set(values)]
+    .filter((item) => Number.isFinite(item) && item > 0)
+    .sort((left, right) => left - right);
+  if (!allowedValues.length) return null;
+
+  const requestedValue = Number(value);
+  const requestedIndex = allowedValues.indexOf(requestedValue);
+  const currentIndex = requestedIndex >= 0 ? requestedIndex : 0;
+  const currentValue = allowedValues[currentIndex];
+  const labelId = "generation-duration-label";
+
+  return (
+    <div className={styles.durationField}>
+      <div className={styles.durationHeader}>
+        <span id={labelId}>{t("Длительность", "Duration")}</span>
+        <output htmlFor="generation-duration">{formatDuration(currentValue, isEnglish)}</output>
+      </div>
+      <input
+        aria-labelledby={labelId}
+        aria-valuetext={formatDuration(currentValue, isEnglish)}
+        id="generation-duration"
+        max={Math.max(allowedValues.length - 1, 0)}
+        min={0}
+        step={1}
+        type="range"
+        value={currentIndex}
+        onChange={(event) => {
+          const nextValue = allowedValues[Number(event.target.value)];
+          if (nextValue !== undefined) onChange(String(nextValue));
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className={styles.durationTicks}
+        style={{ gridTemplateColumns: `repeat(${allowedValues.length}, minmax(0, 1fr))` }}
+      >
+        {allowedValues.map((duration) => (
+          <span key={duration}>{duration}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatDuration(value: number, isEnglish = false): string {
+  return `${value} ${isEnglish ? "sec." : "сек."}`;
+}
+
 function OptionField({
+  disabled = false,
   id,
   label,
   value,
   values,
   optionLabel = String,
+  optionDescription,
+  optionVisual,
   onChange,
 }: {
+  disabled?: boolean;
   id: string;
   label: string;
   value: string;
   values: Array<string | number>;
   optionLabel?: (value: string | number) => string;
+  optionDescription?: (value: string | number) => string | undefined;
+  optionVisual?: (value: string | number) => React.ReactNode;
   onChange: (value: string) => void;
 }) {
   return (
     <AiSelect
+      disabled={disabled}
       id={`generation-${id}`}
       label={label}
-      options={values.map((option) => ({ value: String(option), label: optionLabel(option) }))}
+      options={values.map((option) => ({
+        value: String(option),
+        label: optionLabel(option),
+        description: optionDescription?.(option),
+        visual: optionVisual?.(option),
+      }))}
       value={value}
       onChange={onChange}
     />
   );
 }
 
-function getDetailLabel(value: string | number): string {
-  const normalized = String(value);
-  const labels: Record<string, string> = {
-    auto: "Автоматическая",
-    draft: "Черновая",
-    low: "Низкая",
-    medium: "Средняя",
-    standard: "Стандартная",
-    high: "Высокая",
-    hd: "HD",
-    ultra: "Максимальная",
+function AspectRatioVisual({ ratio }: { ratio: string }) {
+  const [widthValue, heightValue] = ratio.split(":").map(Number);
+  const safeWidth = Number.isFinite(widthValue) && widthValue > 0 ? widthValue : 1;
+  const safeHeight = Number.isFinite(heightValue) && heightValue > 0 ? heightValue : 1;
+  const scale = Math.min(26 / safeWidth, 20 / safeHeight);
+  const style = {
+    width: `${Math.max(6, safeWidth * scale)}px`,
+    height: `${Math.max(6, safeHeight * scale)}px`,
+  } satisfies CSSProperties;
+
+  return <span className={styles.aspectRatioVisual} style={style} />;
+}
+
+function getAspectRatioDescription(
+  value: string | number,
+  t: (russian: string, english: string) => string,
+): string {
+  const descriptions: Record<string, [string, string]> = {
+    auto: ["Определится автоматически", "Selected automatically"],
+    "1:1": ["Квадрат", "Square"],
+    "16:9": ["Широкий экран", "Widescreen"],
+    "9:16": ["Истории и короткие видео", "Stories and short video"],
+    "4:3": ["Классический", "Classic"],
+    "3:4": ["Портретный классический", "Classic portrait"],
+    "5:4": ["Альбомная лента", "Landscape feed"],
+    "4:5": ["Портретная лента", "Portrait feed"],
+    "3:2": ["Альбомное фото", "Landscape photo"],
+    "2:3": ["Портретное фото", "Portrait photo"],
+    "21:9": ["Киноформат", "Cinematic"],
+    "9:21": ["Высокий киноформат", "Tall cinematic"],
   };
-  return labels[normalized.toLowerCase()] || normalized;
+  const copy = descriptions[String(value)];
+  return copy ? t(copy[0], copy[1]) : t("Пользовательский формат", "Custom format");
+}
+
+function getAspectRatioLabel(
+  value: string | number,
+  t: (russian: string, english: string) => string,
+): string {
+  return String(value).toLowerCase() === "auto" ? t("Автоматически", "Automatic") : String(value);
+}
+
+function getDetailLabel(
+  value: string | number,
+  t: (russian: string, english: string) => string,
+): string {
+  const normalized = String(value);
+  const labels: Record<string, [string, string]> = {
+    auto: ["Автоматическая", "Automatic"],
+    draft: ["Черновая", "Draft"],
+    low: ["Низкая", "Low"],
+    medium: ["Средняя", "Medium"],
+    standard: ["Стандартная", "Standard"],
+    high: ["Высокая", "High"],
+    hd: ["HD", "HD"],
+    ultra: ["Максимальная", "Ultra"],
+  };
+  const label = labels[normalized.toLowerCase()];
+  return label ? t(label[0], label[1]) : normalized;
 }
 
 function CountStepper({
@@ -2096,6 +3832,7 @@ function CountStepper({
   values: number[];
   onChange: (value: string) => void;
 }) {
+  const { t } = useAiLocale();
   const allowedValues = [...new Set(values)]
     .filter((item) => Number.isInteger(item) && item > 0)
     .sort((left, right) => left - right);
@@ -2109,25 +3846,23 @@ function CountStepper({
 
   return (
     <div className={styles.countField}>
-      <span id="generation-output-count-label">Количество</span>
+      <span id="generation-output-count-label">{t("Количество", "Quantity")}</span>
       <div
         aria-labelledby="generation-output-count-label"
         className={styles.countStepper}
         role="group"
       >
         <button
-          aria-label="Уменьшить количество результатов"
+          aria-label={t("Уменьшить количество результатов", "Decrease result count")}
           disabled={!canDecrease}
           type="button"
           onClick={() => onChange(String(allowedValues[currentIndex - 1]))}
         >
           <FiMinus aria-hidden="true" />
         </button>
-        <output aria-live="polite">
-          {resolvedValue}
-        </output>
+        <output aria-live="polite">{resolvedValue}</output>
         <button
-          aria-label="Увеличить количество результатов"
+          aria-label={t("Увеличить количество результатов", "Increase result count")}
           disabled={!canIncrease}
           type="button"
           onClick={() => onChange(String(allowedValues[currentIndex + 1]))}
@@ -2150,13 +3885,22 @@ function DynamicToolFields({
 }) {
   return (
     <div className={styles.dynamicFields}>
-      {fields.filter((field) => field.type !== "file").map((field) => {
+      {fields
+        .filter((field) => field.type !== "file")
+        .map((field) => {
         const current = values[field.code] ?? "";
         if (field.type === "boolean") {
           return (
             <label className={styles.contextToggle} key={field.code}>
-              <span><strong>{field.label}</strong>{field.description ? <small>{field.description}</small> : null}</span>
-              <input checked={Boolean(current)} type="checkbox" onChange={(event) => onChange(field.code, event.target.checked)} />
+                <span>
+                  <strong>{field.label}</strong>
+                  {field.description ? <small>{field.description}</small> : null}
+                </span>
+                <input
+                  checked={Boolean(current)}
+                  type="checkbox"
+                  onChange={(event) => onChange(field.code, event.target.checked)}
+                />
               <i aria-hidden="true" />
             </label>
           );
@@ -2169,7 +3913,10 @@ function DynamicToolFields({
               label={field.label}
               description={field.description || undefined}
               required={field.required}
-              options={(field.options || []).map((option) => ({ value: String(option.value), label: option.label }))}
+                options={(field.options || []).map((option) => ({
+                  value: String(option.value),
+                  label: option.label,
+                }))}
               value={String(current)}
               onChange={(value) => onChange(field.code, value)}
             />
@@ -2179,9 +3926,28 @@ function DynamicToolFields({
           <label className={styles.field} key={field.code}>
             <span>{field.label}</span>
             {field.type === "textarea" ? (
-              <textarea placeholder={field.placeholder || ""} required={field.required} rows={3} value={String(current)} onChange={(event) => onChange(field.code, event.target.value)} />
+                <textarea
+                  placeholder={field.placeholder || ""}
+                  required={field.required}
+                  rows={3}
+                  value={String(current)}
+                  onChange={(event) => onChange(field.code, event.target.value)}
+                />
             ) : (
-              <input max={field.maximum ?? undefined} min={field.minimum ?? undefined} placeholder={field.placeholder || ""} required={field.required} type={field.type === "number" ? "number" : "text"} value={String(current)} onChange={(event) => onChange(field.code, field.type === "number" ? Number(event.target.value) : event.target.value)} />
+                <input
+                  max={field.maximum ?? undefined}
+                  min={field.minimum ?? undefined}
+                  placeholder={field.placeholder || ""}
+                  required={field.required}
+                  type={field.type === "number" ? "number" : "text"}
+                  value={String(current)}
+                  onChange={(event) =>
+                    onChange(
+                      field.code,
+                      field.type === "number" ? Number(event.target.value) : event.target.value,
+                    )
+                  }
+                />
             )}
             {field.description ? <small>{field.description}</small> : null}
           </label>
@@ -2199,6 +3965,7 @@ function buildQuotePayload({
   references,
   supportsContext,
   useConversationReference,
+  assumedReferenceCount = 0,
 }: {
   operation: string;
   draft: Draft;
@@ -2207,22 +3974,22 @@ function buildQuotePayload({
   references: readonly File[];
   supportsContext: boolean;
   useConversationReference: boolean;
+  assumedReferenceCount?: number;
 }): QuotePayload {
   return {
     operation,
     modelId: model.id,
-    ...(draft.promptConfigId ? { promptConfigId: draft.promptConfigId } : {}),
+    ...(draft.promptId ? { promptId: draft.promptId } : {}),
     ...(tool ? { toolId: tool.id } : {}),
     ...(draft.conversationId ? { conversationId: draft.conversationId } : {}),
-    ...(supportsContext && draft.conversationId
-      ? { contextEnabled: draft.contextEnabled }
-      : {}),
+    ...(supportsContext && draft.conversationId ? { contextEnabled: draft.contextEnabled } : {}),
     ...(useConversationReference ? { useConversationReference: true } : {}),
     parameters: buildParameters(
       draft,
       operation,
       references,
       useConversationReference,
+      assumedReferenceCount,
     ),
   };
 }
@@ -2232,9 +3999,11 @@ function buildParameters(
   operation: string,
   references: readonly File[],
   useConversationReference: boolean,
+  assumedReferenceCount = 0,
 ) {
   const hasReference = Boolean(
     references.length ||
+      assumedReferenceCount > 0 ||
       draft.publicShareDraftToken ||
       (draft.repeatRunId &&
         !draft.replaceReference &&
@@ -2243,6 +4012,9 @@ function buildParameters(
   );
   return {
     prompt: draft.prompt,
+    ...(draft.promptId && draft.catalogPromptOverride
+      ? { promptOverride: true }
+      : {}),
     ...(draft.negativePrompt ? { negativePrompt: draft.negativePrompt } : {}),
     ...(draft.aspectRatio ? { aspectRatio: draft.aspectRatio } : {}),
     ...(draft.outputCount ? { count: Number(draft.outputCount) } : {}),
@@ -2250,7 +4022,14 @@ function buildParameters(
     ...(draft.resolution ? { resolution: draft.resolution } : {}),
     ...(draft.quality ? { quality: draft.quality } : {}),
     ...(draft.sound ? { sound: true } : {}),
-    ...(hasReference ? { hasReference: true } : {}),
+    ...(draft.reasoningMode ? { reasoningMode: draft.reasoningMode } : {}),
+    ...(draft.videoMode ? { videoMode: draft.videoMode } : {}),
+    ...(hasReference
+      ? {
+          hasReference: true,
+          referenceCount: Math.max(1, references.length, assumedReferenceCount),
+        }
+      : {}),
     ...draft.toolValues,
   };
 }
@@ -2261,10 +4040,24 @@ function isReferenceRequired(
   replaceReference: boolean,
 ): boolean {
   return Boolean(
-    isTool ||
-      replaceReference ||
-      (operation && REFERENCE_REQUIRED_OPERATIONS.has(operation)),
+    isTool || replaceReference || (operation && REFERENCE_REQUIRED_OPERATIONS.has(operation)),
   );
+}
+
+function normalizePresetReferenceLimit(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value)
+    ? Math.min(PLATFORM_REFERENCE_FILE_LIMIT, Math.max(0, value))
+    : 0;
+}
+
+function extractPromptVariables(value: string): string[] {
+  return [
+    ...new Set(
+      [...value.matchAll(/\[([^\]\n]{1,100})\]/gu)]
+        .map((match) => match[1]?.trim())
+        .filter((variable): variable is string => Boolean(variable)),
+    ),
+  ];
 }
 
 function retryParametersToDraft(parameters: Record<string, unknown>): Partial<Draft> {
@@ -2277,7 +4070,11 @@ function retryParametersToDraft(parameters: Record<string, unknown>): Partial<Dr
     "resolution",
     "quality",
     "sound",
+    "reasoningMode",
+    "videoMode",
+    "promptOverride",
     "hasReference",
+    "referenceCount",
     "estimatedInputTokens",
   ]);
   const toolValues = Object.fromEntries(
@@ -2287,14 +4084,24 @@ function retryParametersToDraft(parameters: Record<string, unknown>): Partial<Dr
     ),
   );
   return {
+    catalogPromptOverride: parameters.promptOverride === true,
     prompt: typeof parameters.prompt === "string" ? parameters.prompt : "",
     negativePrompt: typeof parameters.negativePrompt === "string" ? parameters.negativePrompt : "",
     aspectRatio: typeof parameters.aspectRatio === "string" ? parameters.aspectRatio : "",
-    outputCount: typeof parameters.count === "number" || typeof parameters.count === "string" ? String(parameters.count) : "",
-    duration: typeof parameters.duration === "number" || typeof parameters.duration === "string" ? String(parameters.duration) : "",
+    outputCount:
+      typeof parameters.count === "number" || typeof parameters.count === "string"
+        ? String(parameters.count)
+        : "",
+    duration:
+      typeof parameters.duration === "number" || typeof parameters.duration === "string"
+        ? String(parameters.duration)
+        : "",
     resolution: typeof parameters.resolution === "string" ? parameters.resolution : "",
     quality: typeof parameters.quality === "string" ? parameters.quality : "",
     sound: parameters.sound === true,
+    reasoningMode:
+      typeof parameters.reasoningMode === "string" ? parameters.reasoningMode : "",
+    videoMode: typeof parameters.videoMode === "string" ? parameters.videoMode : "",
     toolValues,
   };
 }
@@ -2309,44 +4116,89 @@ function getConversationKind(kind: GenerationChatKind): AiConversationKind {
   return kind;
 }
 
-function getCreateTitle(kind: GenerationChatKind): string {
-  return {
-    image: "Генерация изображений",
-    video: "Генерация видео",
-    text: "Генерация текста",
-    "photo-to-prompt": "Промпт из фотографии",
-  }[kind];
-}
-
-function getComposerPlaceholder(kind: GenerationChatKind): string {
-  return {
-    image: "Опишите изображение, стиль, свет и важные детали…",
-    video: "Опишите сцену, движение камеры и атмосферу…",
-    text: "Напишите сообщение…",
-    "photo-to-prompt": "",
-  }[kind];
-}
-
-function getOperationLabel(operation: string): string {
-  const labels: Record<string, string> = {
-    text_to_image: "Текст → изображение",
-    image_to_image: "Продолжить с изображением",
-    image_edit: "Редактировать изображение",
-    text_to_video: "Текст → видео",
-    image_to_video: "Изображение → видео",
-    text_generation: "Текстовый ответ",
-    photo_to_prompt: "Фото → промпт",
+function getCreateTitle(kind: GenerationChatKind, isEnglish = false): string {
+  const titles: Record<GenerationChatKind, [string, string]> = {
+    image: ["Генерация изображений", "Image generation"],
+    video: ["Генерация видео", "Video generation"],
+    text: ["Генерация текста", "Text generation"],
+    "photo-to-prompt": ["Промпт из фотографии", "Prompt from photo"],
   };
-  return labels[operation] || operation.replaceAll("_", " ");
+  return titles[kind][isEnglish ? 1 : 0];
 }
 
-function getModalityLabel(modality: AiModelModality): string {
-  return { text: "Текст", image: "Изображения", video: "Видео", vision: "Анализ изображений" }[modality];
+function getComposerPlaceholder(kind: GenerationChatKind, isEnglish = false): string {
+  const placeholders: Record<GenerationChatKind, [string, string]> = {
+    image: ["Опишите изображение, стиль, свет и важные детали…", "Describe the image, style, light and key details…"],
+    video: ["Опишите сцену, движение камеры и атмосферу…", "Describe the scene, camera movement and atmosphere…"],
+    text: ["Напишите сообщение…", "Write a message…"],
+    "photo-to-prompt": ["", ""],
+  };
+  return placeholders[kind][isEnglish ? 1 : 0];
 }
 
-function getToolMessage(values: Record<string, string | number | boolean>): string {
-  const valuesText = Object.values(values).filter((value) => value !== "").join(" · ");
-  return valuesText ? `Промпт из фотографии · ${valuesText}` : "Получить промпт из фотографии";
+function getToolMessage(
+  values: Record<string, string | number | boolean>,
+  isEnglish = false,
+): string {
+  const valuesText = Object.values(values)
+    .filter((value) => value !== "")
+    .join(" · ");
+  const title = isEnglish ? "Prompt from photo" : "Промпт из фотографии";
+  return valuesText ? `${title} · ${valuesText}` : isEnglish ? "Create prompt from photo" : "Получить промпт из фотографии";
+}
+
+function toChatTurn(turn: NonNullable<AiConversation["turns"]>[number]): ChatTurn {
+  return {
+    id: turn.run.id,
+    run: turn.run,
+    prompt: turn.userText,
+    outputs: turn.outputs,
+    inputFiles: turn.inputFiles || [],
+    createdAt: turn.run.createdAt,
+    modelId: turn.run.modelId || "",
+    modelName: turn.run.modelName,
+    submissionState: "active",
+  };
+}
+
+function mergeConversationTurns(
+  current: ChatTurn[],
+  synchronized: ChatTurn[],
+): ChatTurn[] {
+  const currentByRunId = new Map(
+    current
+      .filter((turn): turn is ChatTurn & { run: AiRunSummary } => Boolean(turn.run))
+      .map((turn) => [turn.run.id, turn]),
+  );
+  const synchronizedRunIds = new Set(
+    synchronized.flatMap((turn) => (turn.run ? [turn.run.id] : [])),
+  );
+  const merged = synchronized.map((turn) => {
+    if (!turn.run) return turn;
+    const existing = currentByRunId.get(turn.run.id);
+    if (!existing?.run) return turn;
+
+    const keepExistingTerminalRun =
+      TERMINAL_RUN_STATUSES.has(existing.run.status) &&
+      !TERMINAL_RUN_STATUSES.has(turn.run.status);
+    return {
+      ...existing,
+      ...turn,
+      run: keepExistingTerminalRun ? existing.run : turn.run,
+      outputs: turn.outputs.length ? turn.outputs : existing.outputs,
+      inputFiles: turn.inputFiles.length ? turn.inputFiles : existing.inputFiles,
+      submitError: turn.submitError ?? existing.submitError,
+    };
+  });
+  const localOnlyTurns = current.filter(
+    (turn) => !turn.run || !synchronizedRunIds.has(turn.run.id),
+  );
+
+  return [...merged, ...localOnlyTurns];
+}
+
+function conversationVersion(conversation: AiConversation): string {
+  return `${conversation.id}:${conversation.updatedAt}`;
 }
 
 function getConversationTitle(message: string, fallback: string): string {
@@ -2356,31 +4208,31 @@ function getConversationTitle(message: string, fallback: string): string {
   return `${normalized.slice(0, 69).trimEnd()}…`;
 }
 
-function formatConversationDate(value: string): string {
+function formatConversationDate(value: string, locale = "ru-RU"): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Недавно";
+  if (Number.isNaN(date.getTime())) return locale === "en-US" ? "Recently" : "Недавно";
   const now = new Date();
   const isToday =
     date.getFullYear() === now.getFullYear() &&
     date.getMonth() === now.getMonth() &&
     date.getDate() === now.getDate();
   if (isToday) {
-    return `Сегодня, ${date.toLocaleTimeString("ru-RU", {
+    return `${locale === "en-US" ? "Today" : "Сегодня"}, ${date.toLocaleTimeString(locale, {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
   }
-  return date.toLocaleDateString("ru-RU", {
+  return date.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
   });
 }
 
-function formatMessageDate(value: string): string {
+function formatMessageDate(value: string, locale = "ru-RU"): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Дата неизвестна";
-  return date.toLocaleString("ru-RU", {
+  if (Number.isNaN(date.getTime())) return locale === "en-US" ? "Unknown date" : "Дата неизвестна";
+  return date.toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
@@ -2392,21 +4244,21 @@ function formatMessageDate(value: string): string {
 function getQuoteAriaLabel(
   quote: AiQuote | null,
   state: "idle" | "debouncing" | "loading" | "success" | "error",
+  locale = "ru-RU",
+  isEnglish = false,
 ): string {
-  if (quote) return `Цена: ${formatCredits(quote.reserveCredits)}`;
-  if (state === "debouncing" || state === "loading") return "Цена рассчитывается";
-  if (state === "error") return "Не удалось рассчитать цену";
-  return "Цена пока недоступна";
+  if (quote) return `${isEnglish ? "Price" : "Цена"}: ${formatCredits(quote.reserveCredits, locale)}`;
+  if (state === "debouncing" || state === "loading") return isEnglish ? "Calculating price" : "Цена рассчитывается";
+  if (state === "error") return isEnglish ? "Unable to calculate price" : "Не удалось рассчитать цену";
+  return isEnglish ? "Price is not available yet" : "Цена пока недоступна";
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} КБ`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+function formatFileSize(bytes: number, locale = "ru-RU"): string {
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} ${locale === "en-US" ? "KB" : "КБ"}`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} ${locale === "en-US" ? "MB" : "МБ"}`;
 }
 
-function toLocalMessageAttachment(
-  reference: PendingReference,
-): ChatMessageAttachment {
+function toLocalMessageAttachment(reference: PendingReference): ChatMessageAttachment {
   return {
     id: reference.id,
     role: "reference",
@@ -2424,23 +4276,88 @@ function toLocalMessageAttachment(
   };
 }
 
-function formatAttachmentDetails(file: AiMessageAttachment): string {
+function toUploadedMessageAttachment(
+  reference: PendingReference,
+  upload: AiUploadResult | undefined,
+): ChatMessageAttachment {
+  if (!upload) return toLocalMessageAttachment(reference);
+
+  return {
+    id: upload.id,
+    role: "reference",
+    name: upload.name || reference.file.name,
+    mimeType: upload.mimeType || reference.file.type || null,
+    sizeBytes: upload.sizeBytes || String(reference.file.size),
+    width: upload.width,
+    height: upload.height,
+    durationMs: null,
+    assetAvailable: true,
+    previewUrl: upload.previewUrl,
+    downloadUrl: upload.downloadUrl,
+    deletedAt: null,
+  };
+}
+
+function formatAttachmentDetails(file: AiMessageAttachment, locale = "ru-RU"): string {
   const details: string[] = [];
   if (file.mimeType === "application/pdf") details.push("PDF");
   if (file.width && file.height) details.push(`${file.width} × ${file.height} px`);
   const bytes = Number(file.sizeBytes);
-  if (Number.isFinite(bytes) && bytes > 0) details.push(formatFileSize(bytes));
+  if (Number.isFinite(bytes) && bytes > 0) details.push(formatFileSize(bytes, locale));
   return details.join(" · ");
 }
 
 function getImageFileName(output: AiRunOutput | AiWorkOutput): string {
-  const extension =
-    output.mimeType === "image/png"
-      ? "png"
-      : output.mimeType === "image/jpeg"
-        ? "jpg"
-        : "webp";
+  const extensionByMimeType: Record<string, string> = {
+    "image/avif": "avif",
+    "image/gif": "gif",
+    "image/heic": "heic",
+    "image/heif": "heif",
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/tiff": "tiff",
+    "image/webp": "webp",
+  };
+  const extension = extensionByMimeType[output.mimeType || ""] || "image";
   return `neuroluv-${output.id}.${extension}`;
+}
+
+function remapReferencePromptTags(
+  prompt: string,
+  template: string | undefined,
+  previousReferences: readonly PendingReference[],
+  nextReferences: readonly PendingReference[],
+): string {
+  if (!template?.includes("{index}") || !prompt || previousReferences.length === 0) {
+    return prompt;
+  }
+
+  const placeholders = new Map<string, string>();
+  let remapped = prompt;
+  previousReferences.forEach((reference, index) => {
+    const previousTag = template.replace("{index}", String(index + 1));
+    const placeholder = `\uE000${reference.id}\uE001`;
+    placeholders.set(reference.id, placeholder);
+    remapped = remapped.replace(
+      new RegExp(escapeReferenceTag(previousTag), "giu"),
+      placeholder,
+    );
+  });
+
+  placeholders.forEach((placeholder, referenceId) => {
+    const nextIndex = nextReferences.findIndex(
+      (reference) => reference.id === referenceId,
+    );
+    const nextTag =
+      nextIndex >= 0 ? template.replace("{index}", String(nextIndex + 1)) : "";
+    remapped = remapped.replaceAll(placeholder, nextTag);
+  });
+
+  return remapped;
+}
+
+function escapeReferenceTag(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function formatImageCount(count: number): string {
@@ -2477,7 +4394,15 @@ function getFileFingerprint(file: File): string {
   return [file.name, file.type, file.size, file.lastModified].join(":");
 }
 
-function getClipboardFiles(data: DataTransfer | null): File[] {
+function hasFileTransfer(data: DataTransfer): boolean {
+  return (
+    data.files.length > 0 ||
+    Array.from(data.types).includes("Files") ||
+    Array.from(data.items).some((item) => item.kind === "file")
+  );
+}
+
+function getDataTransferFiles(data: DataTransfer | null): File[] {
   if (!data) return [];
   const itemFiles = Array.from(data.items)
     .filter((item) => item.kind === "file")

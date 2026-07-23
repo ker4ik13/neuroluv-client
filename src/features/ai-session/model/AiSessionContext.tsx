@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -30,27 +31,37 @@ export function AiSessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<AiSession>(GUEST_SESSION);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const refreshRequest = useRef<Promise<void> | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(() => {
+    if (refreshRequest.current) return refreshRequest.current;
+
     // Revalidation after user actions must not replace page content with its
     // initial loading state. `isLoading` is reserved for the first session load.
-    setError(null);
+    const request = (async () => {
+      setError(null);
 
-    try {
-      setSession(await aiApiFetch<AiSession>("/auth/me"));
-    } catch (requestError) {
-      if (requestError instanceof AiApiError && requestError.problem.status === 401) {
-        setSession(GUEST_SESSION);
-      } else {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Не удалось проверить сессию",
-        );
+      try {
+        setSession(await aiApiFetch<AiSession>("/auth/me"));
+      } catch (requestError) {
+        if (requestError instanceof AiApiError && requestError.problem.status === 401) {
+          setSession(GUEST_SESSION);
+        } else {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Не удалось проверить сессию",
+          );
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    })();
+    refreshRequest.current = request;
+    void request.finally(() => {
+      if (refreshRequest.current === request) refreshRequest.current = null;
+    });
+    return request;
   }, []);
 
   useEffect(() => {

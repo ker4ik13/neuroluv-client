@@ -1,0 +1,37 @@
+@use '../../../styles/functions' as *;
+
+.logo {
+	display: inline-flex;
+	width: rem(28);
+	height: rem(28);
+	flex: 0 0 rem(28);
+	align-items: center;
+	justify-content: center;
+	color: var(--ai-primary);
+	background: #fff;
+	border: rem(1) solid var(--ai-border);
+	border-radius: rem(9);
+	overflow: hidden;
+
+	img {
+		display: block;
+		width: 72%;
+		height: 72%;
+		object-fit: contain;
+	}
+
+	svg {
+		font-size: rem(15);
+	}
+}
+
+.logoMedium {
+	width: rem(32);
+	height: rem(32);
+	flex-basis: rem(32);
+	border-radius: rem(10);
+
+	svg {
+		font-size: rem(17);
+	}
+}

@@ -1,45 +1,71 @@
-export function formatMoney(amountMinor: number, currency: string): string {
-	return new Intl.NumberFormat('ru-RU', {
+export function formatMoney(
+	amountMinor: number,
+	currency: string,
+	locale = 'ru-RU',
+): string {
+	return new Intl.NumberFormat(locale, {
 		style: 'currency',
 		currency,
 		maximumFractionDigits: 2,
 	}).format(amountMinor / 100);
 }
 
-export function formatDate(value: string, includeTime = false): string {
+export function formatMoneyPerCredit(
+	amountMinor: number,
+	credits: number,
+	currency: string,
+	locale = 'ru-RU',
+): string {
+	const unitAmount = credits > 0 ? amountMinor / credits / 100 : 0;
+	return new Intl.NumberFormat(locale, {
+		style: 'currency',
+		currency,
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(unitAmount);
+}
+
+export function formatDate(
+	value: string,
+	includeTime = false,
+	locale = 'ru-RU',
+): string {
 	const date = new Date(value);
 
 	if (Number.isNaN(date.getTime())) {
-		return 'Дата не указана';
+		return locale.startsWith('en') ? 'Date not specified' : 'Дата не указана';
 	}
 
-	return new Intl.DateTimeFormat('ru-RU', {
+	return new Intl.DateTimeFormat(locale, {
 		dateStyle: 'medium',
 		...(includeTime ? { timeStyle: 'short' as const } : {}),
 	}).format(date);
 }
 
-export function getStatusLabel(status: string): string {
-	const labels: Record<string, string> = {
-		queued: 'В очереди',
-		processing: 'В процессе',
-		succeeded: 'Готово',
-		partially_succeeded: 'Готово частично',
-		failed: 'Ошибка',
-		cancelled: 'Отменено',
-		refunded: 'Возвращено',
-		pending: 'Ожидает',
-		active: 'Активно',
-		inactive: 'Неактивна',
-		archived: 'В архиве',
-		expired: 'Файл удалён',
-		paid: 'Выплачено',
-		approved: 'Одобрено',
-		rejected: 'Отклонено',
-		on_hold: 'На удержании',
+export function getStatusLabel(status: string, locale = 'ru-RU'): string {
+	const labels: Record<string, [string, string]> = {
+		queued: ['В очереди', 'Queued'],
+		processing: ['В процессе', 'Processing'],
+		succeeded: ['Готово', 'Ready'],
+		partially_succeeded: ['Готово частично', 'Partially ready'],
+		failed: ['Ошибка', 'Failed'],
+		cancelled: ['Отменено', 'Cancelled'],
+		refunded: ['Возвращено', 'Refunded'],
+		pending: ['Ожидает', 'Pending'],
+		active: ['Активно', 'Active'],
+		inactive: ['Неактивна', 'Inactive'],
+		archived: ['В архиве', 'Archived'],
+		expired: ['Файл удалён', 'File deleted'],
+		paid: ['Оплачено', 'Paid'],
+		approved: ['Одобрено', 'Approved'],
+		rejected: ['Отклонено', 'Rejected'],
+		on_hold: ['На удержании', 'On hold'],
 	};
 
-	return labels[status] || status.replaceAll('_', ' ');
+	const label = labels[status];
+	return label
+		? label[locale.startsWith('en') ? 1 : 0]
+		: status.replaceAll('_', ' ');
 }
 
 export function getStatusTone(
