@@ -43,6 +43,8 @@ export function PromptComposerEditor({
   onSubmit: () => void;
 }) {
   const { t } = useAiLocale();
+  const resolvedPlaceholder =
+    placeholder.trim() || t("Напишите сообщение…", "Write a message…");
   const editorRef = useRef<HTMLDivElement>(null);
   const renderedMentionSignatureRef = useRef("");
   const [mentionQuery, setMentionQuery] = useState<MentionQuery | null>(null);
@@ -239,7 +241,7 @@ export function PromptComposerEditor({
         className={styles.editor}
         contentEditable
         data-empty={value.length === 0}
-        data-placeholder={placeholder}
+        data-placeholder={resolvedPlaceholder}
         ref={editorRef}
         role="textbox"
         spellCheck

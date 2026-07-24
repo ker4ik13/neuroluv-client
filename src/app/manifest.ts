@@ -1,15 +1,13 @@
 import type { MetadataRoute } from 'next';
 
-import { getSiteSeo } from '@/shared/api/directus/seo';
 import { SITE_URL } from '@/shared/config/site';
 
-export default async function manifest(): Promise<MetadataRoute.Manifest> {
-	const seo = await getSiteSeo();
-
+export default function manifest(): MetadataRoute.Manifest {
 	return {
-		name: seo.siteName,
-		short_name: seo.shortName,
-		description: seo.siteDescription || seo.defaultMetaDescription,
+		name: 'Нейролюб Studio',
+		short_name: 'Нейролюб',
+		description:
+			'Создавайте тексты, изображения и видео с нейросетями в Нейролюб Studio.',
 		start_url: '/',
 		scope: '/',
 		display: 'standalone',

@@ -28,17 +28,17 @@ function firstValue(value: string | string[] | undefined): string | undefined {
 
 function sanitizeAiReturnTo(value: string | undefined): string {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
-    return "/ai/create";
+    return "/ai";
   }
 
   try {
     const parsed = new URL(value, "https://return-to.invalid");
     if (parsed.pathname !== "/ai" && !parsed.pathname.startsWith("/ai/")) {
-      return "/ai/create";
+      return "/ai";
     }
 
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
-    return "/ai/create";
+    return "/ai";
   }
 }

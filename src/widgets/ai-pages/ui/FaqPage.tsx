@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { FiHelpCircle, FiMessageCircle, FiSearch } from "react-icons/fi";
 
 import { type AiFaqItem } from "@/shared/api/ai";
+import { AI_SUPPORT_URL } from "@/shared/config/ai";
 import { useAiLocale } from "@/features/ai-locale";
 
 import { useAiResource } from "../model/api";
@@ -104,7 +105,7 @@ export function FaqPage() {
       <AiCard className={styles.supportCard}>
         <span><FiMessageCircle aria-hidden="true" /></span>
         <div><h2>{t("Не нашли ответ?", "Didn't find an answer?")}</h2><p>{t("Напишите команде поддержки и приложите ID запуска или платежа.", "Contact support and include the run or payment ID.")}</p></div>
-        <AiLinkButton href="https://t.me/neuroluv" variant="secondary">{t("Написать в Telegram", "Message us on Telegram")}</AiLinkButton>
+        <AiLinkButton href={AI_SUPPORT_URL} variant="secondary">{t("Написать в Telegram", "Message us on Telegram")}</AiLinkButton>
       </AiCard>
     </AiPage>
   );

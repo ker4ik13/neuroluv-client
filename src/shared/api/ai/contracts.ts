@@ -29,6 +29,7 @@ export type AiFooterNavigationResponse = {
 
 export type AiPageMetadata = {
 	path: string;
+	siteName?: string | null;
 	title?: string | null;
 	heading?: string | null;
 	content?: string | null;
@@ -119,6 +120,7 @@ export type AiQuote = {
 	normalizedParameters: Record<string, unknown>;
 	supported: boolean;
 	minimumCredits: number;
+	estimatedCredits: number;
 	maximumCredits: number;
 	reserveCredits: number;
 	creditsName: string;
@@ -126,7 +128,7 @@ export type AiQuote = {
 	unavailableReasons: string[];
 	pricing: {
 		unit: string;
-		calculation: 'fixed_request' | 'variable';
+		calculation: 'fixed_request' | 'metered_request' | 'variable';
 	};
 };
 
@@ -348,6 +350,7 @@ export type AiAuthProvider = {
 	code: string;
 	label: string;
 	available: boolean;
+	registrationAccess?: 'open' | 'telegram_allowlist' | 'disabled';
 	authorizationUrl?: string | null;
 	unavailableReason?: string | null;
 };
@@ -361,6 +364,7 @@ export type AiToolField = {
 	code: string;
 	label: string;
 	description?: string | null;
+	defaultValue?: string | number | boolean | null;
 	type: 'text' | 'textarea' | 'select' | 'number' | 'boolean' | 'file';
 	required: boolean;
 	placeholder?: string | null;
@@ -417,6 +421,8 @@ export type AiWorkDetail = AiWorkSummary & {
 	runId?: string | null;
 	operation?: string | null;
 	photoToPromptMode?: 'photo' | 'video' | 'style' | 'repeat' | null;
+	prompt?: string | null;
+	negativePrompt?: string | null;
 	outputs?: AiWorkOutput[];
 	outputUrl?: string | null;
 	textContent?: string | null;

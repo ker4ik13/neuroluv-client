@@ -258,7 +258,11 @@
 	padding: rem(10) rem(16);
 	color: #c7dbe5;
 	background:
-		radial-gradient(circle at 50% 50%, rgba($color-white, 0.08) 0 rem(1), transparent rem(2)),
+		radial-gradient(
+			circle at 50% 50%,
+			rgba($color-white, 0.08) 0 rem(1),
+			transparent rem(2)
+		),
 		#1a3347;
 	background-size: rem(18) rem(18);
 	border-radius: rem(100);
@@ -303,38 +307,30 @@
 	@include body-font(500);
 
 	display: flex;
-	flex: 1 1 0;
-	justify-content: flex-end;
-	gap: rem(10);
+	width: 100%;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: rem(12) rem(24);
 	color: #c7dbe5;
-	font-size: rem(15);
-	line-height: rem(18);
-	text-align: right;
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex-basis: auto;
-	}
+	font-size: rem(14);
+	line-height: rem(20);
 
 	@media (max-width: em($breakpoint-tablet)) {
-		order: 4;
-		justify-content: flex-start;
-		text-align: left;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: rem(12) rem(20);
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
-		flex-direction: column;
+		grid-template-columns: minmax(0, 1fr);
 	}
 }
 
 .legalLink {
+	width: fit-content;
+	max-width: 100%;
 	color: currentColor;
 	transition: color 160ms ease;
-
-	&:not(:last-child)::after {
-		margin-left: rem(10);
-		color: #c7dbe5;
-		content: "·";
-	}
 
 	&:hover {
 		color: $color-cyan;
@@ -342,11 +338,5 @@
 
 	&:focus-visible {
 		@include focus-ring;
-	}
-
-	@media (max-width: em($breakpoint-mobile)) {
-		&:not(:last-child)::after {
-			content: none;
-		}
 	}
 }

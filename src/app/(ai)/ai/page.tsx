@@ -1,20 +1,63 @@
 import type { Metadata } from "next";
 
+import { SITE_URL } from "@/shared/config/site";
 import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { CreateStudioPage } from "@/widgets/ai-pages";
 
 export function generateMetadata(): Promise<Metadata> {
   return buildAiPageMetadata(
     "/ai",
     {
-      title: "Генерация текста, изображений и видео",
+      title: "Нейросети онлайн в одном месте — AI-агрегатор | Нейролюб Studio",
       description:
-        "Создавайте изображения, видео и тексты с помощью нейросетей в единой AI-студии Нейролюба.",
+        "AI-агрегатор: ChatGPT, Nano Banana, Claude, Gemini, DeepSeek и другие нейросети для текста, фото и видео. Один аккаунт для всех ИИ.",
     },
-    { indexable: true },
+    { absoluteTitle: true, indexable: true },
   );
 }
 
 export default function AiPage() {
-  return <CreateStudioPage kind="entry" />;
+  return (
+    <>
+      <JsonLd data={AI_LANDING_JSON_LD} />
+      <CreateStudioPage kind="entry" />
+    </>
+  );
 }
+
+const AI_LANDING_DESCRIPTION =
+  "AI-агрегатор для работы с нейросетями для текста, фото и видео в одном аккаунте.";
+
+const AI_LANDING_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@id": `${SITE_URL}/ai#webpage`,
+      "@type": "WebPage",
+      description: AI_LANDING_DESCRIPTION,
+      inLanguage: "ru-RU",
+      name: "Все нейросети онлайн в одном месте",
+      url: `${SITE_URL}/ai`,
+    },
+    {
+      "@id": `${SITE_URL}/ai#application`,
+      "@type": "WebApplication",
+      alternateName: "Нейролюб Студия",
+      applicationCategory: "MultimediaApplication",
+      browserRequirements: "Современный веб-браузер",
+      description: AI_LANDING_DESCRIPTION,
+      featureList: [
+        "Чат с текстовыми нейросетями",
+        "Генерация и редактирование изображений",
+        "Генерация видео по тексту и фото",
+        "Каталог готовых промптов",
+        "История чатов и созданных работ",
+      ],
+      inLanguage: "ru-RU",
+      name: "Нейролюб Studio",
+      operatingSystem: "Любая операционная система",
+      url: `${SITE_URL}/ai`,
+    },
+  ],
+};

@@ -271,6 +271,12 @@ export function WorkDetailPage({ id }: { id: string }) {
                   </span>
                   {work.data.modelName ? <strong>{work.data.modelName}</strong> : null}
                 </div>
+                {work.data.prompt?.trim() ? (
+                  <section className={styles.workPrompt}>
+                    <h2>{t("Использованный промпт", "Used prompt")}</h2>
+                    <p>{work.data.prompt}</p>
+                  </section>
+                ) : null}
                 {outputs.length > 1 ? (
                   <OutputPicker
                     outputs={outputs}

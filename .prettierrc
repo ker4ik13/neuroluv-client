@@ -12,7 +12,8 @@
 	"importOrderParserPlugins": [
 		"classProperties",
 		"decorators-legacy",
-		"typescript"
+		"typescript",
+		"jsx"
 	],
 	"bracketSpacing": true,
 	"bracketSameLine": false,

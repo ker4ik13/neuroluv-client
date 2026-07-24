@@ -736,6 +736,8 @@
 	time {
 		color: var(--ai-muted);
 		font-size: rem(12);
+		font-weight: 650;
+		line-height: 1.35;
 	}
 }
 
@@ -762,7 +764,12 @@
 		font: inherit;
 		text-align: center;
 		text-decoration: none;
-		background: linear-gradient(135deg, #0a9ed7, var(--ai-primary) 65%, #386ff2);
+		background: linear-gradient(
+			135deg,
+			#0a9ed7,
+			var(--ai-primary) 65%,
+			#386ff2
+		);
 		border: rem(1) solid rgba(8, 127, 219, 0.18);
 		border-radius: rem(13);
 		box-shadow: 0 rem(8) rem(24) rgba(8, 127, 219, 0.12);
@@ -901,11 +908,7 @@
 .messageFooter {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	gap: rem(10);
-}
-
-.messageFooter {
+	gap: rem(8);
 	flex-wrap: wrap;
 	justify-content: flex-start;
 	padding-top: rem(2);
@@ -913,32 +916,31 @@
 	> time {
 		color: var(--ai-muted);
 		font-size: rem(12);
+		font-weight: 650;
+		line-height: 1.35;
 		white-space: nowrap;
 	}
+}
 
-	button {
-		min-height: rem(36);
-		padding: rem(7) rem(9);
+.messageChargedCredits {
+	display: inline-flex;
+	align-items: center;
+	gap: rem(4);
+	color: var(--ai-muted);
+	font-size: rem(12);
+	font-weight: 650;
+	line-height: 1.35;
+	white-space: nowrap;
+
+	svg {
 		color: var(--ai-primary);
-		font-size: rem(12);
-		font-weight: 750;
-		background: transparent;
-		border: 0;
-		border-radius: rem(9);
-		cursor: pointer;
-
-		&:hover {
-			background: var(--ai-primary-soft);
-		}
-
-		&:focus-visible {
-			@include focus-ring;
-		}
+		font-size: rem(13);
 	}
 }
 
 .copyButton,
-.messageFooter .copyButton {
+.messageFooter .copyButton,
+.messageFooter .retryGenerationButton {
 	display: inline-flex;
 	width: rem(30);
 	height: rem(30);
@@ -946,53 +948,39 @@
 	flex: 0 0 rem(30);
 	align-items: center;
 	justify-content: center;
-	gap: rem(5);
 	padding: 0;
 	color: var(--ai-primary);
 	font: inherit;
-	font-size: rem(11);
-	font-weight: 750;
-	background: transparent;
-	border: 0;
-	border-radius: rem(8);
+	font-size: rem(15);
+	background: #f2f7fb;
+	border: rem(1) solid var(--ai-border);
+	border-radius: rem(9);
 	cursor: pointer;
+	transition:
+		color 160ms ease,
+		background-color 160ms ease,
+		border-color 160ms ease,
+		transform 160ms ease;
 
-	&:hover {
-		background: var(--ai-primary-soft);
+	&:hover:not(:disabled) {
+		color: #fff;
+		background: var(--ai-primary);
+		border-color: var(--ai-primary);
+		transform: translateY(rem(-1));
 	}
 
 	&:focus-visible {
 		@include focus-ring;
 	}
-}
 
-.copyButtonUser,
-.messageFooter .copyButtonUser {
-	color: var(--ai-primary);
-	background: transparent;
-
-	&:hover {
-		background: var(--ai-primary-soft);
+	&:disabled {
+		cursor: wait;
+		opacity: 0.65;
 	}
 }
 
 .messageFooter .retryGenerationButton {
-	display: inline-flex;
-	min-height: rem(30);
-	align-items: center;
-	gap: rem(6);
-	padding: rem(5) rem(9);
-	color: var(--ai-text);
-	background: var(--ai-surface-soft);
-
-	&:hover:not(:disabled) {
-		background: var(--ai-border);
-	}
-
-	&:disabled {
-		cursor: not-allowed;
-		opacity: 0.55;
-	}
+	flex: 0 0 rem(30);
 }
 
 .typingMessage {
@@ -1268,6 +1256,67 @@
 	}
 }
 
+.toolReferencePicker {
+	display: grid;
+	width: 100%;
+	min-width: 0;
+	grid-template-columns: rem(42) minmax(0, 1fr);
+	align-items: center;
+	gap: rem(10);
+	padding: rem(10) rem(12);
+	color: var(--ai-text);
+	font: inherit;
+	text-align: left;
+	background: linear-gradient(
+		135deg,
+		rgba(8, 158, 215, 0.08),
+		rgba(56, 111, 242, 0.1)
+	);
+	border: rem(1) dashed rgba(8, 127, 219, 0.52);
+	border-radius: rem(14);
+	cursor: pointer;
+	transition:
+		background 140ms ease,
+		border-color 140ms ease,
+		box-shadow 140ms ease;
+
+	> span:last-child {
+		display: grid;
+		min-width: 0;
+		gap: rem(2);
+	}
+
+	strong {
+		font-size: rem(13);
+	}
+
+	small {
+		color: var(--ai-muted);
+		font-size: rem(11);
+	}
+
+	&:hover {
+		background: var(--ai-primary-soft);
+		border-color: var(--ai-primary);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.toolReferencePickerIcon {
+	display: grid;
+	width: rem(42);
+	height: rem(42);
+	place-items: center;
+	color: var(--ai-primary);
+	font-size: rem(20);
+	background: #fff;
+	border: rem(1) solid rgba(8, 127, 219, 0.16);
+	border-radius: rem(11);
+}
+
 .composerAttachment {
 	display: flex;
 	width: fit-content;
@@ -1460,15 +1509,6 @@
 .composerRemoteAttachment {
 	color: var(--ai-primary);
 	background: rgba(231, 244, 255, 0.72);
-}
-
-.toolComposerText {
-	padding: rem(10) rem(12);
-	color: var(--ai-muted);
-	font-size: rem(14);
-	line-height: 1.5;
-	background: #f8fafb;
-	border-radius: rem(12);
 }
 
 .settings {
@@ -2023,7 +2063,6 @@
 	.composerShortcutHint {
 		display: none;
 	}
-
 }
 
 @media (max-width: em(390)) {

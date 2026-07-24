@@ -198,7 +198,7 @@ export function WorksPage({
       <AiPageHeader
         title={t("Мои работы", "My works")}
         actions={
-          <AiLinkButton href="/ai/create">
+          <AiLinkButton href="/ai">
             <FiPlus aria-hidden="true" />
             {t("Создать", "Create")}
           </AiLinkButton>
