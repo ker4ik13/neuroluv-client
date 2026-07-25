@@ -123,6 +123,11 @@ export function BalancePage() {
 		activeProvider?.recurringAvailable,
 	);
 	const requestedAutoRenew = recurringAvailable && autoRenew;
+	const canEnableExistingAutoRenew = Boolean(
+		products.data?.paymentProviders.some(
+			(provider) => provider.available && provider.recurringAvailable,
+		),
+	);
 	const visiblePlans = useMemo(
 		() =>
 			products.data?.plans.filter((plan) => plan.interval === billingPeriod) ??
@@ -289,6 +294,27 @@ export function BalancePage() {
 		}
 	}
 
+	async function enableRenewal() {
+		setIsPending(true);
+		setError(null);
+		try {
+			await aiApiFetch('/billing/subscription/auto-renew/enable', {
+				method: 'POST',
+			});
+			await products.reload();
+			setNotice(
+				t(
+					'Автопродление включено. Следующая оплата пройдёт в конце текущего периода.',
+					'Auto-renewal enabled. The next payment will be charged at the end of the current period.',
+				),
+			);
+		} catch (requestError) {
+			setError(getAiErrorMessage(requestError));
+		} finally {
+			setIsPending(false);
+		}
+	}
+
 	const loadError = wallet.error || products.error;
 
 	return (
@@ -382,7 +408,25 @@ export function BalancePage() {
 												>
 													{t('Отключить', 'Disable')}
 												</AiButton>
-											) : null}
+											) : (
+												<AiButton
+													disabled={
+														isPending || !canEnableExistingAutoRenew
+													}
+													title={
+														canEnableExistingAutoRenew
+															? undefined
+															: t(
+																	'Станет доступно после включения рекуррентных платежей у платёжного провайдера',
+																	'Available after recurring payments are enabled for the payment provider',
+																)
+													}
+													variant='ghost'
+													onClick={() => void enableRenewal()}
+												>
+													{t('Включить', 'Enable')}
+												</AiButton>
+											)}
 										</div>
 									</>
 								) : (
