@@ -83,6 +83,7 @@ export function BalancePage() {
 	const checkoutIntent = useRef<{ signature: string; key: string } | null>(
 		null,
 	);
+	const syncedActivePlanId = useRef<string | null>(null);
 	const checkoutDialogRef = useRef<HTMLDivElement>(null);
 
 	useFocusTrap(Boolean(checkoutProduct), checkoutDialogRef);
@@ -128,12 +129,29 @@ export function BalancePage() {
 			(provider) => provider.available && provider.recurringAvailable,
 		),
 	);
+	const activePlanId = products.data?.subscription.planId ?? null;
+	const activePlan = useMemo(
+		() => products.data?.plans.find((plan) => plan.id === activePlanId) ?? null,
+		[activePlanId, products.data?.plans],
+	);
 	const visiblePlans = useMemo(
 		() =>
 			products.data?.plans.filter((plan) => plan.interval === billingPeriod) ??
 			[],
 		[billingPeriod, products.data?.plans],
 	);
+
+	useEffect(() => {
+		if (
+			!activePlan ||
+			syncedActivePlanId.current === activePlan.id ||
+			!['month', 'year'].includes(activePlan.interval)
+		) {
+			return;
+		}
+		syncedActivePlanId.current = activePlan.id;
+		setBillingPeriod(activePlan.interval as BillingPeriod);
+	}, [activePlan]);
 
 	function closeCheckout() {
 		setCheckoutProduct(null);
@@ -144,6 +162,9 @@ export function BalancePage() {
 	}
 
 	function openCheckout(product: CheckoutProduct) {
+		if (product.type === 'subscription' && product.value.id === activePlanId) {
+			return;
+		}
 		checkoutIntent.current = null;
 		setPaymentProviderId('');
 		setAutoRenew(product.type === 'subscription');
@@ -410,9 +431,7 @@ export function BalancePage() {
 												</AiButton>
 											) : (
 												<AiButton
-													disabled={
-														isPending || !canEnableExistingAutoRenew
-													}
+													disabled={isPending || !canEnableExistingAutoRenew}
 													title={
 														canEnableExistingAutoRenew
 															? undefined
@@ -476,76 +495,103 @@ export function BalancePage() {
 							</div>
 							{visiblePlans.length ? (
 								<div className={styles.planGrid}>
-									{visiblePlans.map((plan) => (
-										<AiCard
-											className={`${styles.planCard} ${
-												plan.badge ? styles.planCardFeatured : ''
-											}`}
-											key={plan.id}
-										>
-											{plan.badge ? (
-												<span className={styles.planBadge}>{plan.badge}</span>
-											) : null}
-											<h3>{plan.name}</h3>
-											{plan.description ? <p>{plan.description}</p> : null}
-											{plan.interval === 'year' ? (
-												<div className={styles.annualPlanPrice}>
-													<s>
-														{formatMoney(
-															Math.round(plan.amountMinor / (12 * 0.9)),
-															plan.currency,
-															locale,
-														)}
-													</s>
+									{visiblePlans.map((plan) => {
+										const isActivePlan = plan.id === activePlanId;
+
+										return (
+											<AiCard
+												aria-current={isActivePlan ? 'true' : undefined}
+												className={`${styles.planCard} ${
+													plan.badge && !isActivePlan
+														? styles.planCardFeatured
+														: ''
+												} ${isActivePlan ? styles.planCardActive : ''}`}
+												key={plan.id}
+											>
+												{isActivePlan ? (
+													<span
+														className={`${styles.planBadge} ${styles.planBadgeActive}`}
+													>
+														{t('Активный тариф', 'Active plan')}
+													</span>
+												) : plan.badge ? (
+													<span className={styles.planBadge}>{plan.badge}</span>
+												) : null}
+												<h3>{plan.name}</h3>
+												{plan.description ? <p>{plan.description}</p> : null}
+												{plan.interval === 'year' ? (
+													<div className={styles.annualPlanPrice}>
+														<s>
+															{formatMoney(
+																Math.round(plan.amountMinor / (12 * 0.9)),
+																plan.currency,
+																locale,
+															)}
+														</s>
+														<strong className={styles.planPrice}>
+															{formatMoney(
+																Math.round(plan.amountMinor / 12),
+																plan.currency,
+																locale,
+															)}
+															<small>{t('/ месяц', '/ month')}</small>
+														</strong>
+														<span>
+															{t('Оплата за год', 'Billed yearly')}:{' '}
+															{formatMoney(
+																plan.amountMinor,
+																plan.currency,
+																locale,
+															)}
+														</span>
+													</div>
+												) : (
 													<strong className={styles.planPrice}>
-														{formatMoney(
-															Math.round(plan.amountMinor / 12),
-															plan.currency,
-															locale,
-														)}
-														<small>{t('/ месяц', '/ month')}</small>
-													</strong>
-													<span>
-														{t('Оплата за год', 'Billed yearly')}:{' '}
 														{formatMoney(
 															plan.amountMinor,
 															plan.currency,
 															locale,
 														)}
-													</span>
-												</div>
-											) : (
-												<strong className={styles.planPrice}>
-													{formatMoney(plan.amountMinor, plan.currency, locale)}
-													<small>{plan.priceSuffix}</small>
-												</strong>
-											)}
-											<span className={styles.planCredits}>
-												{formatCredits(plan.credits, locale)}
-												{plan.interval === 'year'
-													? ` ${t('на год', 'per year')}`
-													: ''}
-											</span>
-											{plan.features.length ? (
-												<ul>
-													{plan.features.map((feature, index) => (
-														<li key={`${index}:${feature}`}>
-															<FiCheck aria-hidden='true' /> {feature}
-														</li>
-													))}
-												</ul>
-											) : null}
-											<AiButton
-												variant='secondary'
-												onClick={() =>
-													openCheckout({ type: 'subscription', value: plan })
-												}
-											>
-												{t('Выбрать', 'Choose')}{' '}
-												<FiArrowUpRight aria-hidden='true' />
-											</AiButton>
-										</AiCard>
-									))}
+														<small>{plan.priceSuffix}</small>
+													</strong>
+												)}
+												<span className={styles.planCredits}>
+													{formatCredits(plan.credits, locale)}
+													{plan.interval === 'year'
+														? ` ${t('на год', 'per year')}`
+														: ''}
+												</span>
+												{plan.features.length ? (
+													<ul>
+														{plan.features.map((feature, index) => (
+															<li key={`${index}:${feature}`}>
+																<FiCheck aria-hidden='true' /> {feature}
+															</li>
+														))}
+													</ul>
+												) : null}
+												<AiButton
+													disabled={isActivePlan}
+													variant='secondary'
+													onClick={() =>
+														openCheckout({ type: 'subscription', value: plan })
+													}
+												>
+													{isActivePlan ? (
+														<>
+															<FiCheck aria-hidden='true' />
+															{t('Тариф активен', 'Plan active')}
+														</>
+													) : (
+														<>
+															{t('Выбрать', 'Choose')}{' '}
+															<FiArrowUpRight aria-hidden='true' />
+														</>
+													)}
+												</AiButton>
+											</AiCard>
+										);
+									})}
 								</div>
 							) : (
 								<AiCard className={styles.inlineEmpty}>

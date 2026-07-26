@@ -296,6 +296,7 @@ export type AiWorkSummary = {
 
 export type AiSubscriptionState = {
 	active: boolean;
+	planId: string | null;
 	planName?: string | null;
 	periodEndsAt?: string | null;
 	autoRenew?: boolean;

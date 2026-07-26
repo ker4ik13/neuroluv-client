@@ -2480,6 +2480,19 @@ a.receiptState {
 		transform: translateY(rem(-3));
 	}
 }
+.planCardActive {
+	overflow: hidden;
+	background: linear-gradient(145deg, #effcf5 0%, #e4f8ee 52%, #edf8ff 100%);
+	border: rem(2) solid #24a56a;
+	box-shadow: 0 rem(20) rem(44) rgba(36, 165, 106, 0.16);
+
+	.button:disabled {
+		color: #147a4a;
+		background: rgba(36, 165, 106, 0.12);
+		border-color: rgba(36, 165, 106, 0.2);
+		opacity: 1;
+	}
+}
 .planCard h3 {
 	padding-right: rem(58);
 	font-size: rem(24);
@@ -2541,6 +2554,10 @@ a.receiptState {
 	background: linear-gradient(135deg, #08a9c9, #087fdb 62%, #5663ee);
 	border-radius: rem(999);
 	box-shadow: 0 rem(8) rem(18) rgba(8, 127, 219, 0.2);
+}
+.planBadgeActive {
+	background: linear-gradient(135deg, #1c9f62, #34b878);
+	box-shadow: 0 rem(8) rem(18) rgba(36, 165, 106, 0.2);
 }
 .billingPeriodToggle {
 	display: inline-flex;
