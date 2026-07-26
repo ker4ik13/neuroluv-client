@@ -43,9 +43,11 @@ export function ReferralsPage() {
   const [method, setMethod] = useState<"bank" | "crypto">("bank");
   const [asset, setAsset] = useState("USDT");
   const [isPending, setIsPending] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const payoutIntent = useRef<{ signature: string; key: string } | null>(null);
+  const conversionIntent = useRef<{ amountMinor: number; key: string } | null>(null);
 
   useEffect(() => {
     if (!payoutOpen) return;
@@ -136,6 +138,41 @@ export function ReferralsPage() {
     }
   }
 
+  async function convertBalance() {
+    if (!stats.data) return;
+    const amountMinor = Math.floor(stats.data.availableAmountMinor / 100) * 100;
+    if (amountMinor < 100) return;
+    if (conversionIntent.current?.amountMinor !== amountMinor) {
+      conversionIntent.current = { amountMinor, key: crypto.randomUUID() };
+    }
+
+    setIsConverting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await aiApiFetch("/referrals/convert", {
+        method: "POST",
+        body: {
+          idempotencyKey: conversionIntent.current.key,
+          amountMinor,
+          currency: stats.data.currency,
+        },
+      });
+      conversionIntent.current = null;
+      setNotice(
+        t(
+          "Партнёрский баланс конвертирован в кредиты.",
+          "The partner balance has been converted into credits.",
+        ),
+      );
+      await stats.reload();
+    } catch (requestError) {
+      setError(getAiErrorMessage(requestError));
+    } finally {
+      setIsConverting(false);
+    }
+  }
+
   const canPayout = Boolean(
     stats.data && stats.data.availableAmountMinor >= stats.data.minimumPayoutMinor,
   );
@@ -161,8 +198,8 @@ export function ReferralsPage() {
                 <h2>{t("Пригласить друзей и коллег", "Invite friends and colleagues")}</h2>
                 <p>
                   {t(
-                    `Вознаграждение начисляется после первой успешной покупки приглашённого.`,
-                    `The reward is credited after the invitee's first successful purchase.`,
+                    `Получайте процент со всех успешных покупок приглашённого в течение первого года.`,
+                    `Earn a percentage from every successful purchase made by an invitee during their first year.`,
                   )}
                 </p>
               </div>
@@ -180,7 +217,15 @@ export function ReferralsPage() {
               <StatCard icon={<FiUserPlus />} label={t("Регистрации", "Registrations")} value={stats.data.registrations.toLocaleString(locale)} />
               <StatCard icon={<FiUsers />} label={t("Первые оплаты", "First payments")} value={stats.data.firstPayments.toLocaleString(locale)} />
               <StatCard icon={<FiDollarSign />} label={t("Оплачено", "Paid")} value={formatMoney(stats.data.paidAmountMinor, stats.data.currency, locale)} />
-              <StatCard icon={<FiZap />} label={t("За использование промптов", "Prompt usage rewards")} value={stats.data.promptAuthorRewardCredits.toLocaleString(locale)} />
+              <StatCard
+                icon={<FiZap />}
+                label={t("За использование промптов", "Prompt usage rewards")}
+                value={formatMoney(
+                  stats.data.promptAuthorRewardAmountMinor,
+                  stats.data.currency,
+                  locale,
+                )}
+              />
             </div>
 
             <div className={styles.referralLowerGrid}>
@@ -210,14 +255,28 @@ export function ReferralsPage() {
                 <AiButton disabled={!canPayout} onClick={() => setPayoutOpen(true)}>
                   <FiSend aria-hidden="true" /> {t("Запросить выплату", "Request payout")}
                 </AiButton>
+                <AiButton
+                  disabled={stats.data.availableAmountMinor < 100 || isConverting}
+                  onClick={() => void convertBalance()}
+                  variant="secondary"
+                >
+                  <FiZap aria-hidden="true" />{" "}
+                  {isConverting
+                    ? t("Конвертируем…", "Converting…")
+                    : t(
+                        `Конвертировать в кредиты · ${stats.data.partnerCreditsPerRuble} за 1 ₽`,
+                        `Convert to credits · ${stats.data.partnerCreditsPerRuble} per ₽1`,
+                      )}
+                </AiButton>
               </AiCard>
 
               <AiCard className={styles.programRules}>
                 <h2>{t("Как начисляется вознаграждение", "How rewards are calculated")}</h2>
                 <ol>
                   <li><span>1</span><p>{t(`Человек переходит по вашей ссылке и регистрируется в течение ${stats.data.attributionDays} дней.`, `A person follows your link and registers within ${stats.data.attributionDays} days.`)}</p></li>
-                  <li><span>2</span><p>{t(`После его первой успешной покупки создаётся партнёрская комиссия${stats.data.referrerPercent ? ` ${stats.data.referrerPercent}%` : ""}.`, `A referral commission${stats.data.referrerPercent ? ` of ${stats.data.referrerPercent}%` : ""} is created after their first successful purchase.`)}</p></li>
+                  <li><span>2</span><p>{t(`Вы получаете${stats.data.referrerPercent ? ` ${stats.data.referrerPercent}%` : ""} с каждой успешной покупки и подписки реферала в течение ${stats.data.commissionMonths || 12} месяцев после его регистрации.`, `You earn${stats.data.referrerPercent ? ` ${stats.data.referrerPercent}%` : ""} from every successful purchase and subscription made by the referral for ${stats.data.commissionMonths || 12} months after registration.`)}</p></li>
                   <li><span>3</span><p>{t(`Комиссия проходит период удержания${stats.data.holdDays ? ` ${stats.data.holdDays} дней` : ""}, затем становится доступной.`, `The commission is held${stats.data.holdDays ? ` for ${stats.data.holdDays} days` : ""} and then becomes available.`)}</p></li>
+                  <li><span>4</span><p>{t(`За успешную генерацию другого пользователя по вашей публичной ссылке на промпт начисляется ${formatMoney(stats.data.promptAuthorRewardMinor, stats.data.currency, locale)}.`, `A successful generation by another user through your public prompt link earns ${formatMoney(stats.data.promptAuthorRewardMinor, stats.data.currency, locale)}.`)}</p></li>
                 </ol>
               </AiCard>
             </div>

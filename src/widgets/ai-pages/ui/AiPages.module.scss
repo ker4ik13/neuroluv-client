@@ -3307,6 +3307,42 @@ a.receiptState {
 .usePromptCard .button {
 	width: 100%;
 }
+.publicPromptDetails {
+	display: grid;
+	gap: rem(10);
+}
+.publicPromptDetails > div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: rem(12);
+	padding-bottom: rem(10);
+	border-bottom: rem(1) solid var(--ai-border);
+}
+.publicPromptDetails span {
+	color: var(--ai-muted);
+	font-size: rem(13);
+}
+.publicPromptDetails strong {
+	max-width: 70%;
+	overflow: hidden;
+	text-align: right;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.publicPromptReferences {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: rem(8);
+}
+.publicPromptReferences img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+	border: rem(1) solid var(--ai-border);
+	border-radius: rem(10);
+}
 
 /* Modal */
 .modalBackdrop {

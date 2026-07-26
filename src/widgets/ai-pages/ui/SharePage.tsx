@@ -13,7 +13,11 @@ import {
 
 import { useAiSession } from "@/features/ai-session";
 import { useAiLocale } from "@/features/ai-locale";
-import { type AiPublicShare } from "@/shared/api/ai";
+import {
+  aiApiFetch,
+  type AiPublicPromptUse,
+  type AiPublicShare,
+} from "@/shared/api/ai";
 
 import { useAiResource } from "../model/api";
 import { formatDate } from "../model/format";
@@ -37,8 +41,9 @@ export function SharePage({
   );
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isUsingPrompt, setIsUsingPrompt] = useState(false);
 
-  function usePrompt() {
+  async function handleUsePrompt() {
     const prompt = share.data?.prompt?.trim();
     if (!prompt) {
       setError(t("Промпт этой работы недоступен", "This work's prompt is unavailable"));
@@ -50,18 +55,38 @@ export function SharePage({
     }
 
     setError(null);
-    writeLocalJson("neuroluv-ai:create-preset", {
-      prompt,
-      ...(share.data?.negativePrompt ? { negativePrompt: share.data.negativePrompt } : {}),
-      ...(share.data?.modelId ? { modelId: share.data.modelId } : {}),
-    });
-    router.push(
-      share.data?.modality === "video"
-        ? "/ai/create/video"
-        : share.data?.modality === "text"
-          ? "/ai/create/text"
-          : "/ai/create/photo",
-    );
+    setIsUsingPrompt(true);
+    try {
+      const preset = await aiApiFetch<AiPublicPromptUse>(
+        `/public/shares/${encodeURIComponent(slug)}/use-prompt`,
+        { method: "POST" },
+      );
+      writeLocalJson("neuroluv-ai:create-preset", {
+        prompt: preset.prompt,
+        publicPromptUseToken: preset.draftToken,
+        promptMinimumReferenceFiles: preset.minimumReferenceFiles,
+        promptMaximumReferenceFiles: preset.maximumReferenceFiles,
+        ...(preset.negativePrompt ? { negativePrompt: preset.negativePrompt } : {}),
+        ...(preset.modelId ? { modelId: preset.modelId } : {}),
+        ...(preset.aspectRatio ? { aspectRatio: preset.aspectRatio } : {}),
+        ...(preset.operation ? { operation: preset.operation } : {}),
+      });
+      router.push(
+        preset.modality === "video"
+          ? "/ai/create/video"
+          : preset.modality === "text"
+            ? "/ai/create/text"
+            : "/ai/create/photo",
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : t("Не удалось подготовить промпт", "Unable to prepare the prompt"),
+      );
+    } finally {
+      setIsUsingPrompt(false);
+    }
   }
 
   async function copyPage() {
@@ -118,12 +143,43 @@ export function SharePage({
               <FiCalendar aria-hidden="true" />
               {formatDate(share.data.createdAt, true, locale)}
             </span>
-            {share.data.modelName ? <strong>{share.data.modelName}</strong> : null}
           </div>
         </AiCard>
         <aside className={styles.shareAside}>
           <AiCard className={styles.usePromptCard}>
             <h2>{t("Использовать промпт", "Use prompt")}</h2>
+            <div className={styles.publicPromptDetails}>
+              {share.data.author?.name ? (
+                <div>
+                  <span>{t("Автор", "Author")}</span>
+                  <strong>{share.data.author.name}</strong>
+                </div>
+              ) : null}
+              {share.data.modelName ? (
+                <div>
+                  <span>{t("Модель", "Model")}</span>
+                  <strong>{share.data.modelName}</strong>
+                </div>
+              ) : null}
+              {share.data.sourceReferenceCount ? (
+                <div>
+                  <span>{t("Референсы", "References")}</span>
+                  <strong>{share.data.sourceReferenceCount}</strong>
+                </div>
+              ) : null}
+            </div>
+            {share.data.sourceReferences?.length ? (
+              <div className={styles.publicPromptReferences}>
+                {share.data.sourceReferences.map((reference, index) => (
+                  // eslint-disable-next-line @next/next/no-img-element -- signed private asset URL
+                  <img
+                    alt={t(`Референс ${index + 1}`, `Reference ${index + 1}`)}
+                    key={`${reference.previewUrl}-${index}`}
+                    src={reference.previewUrl}
+                  />
+                ))}
+              </div>
+            ) : null}
             <p>
               {share.data.prompt
                 ? t(
@@ -135,9 +191,14 @@ export function SharePage({
                     "This work's prompt is unavailable.",
                   )}
             </p>
-            <AiButton disabled={!share.data.prompt} onClick={usePrompt}>
+            <AiButton
+              disabled={!share.data.prompt || isUsingPrompt}
+              onClick={() => void handleUsePrompt()}
+            >
               <FiZap aria-hidden="true" />
-              {t("Использовать промпт", "Use prompt")}
+              {isUsingPrompt
+                ? t("Подготавливаем…", "Preparing…")
+                : t("Использовать промпт", "Use prompt")}
             </AiButton>
             {error ? <FieldMessage>{error}</FieldMessage> : null}
           </AiCard>

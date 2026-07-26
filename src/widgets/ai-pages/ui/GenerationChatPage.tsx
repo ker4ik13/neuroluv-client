@@ -104,6 +104,7 @@ type Draft = {
   promptMaximumReferenceFiles: number;
   promptTitle: string;
   publicShareDraftToken: string;
+  publicPromptUseToken: string;
   repeatRunId: string;
   replaceReference: boolean;
   modelId: string;
@@ -169,6 +170,7 @@ const EMPTY_DRAFT: Draft = {
   promptMaximumReferenceFiles: 0,
   promptTitle: "",
   publicShareDraftToken: "",
+  publicPromptUseToken: "",
   repeatRunId: "",
   replaceReference: false,
   modelId: "",
@@ -213,6 +215,7 @@ function toPersistedDraft(draft: Draft): Draft {
     promptMaximumReferenceFiles: 0,
     promptTitle: "",
     publicShareDraftToken: "",
+    publicPromptUseToken: "",
     repeatRunId: "",
     replaceReference: false,
   };
@@ -415,6 +418,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           promptMaximumReferenceFiles?: number;
           catalogPromptOverride?: boolean;
           publicShareDraftToken?: string;
+          publicPromptUseToken?: string;
           repeatRunId?: string;
           replaceReference?: boolean;
           prompt?: string;
@@ -437,6 +441,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           promptMaximumReferenceFiles: 0,
           promptTitle: "",
           publicShareDraftToken: "",
+          publicPromptUseToken: "",
           repeatRunId: "",
           replaceReference: false,
         } as Draft;
@@ -467,6 +472,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           );
           nextDraft.catalogPromptOverride = preset.catalogPromptOverride === true;
           nextDraft.publicShareDraftToken = preset.publicShareDraftToken || "";
+          nextDraft.publicPromptUseToken = preset.publicPromptUseToken || "";
           nextDraft.repeatRunId = preset.repeatRunId || "";
           nextDraft.replaceReference = Boolean(preset.replaceReference);
           nextDraft.modelId = preset.modelId || nextDraft.modelId;
@@ -733,11 +739,14 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         : (capabilities?.maxReferenceFiles ?? 1),
     ),
   );
+  const hasPresetReferenceContract = Boolean(
+    draft.promptId || draft.publicPromptUseToken,
+  );
   const maxReferenceFiles =
-    draft.promptId && draft.promptMaximumReferenceFiles > 0
+    hasPresetReferenceContract && draft.promptMaximumReferenceFiles > 0
       ? Math.min(capabilityMaxReferenceFiles, draft.promptMaximumReferenceFiles)
       : capabilityMaxReferenceFiles;
-  const promptMinimumReferenceFiles = draft.promptId
+  const promptMinimumReferenceFiles = hasPresetReferenceContract
     ? Math.min(
         maxReferenceFiles,
         Math.max(0, draft.promptMinimumReferenceFiles),
@@ -1544,6 +1553,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       promptMaximumReferenceFiles: 0,
       promptTitle: "",
       publicShareDraftToken: "",
+      publicPromptUseToken: "",
       repeatRunId: "",
       replaceReference: false,
     }));
@@ -1615,6 +1625,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
               : {}),
             ...(submittedDraft.publicShareDraftToken
               ? { publicShareDraftToken: submittedDraft.publicShareDraftToken }
+              : {}),
+            ...(submittedDraft.publicPromptUseToken
+              ? { publicPromptUseToken: submittedDraft.publicPromptUseToken }
               : {}),
           ...(submittedDraft.repeatRunId ? { retryRunId: submittedDraft.repeatRunId } : {}),
             ...(submittedTool ? { toolId: submittedTool.id } : {}),
@@ -1875,6 +1888,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       promptMaximumReferenceFiles: 0,
       promptTitle: "",
       publicShareDraftToken: "",
+      publicPromptUseToken: "",
       repeatRunId: "",
       replaceReference: false,
     }));
@@ -1917,6 +1931,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       promptMaximumReferenceFiles: 0,
       promptTitle: "",
       publicShareDraftToken: "",
+      publicPromptUseToken: "",
       repeatRunId: "",
       replaceReference: false,
     }));

@@ -561,11 +561,14 @@ export type AiReferralStats = {
 	currency: string;
 	minimumPayoutMinor: number;
 	referrerPercent?: number | null;
+	commissionMonths?: number | null;
 	referredBonusPercent?: number | null;
 	holdDays?: number | null;
 	payoutMethods?: Array<'bank' | 'crypto'>;
 	promptAuthorRewardGenerations: number;
-	promptAuthorRewardCredits: number;
+	promptAuthorRewardAmountMinor: number;
+	promptAuthorRewardMinor: number;
+	partnerCreditsPerRuble: number;
 	payouts: AiReferralPayout[];
 };
 
@@ -583,6 +586,9 @@ export type AiPublicShare = {
 	modality: AiModelModality;
 	modelId?: string | null;
 	modelName?: string | null;
+	author?: {
+		name: string;
+	} | null;
 	createdAt: string;
 	previewUrl?: string | null;
 	outputUrl?: string | null;
@@ -596,6 +602,27 @@ export type AiPublicShare = {
 	};
 	prompt?: string | null;
 	negativePrompt?: string | null;
+	aspectRatio?: string | null;
+	sourceReferenceCount?: number;
+	sourceReferences?: Array<{
+		previewUrl: string;
+		mimeType: string;
+		width?: number | null;
+		height?: number | null;
+	}>;
 	remixSupported: boolean;
 	remixUnavailableReason?: string | null;
+};
+
+export type AiPublicPromptUse = {
+	draftToken: string;
+	expiresAt: string;
+	modelId: string;
+	modality: AiModelModality;
+	operation: string;
+	prompt: string;
+	negativePrompt?: string | null;
+	aspectRatio?: string | null;
+	minimumReferenceFiles: number;
+	maximumReferenceFiles: number;
 };

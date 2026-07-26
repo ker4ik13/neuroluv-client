@@ -672,12 +672,12 @@ export function BalancePage() {
 									<p>
 										{referrals.data?.referrerPercent
 											? t(
-													`Получайте ${referrals.data.referrerPercent}% с первой успешной покупки приглашённого пользователя.`,
-													`Earn ${referrals.data.referrerPercent}% from an invited user's first successful purchase.`,
+													`Получайте ${referrals.data.referrerPercent}% со всех покупок приглашённого пользователя в течение ${referrals.data.commissionMonths || 12} месяцев.`,
+													`Earn ${referrals.data.referrerPercent}% from every purchase made by an invited user for ${referrals.data.commissionMonths || 12} months.`,
 												)
 											: t(
-													'Приглашайте друзей и получайте вознаграждение после их первой успешной покупки.',
-													'Invite friends and earn a reward after their first successful purchase.',
+													'Приглашайте друзей и получайте процент с их покупок в течение первого года.',
+													'Invite friends and earn a percentage of their purchases during the first year.',
 												)}
 									</p>
 								</div>
