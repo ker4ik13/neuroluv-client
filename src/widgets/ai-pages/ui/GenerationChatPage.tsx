@@ -99,6 +99,7 @@ type Draft = {
   contextEnabled: boolean;
   catalogPromptOverride: boolean;
   promptId: number | null;
+  promptCompatibleModelIds: string[];
   promptMinimumReferenceFiles: number;
   promptMaximumReferenceFiles: number;
   promptTitle: string;
@@ -163,6 +164,7 @@ const EMPTY_DRAFT: Draft = {
   contextEnabled: true,
   catalogPromptOverride: false,
   promptId: null,
+  promptCompatibleModelIds: [],
   promptMinimumReferenceFiles: 0,
   promptMaximumReferenceFiles: 0,
   promptTitle: "",
@@ -206,6 +208,7 @@ function toPersistedDraft(draft: Draft): Draft {
     ...draft,
     catalogPromptOverride: false,
     promptId: null,
+    promptCompatibleModelIds: [],
     promptMinimumReferenceFiles: 0,
     promptMaximumReferenceFiles: 0,
     promptTitle: "",
@@ -237,16 +240,28 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   );
   const tool = tools.data?.[0] || null;
   const toolFields = useMemo(() => visibleToolFields(tool), [tool]);
-  const availableModels = useMemo(() => {
-    const source = models.data || [];
-    if (!isTool || !tool?.modelIds.length) return source;
-    return source.filter((model) => tool.modelIds.includes(model.id));
-  }, [isTool, models.data, tool]);
-
   const [draft, setDraft] = useState<Draft>({
     ...EMPTY_DRAFT,
     contextEnabled: canUseContext,
   });
+  const availableModels = useMemo(() => {
+    const source = models.data || [];
+    const toolModels =
+      !isTool || !tool?.modelIds.length
+        ? source
+        : source.filter((model) => tool.modelIds.includes(model.id));
+    if (!draft.promptId || draft.promptCompatibleModelIds.length === 0) {
+      return toolModels;
+    }
+    const compatibleModelIds = new Set(draft.promptCompatibleModelIds);
+    return toolModels.filter((model) => compatibleModelIds.has(model.id));
+  }, [
+    draft.promptCompatibleModelIds,
+    draft.promptId,
+    isTool,
+    models.data,
+    tool,
+  ]);
   const selectedModel = useMemo(
     () => availableModels.find((model) => model.id === draft.modelId) || null,
     [availableModels, draft.modelId],
@@ -395,6 +410,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         const preset = readLocalJson<{
           promptId?: number;
           promptTitle?: string;
+          promptCompatibleModelIds?: string[];
           promptMinimumReferenceFiles?: number;
           promptMaximumReferenceFiles?: number;
           catalogPromptOverride?: boolean;
@@ -416,6 +432,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           // Persisting them makes an ordinary new chat inherit incompatible input.
           catalogPromptOverride: false,
           promptId: null,
+          promptCompatibleModelIds: [],
           promptMinimumReferenceFiles: 0,
           promptMaximumReferenceFiles: 0,
           promptTitle: "",
@@ -439,6 +456,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           nextDraft.negativePrompt = preset.negativePrompt ?? nextDraft.negativePrompt;
           nextDraft.promptId = preset.promptId || nextDraft.promptId;
           nextDraft.promptTitle = preset.promptTitle || "";
+          nextDraft.promptCompatibleModelIds = normalizePresetModelIds(
+            preset.promptCompatibleModelIds,
+          );
           nextDraft.promptMinimumReferenceFiles = normalizePresetReferenceLimit(
             preset.promptMinimumReferenceFiles,
           );
@@ -537,7 +557,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   }, [draft.repeatRunId, draft.replaceReference, draftReady]);
 
   useEffect(() => {
-    if (!availableModels.length) return;
+    if (!draftReady || !availableModels.length) return;
     const current = availableModels.find((model) => model.id === draft.modelId);
     const selected =
       current || availableModels.find((model) => model.available) || availableModels[0];
@@ -581,7 +601,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       }));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [availableModels, draft.modelId, kind]);
+  }, [availableModels, draft.modelId, draftReady, kind]);
 
   useEffect(() => {
     if (
@@ -1519,6 +1539,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       prompt: "",
       catalogPromptOverride: false,
       promptId: null,
+      promptCompatibleModelIds: [],
       promptMinimumReferenceFiles: 0,
       promptMaximumReferenceFiles: 0,
       promptTitle: "",
@@ -1849,6 +1870,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       prompt: "",
       catalogPromptOverride: false,
       promptId: null,
+      promptCompatibleModelIds: [],
       promptMinimumReferenceFiles: 0,
       promptMaximumReferenceFiles: 0,
       promptTitle: "",
@@ -1890,6 +1912,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       prompt: "",
       catalogPromptOverride: false,
       promptId: null,
+      promptCompatibleModelIds: [],
       promptMinimumReferenceFiles: 0,
       promptMaximumReferenceFiles: 0,
       promptTitle: "",
@@ -1990,28 +2013,12 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       family?.entries[0]?.model;
     if (!model) return;
     setQuoteError(null);
-    setDraft((current) => ({
-      ...current,
-      modelId: model.id,
-      catalogPromptOverride: false,
-      promptId: null,
-      promptMinimumReferenceFiles: 0,
-      promptMaximumReferenceFiles: 0,
-      promptTitle: "",
-    }));
+    setDraft((current) => selectDraftModel(current, model.id));
   }
 
   function selectModelVersion(modelId: string) {
     setQuoteError(null);
-    setDraft((current) => ({
-      ...current,
-      modelId,
-      catalogPromptOverride: false,
-      promptId: null,
-      promptMinimumReferenceFiles: 0,
-      promptMaximumReferenceFiles: 0,
-      promptTitle: "",
-    }));
+    setDraft((current) => selectDraftModel(current, modelId));
   }
 
   return (
@@ -2651,7 +2658,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
 
               <AiSelect
                 compact
-                disabled={Boolean(draft.promptId)}
+                disabled={Boolean(
+                  draft.promptId && draft.promptCompatibleModelIds.length <= 1,
+                )}
                 id={`ai-model-family-${kind}`}
                 label={t("Нейросеть", "AI model")}
                 options={modelFamilyOptions}
@@ -2661,7 +2670,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
 
               <AiSelect
                 compact
-                disabled={Boolean(draft.promptId)}
+                disabled={Boolean(
+                  draft.promptId && draft.promptCompatibleModelIds.length <= 1,
+                )}
                 id={`ai-model-version-${kind}`}
                 label={t("Версия", "Version")}
                 options={modelVersionOptions}
@@ -4188,6 +4199,37 @@ function normalizePresetReferenceLimit(value: unknown): number {
   return typeof value === "number" && Number.isInteger(value)
     ? Math.min(PLATFORM_REFERENCE_FILE_LIMIT, Math.max(0, value))
     : 0;
+}
+
+function normalizePresetModelIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [
+    ...new Set(
+      value.filter(
+        (modelId): modelId is string =>
+          typeof modelId === "string" && modelId.trim().length > 0,
+      ),
+    ),
+  ];
+}
+
+function selectDraftModel(draft: Draft, modelId: string): Draft {
+  if (
+    draft.promptId &&
+    draft.promptCompatibleModelIds.includes(modelId)
+  ) {
+    return { ...draft, modelId };
+  }
+  return {
+    ...draft,
+    modelId,
+    catalogPromptOverride: false,
+    promptId: null,
+    promptCompatibleModelIds: [],
+    promptMinimumReferenceFiles: 0,
+    promptMaximumReferenceFiles: 0,
+    promptTitle: "",
+  };
 }
 
 function extractPromptVariables(value: string): string[] {

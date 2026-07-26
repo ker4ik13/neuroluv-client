@@ -111,6 +111,7 @@ export function PromptDetailPage({ slug }: { slug: string }) {
       {
         promptId: Number(prompt.data.id),
         promptTitle: prompt.data.title,
+        promptCompatibleModelIds: prompt.data.compatibleModelIds,
         modelId: selectedModelId,
         prompt: preparedPrompt,
         aspectRatio: prompt.data.defaultAspectRatio || "",
