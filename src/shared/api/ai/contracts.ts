@@ -75,6 +75,12 @@ export type AiModelCapabilities = {
 	supportsContext?: boolean;
 	maxUploadBytes?: number;
 	maxReferenceFiles?: number;
+	acceptedMimeTypes?: string[];
+	requiredFileKinds?: Array<{
+		kind: 'image' | 'video';
+		min: number;
+		max: number;
+	}>;
 	referencePromptTag?: string;
 	reasoning?: {
 		modes: string[];
@@ -525,6 +531,9 @@ export type AiUserProfile = {
 	language?: string | null;
 	marketingConsent?: boolean;
 	productUpdates?: boolean;
+	preferences?: {
+		theme?: 'system' | 'light' | 'dark' | null;
+	};
 	authMethods: {
 		emailPassword: boolean;
 		emailVerified: boolean;

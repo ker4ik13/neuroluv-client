@@ -198,8 +198,8 @@ const SAFE_TEXT_REFERENCE_MIME_TYPES = new Set([
   ...SAFE_IMAGE_REFERENCE_MIME_TYPES,
   "application/pdf",
 ]);
-const PLATFORM_REFERENCE_FILE_LIMIT = 5;
-const PLATFORM_REFERENCE_TOTAL_BYTES_LIMIT = 40 * 1024 * 1024;
+const PLATFORM_REFERENCE_FILE_LIMIT = 14;
+const PLATFORM_REFERENCE_TOTAL_BYTES_LIMIT = 160 * 1024 * 1024;
 const TERMINAL_RUN_STATUSES = new Set(["succeeded", "partially_succeeded", "failed", "cancelled"]);
 const PRICE_PREVIEW_PROMPT = "Предварительный расчёт стоимости";
 const CATALOG_CACHE_TTL_MS = 5 * 60_000;
@@ -753,9 +753,22 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       )
     : 0;
   const maxReferenceFileBytes = capabilities?.maxUploadBytes || 20 * 1024 * 1024;
-  const acceptedReferenceMimeTypes =
-    kind === "text" ? SAFE_TEXT_REFERENCE_MIME_TYPES : SAFE_IMAGE_REFERENCE_MIME_TYPES;
-  const acceptsPdf = kind === "text";
+  const acceptedReferenceMimeTypes = useMemo(
+    () =>
+      new Set(
+        capabilities?.acceptedMimeTypes?.length
+          ? capabilities.acceptedMimeTypes
+          : kind === "text"
+            ? SAFE_TEXT_REFERENCE_MIME_TYPES
+            : SAFE_IMAGE_REFERENCE_MIME_TYPES,
+      ),
+    [capabilities?.acceptedMimeTypes, kind],
+  );
+  const acceptsPdf = acceptedReferenceMimeTypes.has("application/pdf");
+  const acceptsVideo = [...acceptedReferenceMimeTypes].some((mimeType) =>
+    mimeType.startsWith("video/"),
+  );
+  const acceptsFiles = acceptsPdf || acceptsVideo;
   const currentContextEpoch = [...turns].reverse().find((turn) => turn.run?.contextEpoch != null)
     ?.run?.contextEpoch;
   const hasContextImage = turns.some(
@@ -819,11 +832,11 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       (draft.promptId && capabilities?.acceptsReference),
   );
   const attachmentStatusId = `ai-chat-attachment-status-${kind}`;
-  const dropTitle = acceptsPdf
+  const dropTitle = acceptsFiles
     ? t("Отпустите файлы, чтобы прикрепить", "Drop files to attach")
     : t("Отпустите изображения, чтобы прикрепить", "Drop images to attach");
-  const dropDescription = acceptsPdf
-    ? `PDF, JPG, PNG ${t("или", "or")} WebP · ${t("максимум", "up to")} ${isEnglish ? `${maxReferenceFiles} files` : formatFileCount(maxReferenceFiles)}`
+  const dropDescription = acceptsFiles
+    ? `${getAcceptedFileTypesLabel(acceptedReferenceMimeTypes)} · ${t("максимум", "up to")} ${isEnglish ? `${maxReferenceFiles} files` : formatFileCount(maxReferenceFiles)}`
     : `JPG, PNG ${t("или", "or")} WebP · ${t("максимум", "up to")} ${isEnglish ? `${maxReferenceFiles} images` : formatImageCount(maxReferenceFiles)}`;
   const activeReferences = useMemo(
     () => (referenceInputVisible ? references.map((reference) => reference.file) : []),
@@ -833,6 +846,12 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     activeReferences.length,
     hasRemoteReference ? 1 : 0,
   );
+  const activeReferenceKindCounts = {
+    image:
+      activeReferences.filter((file) => file.type.startsWith("image/")).length +
+      (hasRemoteReference ? 1 : 0),
+    video: activeReferences.filter((file) => file.type.startsWith("video/")).length,
+  };
   const hasReferenceIntent = activeReferences.length > 0 || hasRemoteReference;
   const effectiveVideoMode = automaticVideoModes
     ? hasReferenceIntent
@@ -852,6 +871,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         });
   const referenceRequired =
     promptMinimumReferenceFiles > 0 ||
+    Boolean(capabilities?.requiredFileKinds?.some((requirement) => requirement.min > 0)) ||
     isReferenceRequired(resolvedOperation, isTool, draft.replaceReference);
   const useConversationReference = Boolean(
     kind === "image" &&
@@ -866,16 +886,43 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   );
   const referenceVisibilityMessage =
     references.length > 0 && !referenceInputVisible
-      ? t(`Выбранная модель не принимает прикреплённые ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept attached ${acceptsPdf ? "files" : "images"}`)
+      ? t(`Выбранная модель не принимает прикреплённые ${acceptsFiles ? "файлы" : "изображения"}`, `The selected model does not accept attached ${acceptsFiles ? "files" : "images"}`)
       : null;
   const referenceCapabilityMessage =
     activeReferences.length > 0 && capabilities?.acceptsReference !== true
-      ? t(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsPdf ? "files" : "images"}`)
+      ? t(`Выбранная модель не принимает входные ${acceptsFiles ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsFiles ? "files" : "images"}`)
       : null;
   const referenceLimitMessage =
     activeReferenceCount > maxReferenceFiles
-      ? t(`Для выбранной модели можно приложить не более ${acceptsPdf ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`, `You can attach up to ${maxReferenceFiles} ${acceptsPdf ? "files" : "images"} for the selected model`)
+      ? t(`Для выбранной модели можно приложить не более ${acceptsFiles ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`, `You can attach up to ${maxReferenceFiles} ${acceptsFiles ? "files" : "images"} for the selected model`)
       : null;
+  const requiredFileKindsMessage =
+    capabilities?.requiredFileKinds
+      ?.map((requirement) => {
+        const count = activeReferenceKindCounts[requirement.kind];
+        if (count < requirement.min) {
+          const kindLabel =
+            requirement.kind === "video"
+              ? t("видео", "video")
+              : t("изображение", "image");
+          return t(
+            `Прикрепите минимум ${requirement.min} ${kindLabel}`,
+            `Upload at least ${requirement.min} ${kindLabel}`,
+          );
+        }
+        if (count > requirement.max) {
+          const kindLabel =
+            requirement.kind === "video"
+              ? t("видео", "videos")
+              : t("изображений", "images");
+          return t(
+            `Можно прикрепить не более ${requirement.max} ${kindLabel}`,
+            `You can upload no more than ${requirement.max} ${kindLabel}`,
+          );
+        }
+        return null;
+      })
+      .find((message): message is string => Boolean(message)) || null;
   const videoReferenceMinimumMessage =
     kind === "video" &&
     effectiveVideoMode &&
@@ -904,7 +951,8 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     operationBlockMessage ||
     referenceVisibilityMessage ||
     referenceCapabilityMessage ||
-    referenceLimitMessage;
+    referenceLimitMessage ||
+    requiredFileKindsMessage;
   const referenceBlockMessage =
     quoteBlockMessage ||
     promptReferenceMinimumMessage ||
@@ -1053,13 +1101,13 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     (incomingFiles: readonly File[]) => {
       if (incomingFiles.length === 0) return;
       if (!referenceInputVisible) {
-        const message = t(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsPdf ? "files" : "images"}`);
+        const message = t(`Выбранная модель не принимает входные ${acceptsFiles ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsFiles ? "files" : "images"}`);
         setQuoteError(message);
         setAttachmentStatus(message);
         return;
       }
       if (capabilities?.acceptsReference !== true) {
-        const message = t(`Выбранная модель не принимает входные ${acceptsPdf ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsPdf ? "files" : "images"}`);
+        const message = t(`Выбранная модель не принимает входные ${acceptsFiles ? "файлы" : "изображения"}`, `The selected model does not accept input ${acceptsFiles ? "files" : "images"}`);
         setQuoteError(message);
         setAttachmentStatus(message);
         return;
@@ -1131,21 +1179,24 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       }
 
       const validationMessage = hasUnsupportedType
-        ? acceptsPdf
-          ? t("Поддерживаются файлы PDF и изображения JPG, PNG, WebP", "PDF files and JPG, PNG or WebP images are supported")
+        ? acceptsFiles
+          ? t(
+              `Поддерживаемые форматы: ${getAcceptedFileTypesLabel(acceptedReferenceMimeTypes)}`,
+              `Supported formats: ${getAcceptedFileTypesLabel(acceptedReferenceMimeTypes)}`,
+            )
           : t("Поддерживаются только изображения JPG, PNG и WebP", "Only JPG, PNG and WebP images are supported")
         : hasOversizedFile
-          ? t(`Один из ${acceptsPdf ? "файлов" : "изображений"} превышает лимит выбранной модели`, `One of the attached ${acceptsPdf ? "files" : "images"} exceeds the selected model's limit`)
+          ? t(`Один из ${acceptsFiles ? "файлов" : "изображений"} превышает лимит выбранной модели`, `One of the attached ${acceptsFiles ? "files" : "images"} exceeds the selected model's limit`)
           : hasExceededTotalSize
-            ? t("Общий размер прикреплённых файлов не должен превышать 40 МБ", "The total attachment size must not exceed 40 MB")
+            ? t("Общий размер прикреплённых файлов не должен превышать 160 МБ", "The total attachment size must not exceed 160 MB")
             : hasExceededLimit
-            ? t(`Для выбранной модели можно приложить не более ${acceptsPdf ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`, `You can attach up to ${maxReferenceFiles} ${acceptsPdf ? "files" : "images"} for the selected model`)
+            ? t(`Для выбранной модели можно приложить не более ${acceptsFiles ? formatFileCount(maxReferenceFiles) : formatImageCount(maxReferenceFiles)}`, `You can attach up to ${maxReferenceFiles} ${acceptsFiles ? "files" : "images"} for the selected model`)
             : hasDuplicate
-              ? t(`Этот ${acceptsPdf ? "файл" : "рисунок"} уже прикреплён`, `This ${acceptsPdf ? "file" : "image"} is already attached`)
+              ? t(`Этот ${acceptsFiles ? "файл" : "рисунок"} уже прикреплён`, `This ${acceptsFiles ? "file" : "image"} is already attached`)
               : null;
       setQuoteError(validationMessage);
       const addedMessage = filesToAdd.length
-        ? t(`Прикреплено: ${acceptsPdf ? formatFileCount(filesToAdd.length) : formatImageCount(filesToAdd.length)}`, `Attached: ${filesToAdd.length} ${acceptsPdf ? filesToAdd.length === 1 ? "file" : "files" : filesToAdd.length === 1 ? "image" : "images"}`)
+        ? t(`Прикреплено: ${acceptsFiles ? formatFileCount(filesToAdd.length) : formatImageCount(filesToAdd.length)}`, `Attached: ${filesToAdd.length} ${acceptsFiles ? filesToAdd.length === 1 ? "file" : "files" : filesToAdd.length === 1 ? "image" : "images"}`)
         : null;
       setAttachmentStatus(
         [addedMessage, validationMessage].filter(Boolean).join(". ") || t("Файлы не были прикреплены", "No files were attached"),
@@ -1154,7 +1205,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     },
     [
       acceptedReferenceMimeTypes,
-      acceptsPdf,
+      acceptsFiles,
       capabilities?.acceptsReference,
       maxReferenceFileBytes,
       maxReferenceFiles,
@@ -2397,7 +2448,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
               ) : null}
               {references.length || missingPromptReferenceSlots > 0 ? (
                 <ul
-                  aria-label={t(`Прикреплено: ${acceptsPdf ? formatFileCount(references.length) : formatImageCount(references.length)}`, `Attached: ${references.length} ${acceptsPdf ? references.length === 1 ? "file" : "files" : references.length === 1 ? "image" : "images"}`)}
+                  aria-label={t(`Прикреплено: ${acceptsFiles ? formatFileCount(references.length) : formatImageCount(references.length)}`, `Attached: ${references.length} ${acceptsFiles ? references.length === 1 ? "file" : "files" : references.length === 1 ? "image" : "images"}`)}
                   aria-live="polite"
                   className={styles.composerAttachments}
                 >
@@ -2524,11 +2575,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
               <input
                 ref={fileInput}
                 id={`ai-chat-file-input-${kind}`}
-                accept={
-                  acceptsPdf
-                    ? "image/jpeg,image/png,image/webp,application/pdf"
-                    : "image/jpeg,image/png,image/webp"
-                }
+                accept={[...acceptedReferenceMimeTypes].join(",")}
                 aria-required={referenceRequired}
                 className={styles.visuallyHidden}
                 multiple={maxReferenceFiles > 1}
@@ -2555,8 +2602,8 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                     aria-describedby={attachmentStatusId}
                     aria-label={
                       maxReferenceFiles > 1
-                        ? t(`Прикрепить ${acceptsPdf ? "файлы" : "изображения"}, максимум ${maxReferenceFiles}`, `Attach ${acceptsPdf ? "files" : "images"}, up to ${maxReferenceFiles}`)
-                        : t(`Прикрепить ${acceptsPdf ? "файл" : "изображение"}`, `Attach ${acceptsPdf ? "a file" : "an image"}`)
+                        ? t(`Прикрепить ${acceptsFiles ? "файлы" : "изображения"}, максимум ${maxReferenceFiles}`, `Attach ${acceptsFiles ? "files" : "images"}, up to ${maxReferenceFiles}`)
+                        : t(`Прикрепить ${acceptsFiles ? "файл" : "изображение"}`, `Attach ${acceptsFiles ? "a file" : "an image"}`)
                     }
                     className={styles.attachButton}
                     type="button"
@@ -4539,6 +4586,22 @@ function getDisplayedQuoteCredits(quote: AiQuote): number {
 function formatFileSize(bytes: number, locale = "ru-RU"): string {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} ${locale === "en-US" ? "KB" : "КБ"}`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} ${locale === "en-US" ? "MB" : "МБ"}`;
+}
+
+function getAcceptedFileTypesLabel(mimeTypes: ReadonlySet<string>): string {
+  const labels = new Set<string>();
+  mimeTypes.forEach((mimeType) => {
+    const labelByMimeType: Record<string, string> = {
+      "application/pdf": "PDF",
+      "image/jpeg": "JPG",
+      "image/png": "PNG",
+      "image/webp": "WebP",
+      "video/mp4": "MP4",
+      "video/quicktime": "MOV",
+    };
+    labels.add(labelByMimeType[mimeType] || mimeType);
+  });
+  return [...labels].join(", ");
 }
 
 function toLocalMessageAttachment(reference: PendingReference): ChatMessageAttachment {

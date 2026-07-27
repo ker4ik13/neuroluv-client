@@ -19,6 +19,7 @@ import type { NavigationLogo } from "@/entities/navigation";
 import type { FooterData } from "@/entities/footer";
 import { AiSessionProvider, useAiSession } from "@/features/ai-session";
 import { AiLocaleProvider, useAiLocale, withAiLocale } from "@/features/ai-locale";
+import { AiThemeProvider } from "@/features/ai-theme";
 import {
   aiApiFetch,
   aiApiFetchCached,
@@ -49,11 +50,13 @@ export function AiShell({
   logo: NavigationLogo | null;
 }) {
   return (
-    <AiSessionProvider>
-      <AiLocaleProvider>
-        <AiShellContent footer={footer} logo={logo}>{children}</AiShellContent>
-      </AiLocaleProvider>
-    </AiSessionProvider>
+    <AiThemeProvider>
+      <AiSessionProvider>
+        <AiLocaleProvider>
+          <AiShellContent footer={footer} logo={logo}>{children}</AiShellContent>
+        </AiLocaleProvider>
+      </AiSessionProvider>
+    </AiThemeProvider>
   );
 }
 

@@ -40,7 +40,7 @@
 	color: var(--ai-text);
 	font: inherit;
 	text-align: left;
-	background: #f9fbfc;
+	background: var(--ai-field-bg);
 	border: rem(1) solid var(--ai-border);
 	border-radius: rem(12);
 	cursor: pointer;
@@ -57,7 +57,7 @@
 	&:focus-visible {
 		@include focus-ring;
 
-		background: #fff;
+		background: var(--ai-surface);
 		border-color: var(--ai-primary);
 	}
 
@@ -68,7 +68,7 @@
 }
 
 .rootOpen .trigger {
-	background: #fff;
+	background: var(--ai-surface);
 	border-color: var(--ai-primary);
 	box-shadow: inset 0 0 0 rem(1) rgba(8, 127, 219, 0.16);
 }

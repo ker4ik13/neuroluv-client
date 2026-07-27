@@ -32,5 +32,15 @@ export default async function AiLayout({ children }: { children: React.ReactNode
   if (navigationResult.status === "fulfilled") logo = navigationResult.value.logo;
   if (footerResult.status === "fulfilled") footer = footerResult.value;
 
-  return <AiShell footer={footer} logo={logo}>{children}</AiShell>;
+  return (
+    <>
+      <script
+        dangerouslySetInnerHTML={{
+          __html:
+            "(function(){try{var t=localStorage.getItem('neuroluv-ai:theme')||'system';var r=t==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t;document.documentElement.dataset.aiTheme=r;document.documentElement.style.colorScheme=r}catch(e){}})();",
+        }}
+      />
+      <AiShell footer={footer} logo={logo}>{children}</AiShell>
+    </>
+  );
 }

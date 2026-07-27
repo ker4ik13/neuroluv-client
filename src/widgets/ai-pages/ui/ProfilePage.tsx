@@ -12,6 +12,7 @@ import {
 	FiLock,
 	FiLogOut,
 	FiMail,
+	FiMoon,
 	FiMessageCircle,
 	FiSave,
 	FiSend,
@@ -21,6 +22,7 @@ import {
 } from 'react-icons/fi';
 import { type AiLocale, useAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
+import { type AiTheme, useAiTheme } from '@/features/ai-theme';
 import {
 	type AiApiEnvelope,
 	aiApiFetch,
@@ -46,12 +48,14 @@ export function ProfilePage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { setLocale, t } = useAiLocale();
+	const { setTheme } = useAiTheme();
 	const { session, isLoading: isSessionLoading, refresh } = useAiSession();
 	const profile = useAiResource<AiUserProfile>(
 		session.authenticated ? '/profile' : null,
 	);
 	const [displayName, setDisplayName] = useState('');
 	const [language, setLanguage] = useState<AiLocale>('ru-RU');
+	const [themePreference, setThemePreference] = useState<AiTheme>('system');
 	const [marketingConsent, setMarketingConsent] = useState(false);
 	const [productUpdates, setProductUpdates] = useState(false);
 	const [isPending, setIsPending] = useState(false);
@@ -82,12 +86,19 @@ export function ProfilePage() {
 		const timer = window.setTimeout(() => {
 			setDisplayName(data.displayName);
 			setLanguage(data.language === 'en-US' ? 'en-US' : 'ru-RU');
+			const profileTheme = data.preferences?.theme;
+			const nextTheme =
+				profileTheme === 'light' || profileTheme === 'dark'
+					? profileTheme
+					: 'system';
+			setThemePreference(nextTheme);
+			setTheme(nextTheme);
 			setMarketingConsent(Boolean(data.marketingConsent));
 			setProductUpdates(Boolean(data.productUpdates));
 		}, 0);
 
 		return () => window.clearTimeout(timer);
-	}, [profile.data]);
+	}, [profile.data, setTheme]);
 
 	if (!isSessionLoading && !session.authenticated) {
 		return (
@@ -116,6 +127,7 @@ export function ProfilePage() {
 				body: {
 					displayName: displayName.trim(),
 					locale: language,
+					theme: themePreference,
 					marketingConsent,
 					emailProductNews: productUpdates,
 				},
@@ -443,6 +455,29 @@ export function ProfilePage() {
 											setLocale(nextLanguage);
 										}}
 									/>
+									<AiSelect<AiTheme>
+										id='profile-theme'
+										label={t('Оформление', 'Appearance')}
+										options={[
+											{ value: 'system', label: t('Как в системе', 'System') },
+											{ value: 'light', label: t('Светлая', 'Light') },
+											{ value: 'dark', label: t('Тёмная', 'Dark') },
+										]}
+										value={themePreference}
+										onChange={(nextTheme) => {
+											setThemePreference(nextTheme);
+											setTheme(nextTheme);
+										}}
+									/>
+									<div className={styles.preferenceTitle}>
+										<FiMoon aria-hidden='true' />
+										<p>
+											{t(
+												'Тема сохраняется для этого устройства и аккаунта.',
+												'The theme is saved for this device and account.',
+											)}
+										</p>
+									</div>
 									<div className={styles.preferenceGroup}>
 										<div className={styles.preferenceTitle}>
 											<FiBell aria-hidden='true' />

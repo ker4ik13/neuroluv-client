@@ -8,6 +8,8 @@ $ai-header-menu-breakpoint: 1160;
 	--ai-bg: #f3f7fa;
 	--ai-surface: #ffffff;
 	--ai-surface-soft: #eaf2f7;
+	--ai-surface-muted: #f9fbfc;
+	--ai-field-bg: #f9fbfc;
 	--ai-border: #dce7ed;
 	--ai-text: #132838;
 	--ai-muted: #607484;
@@ -17,6 +19,7 @@ $ai-header-menu-breakpoint: 1160;
 	--ai-success: #148957;
 	--ai-warning: #b7650b;
 	--ai-error: #c43b4d;
+	--ai-danger: #c43b4d;
 	--ai-shadow: 0 #{rem(18)} #{rem(50)} rgba(19, 40, 56, 0.08);
 	--ai-radius-sm: #{rem(12)};
 	--ai-radius-md: #{rem(20)};
@@ -28,6 +31,38 @@ $ai-header-menu-breakpoint: 1160;
 		radial-gradient(
 			circle at 10% 0%,
 			rgba(13, 184, 209, 0.1),
+			transparent 30rem
+		),
+		radial-gradient(
+			circle at 90% 10%,
+			rgba(47, 128, 237, 0.1),
+			transparent 32rem
+		),
+		var(--ai-bg);
+}
+
+:global(html[data-ai-theme='dark']) .app {
+	--ai-bg: #0b1218;
+	--ai-surface: #111c25;
+	--ai-surface-soft: #182630;
+	--ai-surface-muted: #14212a;
+	--ai-field-bg: #0f1921;
+	--ai-border: #2a3d49;
+	--ai-text: #eaf3f8;
+	--ai-muted: #9bb0bd;
+	--ai-primary: #42a8ef;
+	--ai-primary-hover: #6dbbf2;
+	--ai-primary-soft: #142f43;
+	--ai-success: #45c58c;
+	--ai-warning: #e7a14d;
+	--ai-error: #ef7180;
+	--ai-danger: #ef7180;
+	--ai-shadow: 0 #{rem(18)} #{rem(50)} rgba(0, 0, 0, 0.34);
+
+	background:
+		radial-gradient(
+			circle at 10% 0%,
+			rgba(13, 184, 209, 0.09),
 			transparent 30rem
 		),
 		radial-gradient(
@@ -67,9 +102,9 @@ $ai-header-menu-breakpoint: 1160;
 		backdrop-filter: blur(rem(4));
 		background: linear-gradient(
 			180deg,
-			rgba($color-surface, 0.8) 0%,
-			rgba($color-surface, 0.7) 48%,
-			rgba($color-surface, 0) 100%
+			color-mix(in srgb, var(--ai-bg) 86%, transparent) 0%,
+			color-mix(in srgb, var(--ai-bg) 72%, transparent) 48%,
+			transparent 100%
 		);
 		content: '';
 		mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 100%);
@@ -94,10 +129,10 @@ $ai-header-menu-breakpoint: 1160;
 	margin: 0 auto;
 	padding: rem(12) rem(16);
 	pointer-events: auto;
-	color: $color-ink;
-	background: $color-white;
+	color: var(--ai-text);
+	background: var(--ai-surface);
 	border-radius: rem($radius-header);
-	box-shadow: 0 rem(10) rem(30) rgba($color-ink, 0.08);
+	box-shadow: var(--ai-shadow);
 }
 
 .brand {
@@ -111,7 +146,7 @@ $ai-header-menu-breakpoint: 1160;
 	flex: 0 1 auto;
 	align-items: center;
 	gap: rem(10);
-	color: $color-ink-soft;
+	color: var(--ai-text);
 
 	&:focus-visible {
 		@include focus-ring;
@@ -188,7 +223,7 @@ $ai-header-menu-breakpoint: 1160;
 	justify-content: flex-start;
 	gap: rem(12);
 	padding: rem(10) rem(16);
-	color: #15171a;
+	color: var(--ai-text);
 	font-size: rem(18);
 	white-space: nowrap;
 	border-radius: rem(12);
@@ -198,7 +233,7 @@ $ai-header-menu-breakpoint: 1160;
 
 	&:hover {
 		color: $color-cyan;
-		background-color: rgba(0, 0, 0, 0.03);
+		background-color: var(--ai-surface-soft);
 	}
 
 	&:focus-visible {
@@ -456,8 +491,8 @@ $ai-header-menu-breakpoint: 1160;
 		overflow-y: auto;
 		pointer-events: auto;
 		visibility: hidden;
-		background: $color-white;
-		border: rem(1) solid rgba($color-border, 0.9);
+		background: var(--ai-surface);
+		border: rem(1) solid var(--ai-border);
 		border-radius: rem(20);
 		box-shadow: 0 rem(22) rem(60) rgba($color-ink, 0.14);
 		opacity: 0;

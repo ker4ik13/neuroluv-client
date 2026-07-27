@@ -200,7 +200,7 @@
 	width: min(100%, rem(1180));
 	height: 100%;
 	min-height: 0;
-	background: #fff;
+	background: var(--ai-surface);
 	border: 0;
 	border-radius: rem(14);
 	box-shadow: 0 rem(14) rem(36) rgba(0, 0, 0, 0.32);
