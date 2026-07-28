@@ -3984,6 +3984,7 @@ function getDetailLabel(
   const normalized = String(value);
   const labels: Record<string, [string, string]> = {
     auto: ["Автоматическая", "Automatic"],
+    basic: ["Базовая", "Basic"],
     draft: ["Черновая", "Draft"],
     low: ["Низкая", "Low"],
     medium: ["Средняя", "Medium"],
