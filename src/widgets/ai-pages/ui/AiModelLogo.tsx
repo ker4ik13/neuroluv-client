@@ -5,6 +5,9 @@ import { RiSparkling2Fill } from "react-icons/ri";
 
 import styles from "./AiModelLogo.module.scss";
 
+const DARK_MONOCHROME_LOGO_PATTERN =
+  /^(?:ChatGPT|GPT(?:[-\s]|$)|OpenAI|Claude|Anthropic|Grok|xAI|Kling|Krea|Recraft)(?:\s|$)/iu;
+
 export function AiModelLogo({
   label,
   logoUrl,
@@ -16,11 +19,18 @@ export function AiModelLogo({
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const showImage = Boolean(logoUrl && failedUrl !== logoUrl);
+  const usesAdaptiveMonochromeLogo = DARK_MONOCHROME_LOGO_PATTERN.test(label.trim());
 
   return (
     <span
       aria-hidden="true"
-      className={`${styles.logo} ${size === "medium" ? styles.logoMedium : ""}`}
+      className={[
+        styles.logo,
+        size === "medium" ? styles.logoMedium : "",
+        usesAdaptiveMonochromeLogo ? styles.logoMonochrome : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       title={label}
     >
       {showImage ? (

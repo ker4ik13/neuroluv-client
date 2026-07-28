@@ -97,10 +97,12 @@
 	padding: rem(24);
 	color: var(--ai-primary);
 	text-align: center;
-	background: rgba(239, 248, 255, 0.94);
-	border: rem(2) dashed rgba(8, 127, 219, 0.58);
+	background: color-mix(in srgb, var(--ai-surface) 92%, transparent);
+	border: rem(2) dashed color-mix(in srgb, var(--ai-primary) 62%, var(--ai-border));
 	border-radius: rem(18);
-	box-shadow: inset 0 0 0 rem(1) rgba(255, 255, 255, 0.74);
+	box-shadow:
+		inset 0 0 0 rem(1) color-mix(in srgb, var(--ai-border) 72%, transparent),
+		0 rem(16) rem(42) color-mix(in srgb, #000 18%, transparent);
 	pointer-events: none;
 	backdrop-filter: blur(rem(8));
 
