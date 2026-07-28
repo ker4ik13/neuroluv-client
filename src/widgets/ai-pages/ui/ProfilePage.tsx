@@ -12,14 +12,21 @@ import {
 	FiLock,
 	FiLogOut,
 	FiMail,
-	FiMoon,
 	FiMessageCircle,
+	FiMoon,
 	FiSave,
 	FiSend,
 	FiShield,
 	FiUser,
 	FiUsers,
 } from 'react-icons/fi';
+import {
+	browserPushSubscriptionActive,
+	broadcastBrowserNotificationsPreference,
+	browserNotificationsSupported,
+	disableBrowserPushOnDevice,
+	enableBrowserPushOnDevice,
+} from '@/features/ai-browser-notifications';
 import { type AiLocale, useAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
 import { type AiTheme, useAiTheme } from '@/features/ai-theme';
@@ -58,6 +65,13 @@ export function ProfilePage() {
 	const [themePreference, setThemePreference] = useState<AiTheme>('system');
 	const [marketingConsent, setMarketingConsent] = useState(false);
 	const [productUpdates, setProductUpdates] = useState(false);
+	const [browserNotifications, setBrowserNotifications] = useState(false);
+	const [browserPushActive, setBrowserPushActive] = useState(false);
+	const [browserPushPending, setBrowserPushPending] = useState(false);
+	const [browserNotificationPermission, setBrowserNotificationPermission] =
+		useState<NotificationPermission | 'unsupported'>(() =>
+			browserNotificationsSupported() ? Notification.permission : 'unsupported',
+		);
 	const [isPending, setIsPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
@@ -95,10 +109,32 @@ export function ProfilePage() {
 			setTheme(nextTheme);
 			setMarketingConsent(Boolean(data.marketingConsent));
 			setProductUpdates(Boolean(data.productUpdates));
+			setBrowserNotifications(Boolean(data.preferences?.browserNotifications));
 		}, 0);
 
 		return () => window.clearTimeout(timer);
 	}, [profile.data, setTheme]);
+
+	useEffect(() => {
+		if (!session.authenticated) return;
+		let active = true;
+		void browserPushSubscriptionActive()
+			.then((subscribed) => {
+				if (!active) return;
+				setBrowserNotificationPermission(
+					browserNotificationsSupported()
+						? Notification.permission
+						: 'unsupported',
+				);
+				setBrowserPushActive(subscribed);
+			})
+			.catch(() => {
+				if (active) setBrowserPushActive(false);
+			});
+		return () => {
+			active = false;
+		};
+	}, [session.authenticated]);
 
 	if (!isSessionLoading && !session.authenticated) {
 		return (
@@ -130,17 +166,79 @@ export function ProfilePage() {
 					theme: themePreference,
 					marketingConsent,
 					emailProductNews: productUpdates,
+					browserNotifications,
 				},
 			});
 			unwrapAiData(payload);
 			setLocale(language);
 			await refresh();
 			profile.reload();
+			broadcastBrowserNotificationsPreference(
+				browserNotifications,
+				browserPushActive,
+			);
 			setNotice(t('Настройки сохранены', 'Settings saved'));
 		} catch (requestError) {
 			setError(getAiErrorMessage(requestError));
 		} finally {
 			setIsPending(false);
+		}
+	}
+
+	async function changeBrowserNotifications(nextEnabled: boolean) {
+		setError(null);
+		setBrowserPushPending(true);
+		try {
+			if (!nextEnabled) {
+				await disableBrowserPushOnDevice();
+				await aiApiFetch('/profile', {
+					method: 'PATCH',
+					body: { browserNotifications: false },
+				});
+				setBrowserNotifications(false);
+				setBrowserPushActive(false);
+				broadcastBrowserNotificationsPreference(false, false);
+				void profile.reload();
+				return;
+			}
+			if (!browserNotificationsSupported()) {
+				throw new Error(
+					t(
+						'Этот браузер не поддерживает Web Push',
+						'This browser does not support Web Push',
+					),
+				);
+			}
+
+			await enableBrowserPushOnDevice();
+			try {
+				await aiApiFetch('/profile', {
+					method: 'PATCH',
+					body: { browserNotifications: true },
+				});
+			} catch (requestError) {
+				await disableBrowserPushOnDevice();
+				throw requestError;
+			}
+			setBrowserNotificationPermission(Notification.permission);
+			setBrowserNotifications(true);
+			setBrowserPushActive(true);
+			broadcastBrowserNotificationsPreference(true, true);
+			void profile.reload();
+		} catch (requestError) {
+			const subscribed = await browserPushSubscriptionActive().catch(
+				() => false,
+			);
+			setBrowserPushActive(subscribed);
+			if (!subscribed) setBrowserNotifications(false);
+			setBrowserNotificationPermission(
+				browserNotificationsSupported()
+					? Notification.permission
+					: 'unsupported',
+			);
+			setError(getAiErrorMessage(requestError));
+		} finally {
+			setBrowserPushPending(false);
 		}
 	}
 
@@ -491,6 +589,69 @@ export function ProfilePage() {
 												</p>
 											</div>
 										</div>
+										<label className={styles.toggleField}>
+											<input
+												checked={browserNotifications}
+												disabled={browserPushPending}
+												type='checkbox'
+												onChange={(event) =>
+													void changeBrowserNotifications(event.target.checked)
+												}
+											/>
+											<span aria-hidden='true' />
+											<strong>
+												{t(
+													'Уведомления браузера о генерациях и оплатах',
+													'Browser notifications for generations and payments',
+												)}
+											</strong>
+										</label>
+										{browserNotifications && browserPushActive ? (
+											<FieldMessage tone='success'>
+												{t(
+													'Web Push подключён на этом устройстве.',
+													'Web Push is connected on this device.',
+												)}
+											</FieldMessage>
+										) : null}
+										{browserNotifications &&
+										(!browserPushActive ||
+											browserNotificationPermission !== 'granted') ? (
+											<div>
+												<FieldMessage tone='notice'>
+													{browserNotificationPermission === 'unsupported'
+														? t(
+																'Этот браузер не поддерживает системные уведомления.',
+																'This browser does not support system notifications.',
+															)
+															: browserNotificationPermission !== 'granted'
+																? t(
+																		'Разрешение ещё не выдано на этом устройстве.',
+																		'Permission has not been granted on this device yet.',
+																	)
+																: t(
+																		'Уведомления ещё не подключены на этом устройстве.',
+																		'Notifications are not connected on this device yet.',
+																	)}
+												</FieldMessage>
+												{browserNotificationPermission !== 'unsupported' ? (
+													<AiButton
+														disabled={browserPushPending}
+														type='button'
+														variant='secondary'
+														onClick={() =>
+															void changeBrowserNotifications(true)
+														}
+													>
+														<FiBell aria-hidden='true' />
+														{t(
+															'Разрешить на этом устройстве',
+															'Allow on this device',
+														)}
+													</AiButton>
+												) : null}
+											</div>
+										) : null}
 										<label className={styles.toggleField}>
 											<input
 												checked={productUpdates}

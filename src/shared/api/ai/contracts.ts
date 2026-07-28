@@ -515,6 +515,7 @@ export type AiPaymentSummary = {
 	title: string;
 	status: 'pending' | 'succeeded' | 'failed' | 'refunded' | string;
 	amountMinor: number;
+	credits?: number;
 	currency: string;
 	createdAt: string;
 	receiptUrl?: string | null;
@@ -533,6 +534,7 @@ export type AiUserProfile = {
 	productUpdates?: boolean;
 	preferences?: {
 		theme?: 'system' | 'light' | 'dark' | null;
+		browserNotifications?: boolean | null;
 	};
 	authMethods: {
 		emailPassword: boolean;

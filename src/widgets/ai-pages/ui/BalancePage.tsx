@@ -14,6 +14,10 @@ import {
 	FiUsers,
 	FiZap,
 } from 'react-icons/fi';
+import {
+	AI_PAYMENT_UPDATED_EVENT,
+	rememberPendingPayment,
+} from '@/features/ai-browser-notifications';
 import { useAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
 import {
@@ -55,7 +59,11 @@ type BillingPeriod = Extract<AiPlan['interval'], 'month' | 'year'>;
 
 export function BalancePage() {
 	const { locale, t } = useAiLocale();
-	const { session, isLoading: isSessionLoading } = useAiSession();
+	const {
+		session,
+		isLoading: isSessionLoading,
+		refresh: refreshSession,
+	} = useAiSession();
 	const wallet = useAiResource<AiWalletSummary>(
 		session.authenticated ? '/wallet/balance' : null,
 	);
@@ -85,8 +93,60 @@ export function BalancePage() {
 	);
 	const syncedActivePlanId = useRef<string | null>(null);
 	const checkoutDialogRef = useRef<HTMLDivElement>(null);
+	const refreshPayments = payments.refresh;
+	const refreshProducts = products.refresh;
+	const refreshWallet = wallet.refresh;
 
 	useFocusTrap(Boolean(checkoutProduct), checkoutDialogRef);
+
+	useEffect(() => {
+		const onPaymentUpdated = (event: Event) => {
+			const payment = (event as CustomEvent<AiPaymentSummary>).detail;
+			if (!payment?.id) return;
+
+			void Promise.all([
+				refreshWallet(),
+				refreshProducts(),
+				refreshPayments(),
+				refreshSession(),
+			]);
+			if (['paid', 'succeeded'].includes(payment.status)) {
+				setError(null);
+				setNotice(
+					payment.credits && payment.credits > 0
+						? t(
+								`Оплата прошла успешно. Начислено ${formatCredits(payment.credits, locale)}.`,
+								`Payment completed. ${formatCredits(payment.credits, locale)} added.`,
+							)
+						: t(
+								'Оплата прошла успешно. Баланс обновлён.',
+								'Payment completed. Your balance has been updated.',
+							),
+				);
+			} else if (
+				['canceled', 'cancelled', 'expired', 'failed'].includes(payment.status)
+			) {
+				setNotice(null);
+				setError(
+					t(
+						'Платёж не был завершён. Средства не списаны.',
+						'The payment was not completed. No funds were charged.',
+					),
+				);
+			}
+		};
+
+		window.addEventListener(AI_PAYMENT_UPDATED_EVENT, onPaymentUpdated);
+		return () =>
+			window.removeEventListener(AI_PAYMENT_UPDATED_EVENT, onPaymentUpdated);
+	}, [
+		locale,
+		refreshPayments,
+		refreshProducts,
+		refreshSession,
+		refreshWallet,
+		t,
+	]);
 
 	useEffect(() => {
 		if (!checkoutProduct) return;
@@ -245,6 +305,7 @@ export function BalancePage() {
 					),
 				);
 			}
+			rememberPendingPayment(checkout.paymentId);
 			window.location.assign(url.toString());
 		} catch (requestError) {
 			setError(getAiErrorMessage(requestError));
