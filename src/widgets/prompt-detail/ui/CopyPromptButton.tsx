@@ -6,10 +6,14 @@ import { AiOutlineCopy } from "react-icons/ai";
 import styles from "./PromptDetailPage.module.scss";
 
 type CopyPromptButtonProps = {
+  label?: string;
   text: string;
 };
 
-export function CopyPromptButton({ text }: CopyPromptButtonProps) {
+export function CopyPromptButton({
+  label = "Скопировать промпт",
+  text,
+}: CopyPromptButtonProps) {
   const [isCopied, setIsCopied] = useState(false);
 
   async function handleCopy() {
@@ -25,8 +29,8 @@ export function CopyPromptButton({ text }: CopyPromptButtonProps) {
   }
 
   return (
-    <button className={styles.copyButton} onClick={handleCopy} type="button">
-      {isCopied ? "Скопировано" : "Скопировать промпт"}
+    <button className={styles.heroActionButton} onClick={handleCopy} type="button">
+      {isCopied ? "Скопировано" : label}
       <AiOutlineCopy aria-hidden="true" />
     </button>
   );

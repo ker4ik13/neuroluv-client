@@ -69,16 +69,27 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
           <h1 className={styles.heroTitle}>{item.title}</h1>
           <p className={styles.heroDescription}>{item.description}</p>
           <div className={styles.heroActions}>
-            {!item.isPaid && <CopyPromptButton text={item.promptText} />}
-            <a
-              className={styles.adaptButton}
-              href="https://t.me/imishka0"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Заказать адаптацию
-              <FaArrowRight aria-hidden="true" />
-            </a>
+            {item.aiEnabled ? (
+              <Link
+                className={styles.heroActionButton}
+                href={`/ai/prompts/${item.slug}`}
+              >
+                Сгенерировать
+                <FaArrowRight aria-hidden="true" />
+              </Link>
+            ) : item.isPaid ? (
+              <a
+                className={styles.heroActionButton}
+                href="https://t.me/imishka0"
+                rel="noreferrer"
+                target="_blank"
+              >
+                Заказать
+                <FaArrowRight aria-hidden="true" />
+              </a>
+            ) : (
+              <CopyPromptButton label="Скопировать" text={item.promptText} />
+            )}
           </div>
           <div className={styles.heroMeta}>
             {item.neuralNetwork && (

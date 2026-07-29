@@ -124,8 +124,7 @@ $sticky-sidebar-top: 112;
 	}
 }
 
-.copyButton,
-.adaptButton {
+.heroActionButton {
 	@include body-font(700);
 
 	display: inline-flex;
@@ -137,13 +136,16 @@ $sticky-sidebar-top: 112;
 	color: $color-white;
 	font-size: rem(18);
 	line-height: 1;
-	background: $color-cyan;
+	background: $color-blue;
 	border: 0;
 	border-radius: rem(16);
 	cursor: pointer;
-	transition: transform 160ms ease;
+	transition:
+		background-color 160ms ease,
+		transform 160ms ease;
 
 	&:hover {
+		background: $color-blue-hover;
 		transform: translateY(rem(-2));
 	}
 
@@ -167,10 +169,6 @@ $sticky-sidebar-top: 112;
 			height: rem(18);
 		}
 	}
-}
-
-.adaptButton {
-	background: $color-blue;
 }
 
 .heroMeta {
