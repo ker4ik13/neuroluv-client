@@ -22,6 +22,7 @@ import { useAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
 import {
 	type AiApiEnvelope,
+	AiApiError,
 	aiApiFetch,
 	type AiBillingProducts,
 	type AiPage as AiPageData,
@@ -225,7 +226,6 @@ export function BalancePage() {
 		if (product.type === 'subscription' && product.value.id === activePlanId) {
 			return;
 		}
-		checkoutIntent.current = null;
 		setPaymentProviderId('');
 		setAutoRenew(product.type === 'subscription');
 		setPromoCode('');
@@ -275,6 +275,7 @@ export function BalancePage() {
 			>('/billing/checkout', {
 				method: 'POST',
 				headers: { 'idempotency-key': checkoutIntent.current.key },
+				timeoutMs: 40_000,
 				body: {
 					productType: checkoutProduct.type,
 					productId: checkoutProduct.value.id,
@@ -285,6 +286,7 @@ export function BalancePage() {
 			});
 			const checkout = unwrapAiData(payload);
 			if (!checkout.checkoutUrl) {
+				checkoutIntent.current = null;
 				closeCheckout();
 				setNotice(
 					t(
@@ -305,9 +307,16 @@ export function BalancePage() {
 					),
 				);
 			}
+			checkoutIntent.current = null;
 			rememberPendingPayment(checkout.paymentId);
 			window.location.assign(url.toString());
 		} catch (requestError) {
+			if (
+				requestError instanceof AiApiError &&
+				requestError.problem.status < 500
+			) {
+				checkoutIntent.current = null;
+			}
 			setError(getAiErrorMessage(requestError));
 		} finally {
 			setIsPending(false);
