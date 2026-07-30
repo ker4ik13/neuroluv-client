@@ -11,6 +11,7 @@ import type {
 	NavigationItem,
 	SocialLink,
 } from '@/entities/navigation';
+import { useBodyScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
 import { AppIcon } from '@/shared/ui/app-icon';
 import { BrandIcon } from '@/shared/ui/brand-icon';
 import { Container } from '@/shared/ui/container';
@@ -31,14 +32,9 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 	const [desktopValue, setDesktopValue] = useState('');
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [mobileSectionId, setMobileSectionId] = useState<number | null>(null);
+	const isNavigationOpen = Boolean(desktopValue) || isMobileMenuOpen;
 
-	useEffect(() => {
-		document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
-
-		return () => {
-			document.body.style.overflow = '';
-		};
-	}, [isMobileMenuOpen]);
+	useBodyScrollLock(isNavigationOpen);
 
 	useEffect(() => {
 		function handleEscape(event: KeyboardEvent) {
@@ -143,6 +139,13 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 					</div>
 				</div>
 			</Container>
+			<button
+				aria-label='Закрыть меню'
+				className={`${styles.menuBackdrop} ${isNavigationOpen ? styles.menuBackdropOpen : ''}`}
+				disabled={!isNavigationOpen}
+				type='button'
+				onClick={closeNavigation}
+			/>
 		</header>
 	);
 }

@@ -37,6 +37,7 @@ import {
 	type AiNavigationResponse,
 	type AiSession,
 } from '@/shared/api/ai';
+import { useBodyScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
 import { formatCreditNumber, formatCredits } from '@/shared/lib/formatCredits';
 import { AppIcon } from '@/shared/ui/app-icon';
 import { Container } from '@/shared/ui/container';
@@ -112,6 +113,9 @@ function AiShellContent({
 	const [mobileSectionId, setMobileSectionId] = useState<string | null>(null);
 	const [apiNavigation, setApiNavigation] = useState<AiNavigationItem[]>([]);
 	const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
+	const isNavigationOpen = Boolean(desktopValue) || isMenuOpen;
+
+	useBodyScrollLock(isNavigationOpen);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -143,17 +147,6 @@ function AiShellContent({
 
 		return () => window.clearTimeout(timer);
 	}, [pathname]);
-
-	useEffect(() => {
-		if (!isMenuOpen) return;
-
-		const previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
-
-		return () => {
-			document.body.style.overflow = previousOverflow;
-		};
-	}, [isMenuOpen]);
 
 	useEffect(() => {
 		function handleEscape(event: KeyboardEvent) {
@@ -362,6 +355,13 @@ function AiShellContent({
 						</nav>
 					</div>
 				</Container>
+				<button
+					aria-label={t('Закрыть меню', 'Close menu')}
+					className={`${styles.menuBackdrop} ${isNavigationOpen ? styles.menuBackdropOpen : ''}`}
+					disabled={!isNavigationOpen}
+					type='button'
+					onClick={closeNavigation}
+				/>
 			</header>
 
 			<main
