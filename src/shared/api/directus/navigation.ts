@@ -30,10 +30,16 @@ type DirectusNavigationItem = {
   children?: DirectusNavigationItem[];
 };
 
+type DirectusMenuItem = {
+  id: number;
+  sort: number | null;
+  navigation_items_id: DirectusNavigationItem | number | null;
+};
+
 type DirectusHeaderMenu = {
   id: number;
   is_active: boolean | null;
-  items?: DirectusNavigationItem[];
+  menu_items?: DirectusMenuItem[];
 };
 
 type DirectusSiteSettings = {
@@ -69,34 +75,36 @@ const HEADER_SETTINGS_FIELDS = [
   "logo.height",
   "header_navigation.id",
   "header_navigation.is_active",
-  "header_navigation.items.id",
-  "header_navigation.items.sort",
-  "header_navigation.items.label",
-  "header_navigation.items.type",
-  "header_navigation.items.url",
-  "header_navigation.items.page_slug",
-  "header_navigation.items.anchor",
-  "header_navigation.items.target",
-  "header_navigation.items.is_active",
-  "header_navigation.items.is_highlighted",
-  "header_navigation.items.icon.title",
-  "header_navigation.items.icon.code",
-  "header_navigation.items.icon.library",
-  "header_navigation.items.icon.is_active",
-  "header_navigation.items.children.id",
-  "header_navigation.items.children.sort",
-  "header_navigation.items.children.label",
-  "header_navigation.items.children.type",
-  "header_navigation.items.children.url",
-  "header_navigation.items.children.page_slug",
-  "header_navigation.items.children.anchor",
-  "header_navigation.items.children.target",
-  "header_navigation.items.children.is_active",
-  "header_navigation.items.children.is_highlighted",
-  "header_navigation.items.children.icon.title",
-  "header_navigation.items.children.icon.code",
-  "header_navigation.items.children.icon.library",
-  "header_navigation.items.children.icon.is_active",
+  "header_navigation.menu_items.id",
+  "header_navigation.menu_items.sort",
+  "header_navigation.menu_items.navigation_items_id.id",
+  "header_navigation.menu_items.navigation_items_id.sort",
+  "header_navigation.menu_items.navigation_items_id.label",
+  "header_navigation.menu_items.navigation_items_id.type",
+  "header_navigation.menu_items.navigation_items_id.url",
+  "header_navigation.menu_items.navigation_items_id.page_slug",
+  "header_navigation.menu_items.navigation_items_id.anchor",
+  "header_navigation.menu_items.navigation_items_id.target",
+  "header_navigation.menu_items.navigation_items_id.is_active",
+  "header_navigation.menu_items.navigation_items_id.is_highlighted",
+  "header_navigation.menu_items.navigation_items_id.icon.title",
+  "header_navigation.menu_items.navigation_items_id.icon.code",
+  "header_navigation.menu_items.navigation_items_id.icon.library",
+  "header_navigation.menu_items.navigation_items_id.icon.is_active",
+  "header_navigation.menu_items.navigation_items_id.children.id",
+  "header_navigation.menu_items.navigation_items_id.children.sort",
+  "header_navigation.menu_items.navigation_items_id.children.label",
+  "header_navigation.menu_items.navigation_items_id.children.type",
+  "header_navigation.menu_items.navigation_items_id.children.url",
+  "header_navigation.menu_items.navigation_items_id.children.page_slug",
+  "header_navigation.menu_items.navigation_items_id.children.anchor",
+  "header_navigation.menu_items.navigation_items_id.children.target",
+  "header_navigation.menu_items.navigation_items_id.children.is_active",
+  "header_navigation.menu_items.navigation_items_id.children.is_highlighted",
+  "header_navigation.menu_items.navigation_items_id.children.icon.title",
+  "header_navigation.menu_items.navigation_items_id.children.icon.code",
+  "header_navigation.menu_items.navigation_items_id.children.icon.library",
+  "header_navigation.menu_items.navigation_items_id.children.icon.is_active",
 ].join(",");
 
 const HEADER_SOCIAL_FIELDS = [
@@ -125,7 +133,7 @@ export async function getHeaderNavigation(): Promise<HeaderNavigation> {
   return {
     siteName: settings.short_name || settings.site_name || "Нейролюб",
     logo: normalizeLogo(settings.logo),
-    items: normalizeMenuItems(settings.header_navigation?.items || []),
+    items: normalizeMenuItems(settings.header_navigation?.menu_items || []),
     socialLinks: socialLinks.map(normalizeSocialLink).filter(isSocialLink),
   };
 }
@@ -156,19 +164,53 @@ function normalizeLogo(logo: DirectusFile | string | null): NavigationLogo | nul
   };
 }
 
-function normalizeMenuItems(items: DirectusNavigationItem[]): NavigationItem[] {
+function normalizeMenuItems(items: DirectusMenuItem[]): NavigationItem[] {
   return items
-    .filter((item) => item.is_active !== false && item.label)
+    .filter(hasPopulatedNavigationItem)
+    .sort(sortByMenuItemSort)
+    .map(({ navigation_items_id: item }) =>
+      normalizeNavigationItem(item, normalizeChildItems(item.children || [])),
+    );
+}
+
+function normalizeChildItems(items: DirectusNavigationItem[]): NavigationItem[] {
+  return items
+    .filter(isVisibleNavigationItem)
     .sort(sortByDirectusSort)
-    .map((item) => ({
-      id: item.id,
-      label: item.label || "",
-      href: buildItemHref(item),
-      target: item.target || "_self",
-      icon: normalizeIcon(item.icon),
-      isHighlighted: Boolean(item.is_highlighted),
-      children: normalizeMenuItems(item.children || []),
-    }));
+    .map((item) => normalizeNavigationItem(item, []));
+}
+
+function normalizeNavigationItem(
+  item: DirectusNavigationItem,
+  children: NavigationItem[],
+): NavigationItem {
+  return {
+    id: item.id,
+    label: item.label || "",
+    href: buildItemHref(item),
+    target: item.target || "_self",
+    icon: normalizeIcon(item.icon),
+    isHighlighted: Boolean(item.is_highlighted),
+    children,
+  };
+}
+
+function hasPopulatedNavigationItem(
+  menuItem: DirectusMenuItem,
+): menuItem is DirectusMenuItem & {
+  navigation_items_id: DirectusNavigationItem;
+} {
+  return (
+    typeof menuItem.navigation_items_id === "object" &&
+    menuItem.navigation_items_id !== null &&
+    isVisibleNavigationItem(menuItem.navigation_items_id)
+  );
+}
+
+function isVisibleNavigationItem(
+  item: DirectusNavigationItem,
+): item is DirectusNavigationItem & { label: string } {
+  return item.is_active !== false && Boolean(item.label);
 }
 
 function normalizeSocialLink(link: DirectusSocialLink): SocialLink | null {
@@ -218,4 +260,21 @@ function sortByDirectusSort(
   second: DirectusNavigationItem,
 ): number {
   return (first.sort || 0) - (second.sort || 0);
+}
+
+function sortByMenuItemSort(
+  first: DirectusMenuItem,
+  second: DirectusMenuItem,
+): number {
+  return getMenuItemSort(first) - getMenuItemSort(second);
+}
+
+function getMenuItemSort(menuItem: DirectusMenuItem): number {
+  const navigationItem = menuItem.navigation_items_id;
+  const navigationItemSort =
+    typeof navigationItem === "object" && navigationItem !== null
+      ? navigationItem.sort
+      : null;
+
+  return menuItem.sort ?? navigationItemSort ?? 0;
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { getHeaderNavigation } from "@/shared/api/directus/navigation";
 import { getSiteSeo } from "@/shared/api/directus/seo";
 import { buildSiteJsonLd } from "@/shared/lib/seo/json-ld";
 import { buildSiteMetadata } from "@/shared/lib/seo/metadata";
@@ -19,12 +20,15 @@ export default async function UserLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const seo = await getSiteSeo();
+  const [seo, navigation] = await Promise.all([
+    getSiteSeo(),
+    getHeaderNavigation().catch(() => null),
+  ]);
 
   return (
     <>
-      <JsonLd data={buildSiteJsonLd(seo)} />
-      <Header />
+      <JsonLd data={buildSiteJsonLd(seo, navigation)} />
+      <Header navigation={navigation} />
       <main>{children}</main>
       <Footer />
       <YandexMetrika />

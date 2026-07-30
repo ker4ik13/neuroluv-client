@@ -1,4 +1,6 @@
 import type { PageBlock } from "@/entities/page";
+import { buildFaqPageJsonLd } from "@/shared/lib/seo/json-ld";
+import { JsonLd } from "@/shared/ui/json-ld";
 import { ArticlesBlock } from "@/widgets/page-blocks/ui/articles-block/ArticlesBlock";
 import { AboutBlock } from "@/widgets/page-blocks/ui/about-block/AboutBlock";
 import { BigCtaBlock } from "@/widgets/page-blocks/ui/big-cta-block/BigCtaBlock";
@@ -60,6 +62,7 @@ const blockRenderers = {
 export function PageBlocks({ blocks }: PageBlocksProps) {
   return (
     <>
+      <JsonLd data={buildFaqPageJsonLd(blocks)} />
       {blocks.map((block) => {
         return (
           <PageBlockItem block={block} key={`${block.type}-${block.id}`} />

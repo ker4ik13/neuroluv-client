@@ -1,8 +1,7 @@
-import 'server-only';
-
 import type { Metadata } from 'next';
-
+import 'server-only';
 import { getAiPageMetadata } from '@/shared/api/ai/public';
+import { getSiteSeo } from '@/shared/api/directus/seo';
 import { resolveSeoTemplate } from '@/shared/lib/seo/metadata';
 
 type AiMetadataFallback = {
@@ -19,7 +18,10 @@ export async function buildAiPageMetadata(
 		indexable?: boolean;
 	} = {},
 ): Promise<Metadata> {
-	const page = await getAiPageMetadata(path);
+	const [page, siteSeo] = await Promise.all([
+		getAiPageMetadata(path),
+		getSiteSeo(),
+	]);
 	const variables = {
 		SITE_NAME: page?.siteName || 'Нейролюб Studio',
 	};
@@ -33,6 +35,7 @@ export async function buildAiPageMetadata(
 	);
 	const index = options.indexable === true && page?.noindex !== true;
 	const canonicalPath = options.canonicalPath || path;
+	const imageUrl = page?.imageUrl || siteSeo.defaultOgImage?.url;
 
 	return {
 		title: options.absoluteTitle ? { absolute: title } : title,
@@ -46,13 +49,13 @@ export async function buildAiPageMetadata(
 			siteName: variables.SITE_NAME,
 			url: canonicalPath,
 			type: 'website',
-			...(page?.imageUrl ? { images: [{ url: page.imageUrl }] } : {}),
+			...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
 		},
 		twitter: {
-			card: page?.imageUrl ? 'summary_large_image' : 'summary',
+			card: imageUrl ? 'summary_large_image' : 'summary',
 			title,
 			description,
-			...(page?.imageUrl ? { images: [page.imageUrl] } : {}),
+			...(imageUrl ? { images: [imageUrl] } : {}),
 		},
 	};
 }

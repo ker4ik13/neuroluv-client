@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { PageSeo, SeoAsset, SiteSeo } from '@/entities/seo';
+import { getSiteSeo } from '@/shared/api/directus/seo';
 import {
 	GOOGLE_SITE_VERIFICATION,
 	SITE_URL,
@@ -72,10 +73,10 @@ function buildVerification(): Metadata['verification'] {
 	};
 }
 
-export function buildPageMetadata(
+export async function buildPageMetadata(
 	seo: PageSeo | null,
 	options: BuildPageMetadataOptions = {},
-): Metadata {
+): Promise<Metadata> {
 	const variables = normalizeVariables({
 		...DEFAULT_VARIABLES,
 		...options.variables,
@@ -94,7 +95,8 @@ export function buildPageMetadata(
 		seo?.ogDescription || description,
 		variables,
 	);
-	const image = seo?.ogImage || options.fallbackImage || null;
+	const pageImage = seo?.ogImage || options.fallbackImage || null;
+	const image = pageImage || (await getSiteSeo()).defaultOgImage;
 	const canonical = resolveCanonicalUrl(
 		seo?.canonicalUrl || options.canonicalUrl || options.canonicalPath,
 		variables,

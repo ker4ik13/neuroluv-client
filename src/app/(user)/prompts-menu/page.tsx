@@ -5,7 +5,10 @@ import type { PromptsMenuPageData } from "@/entities/prompt";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPromptsMenuPageData } from "@/shared/api/directus/prompts";
 import { getPageSeoBySlug } from "@/shared/api/directus/seo";
-import { buildWebPageJsonLd } from "@/shared/lib/seo/json-ld";
+import {
+  buildBreadcrumbJsonLd,
+  buildWebPageJsonLd,
+} from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { JsonLd } from "@/shared/ui/json-ld";
 import { PageBlocks } from "@/widgets/page-blocks";
@@ -52,12 +55,18 @@ export default async function PromptsMenuRoute() {
   return (
     <>
       <JsonLd
-        data={buildWebPageJsonLd({
-          description,
-          title,
-          type: "CollectionPage",
-          url: "/prompts-menu",
-        })}
+        data={[
+          buildWebPageJsonLd({
+            description,
+            title,
+            type: "CollectionPage",
+            url: "/prompts-menu",
+          }),
+          buildBreadcrumbJsonLd([
+            { name: "Главная", url: "/" },
+            { name: "Каталог промптов", url: "/prompts-menu" },
+          ]),
+        ]}
       />
       {heroBlock && <PageBlocks blocks={[heroBlock]} />}
       <PromptsMenuPage data={data} />

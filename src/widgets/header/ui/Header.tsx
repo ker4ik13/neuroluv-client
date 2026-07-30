@@ -10,13 +10,19 @@ const FALLBACK_NAVIGATION: HeaderNavigation = {
   socialLinks: [],
 };
 
-export async function Header() {
-  let navigation = FALLBACK_NAVIGATION;
+type HeaderProps = {
+  navigation?: HeaderNavigation | null;
+};
 
-  try {
-    navigation = await getHeaderNavigation();
-  } catch {
-    navigation = FALLBACK_NAVIGATION;
+export async function Header({ navigation: providedNavigation }: HeaderProps = {}) {
+  let navigation = providedNavigation || FALLBACK_NAVIGATION;
+
+  if (providedNavigation === undefined) {
+    try {
+      navigation = await getHeaderNavigation();
+    } catch {
+      navigation = FALLBACK_NAVIGATION;
+    }
   }
 
   return <HeaderView navigation={navigation} />;

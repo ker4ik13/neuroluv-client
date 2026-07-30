@@ -5,7 +5,10 @@ import { splitFirstHeroBlock, type PageBlock } from "@/entities/page";
 import { getNewsPageData } from "@/shared/api/directus/news";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoByPath } from "@/shared/api/directus/seo";
-import { buildWebPageJsonLd } from "@/shared/lib/seo/json-ld";
+import {
+  buildBreadcrumbJsonLd,
+  buildWebPageJsonLd,
+} from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
 import { JsonLd } from "@/shared/ui/json-ld";
@@ -98,12 +101,18 @@ export default async function NewsRoute({ searchParams }: NewsRouteProps) {
   return (
     <>
       <JsonLd
-        data={buildWebPageJsonLd({
-          description: heroDescription,
-          title: heroTitle,
-          type: "CollectionPage",
-          url: currentPath,
-        })}
+        data={[
+          buildWebPageJsonLd({
+            description: heroDescription,
+            title: heroTitle,
+            type: "CollectionPage",
+            url: currentPath,
+          }),
+          buildBreadcrumbJsonLd([
+            { name: "Главная", url: "/" },
+            { name: "Новости", url: "/news" },
+          ]),
+        ]}
       />
       {heroBlock && <PageBlocks blocks={[heroBlock]} />}
       <NewsPage

@@ -1,5 +1,6 @@
 import type { NewsItem } from "@/entities/news";
-import type { Page } from "@/entities/page";
+import type { Page, PageBlock } from "@/entities/page";
+import type { HeaderNavigation, NavigationItem } from "@/entities/navigation";
 import type { PromptItem, PromptTaxonomy } from "@/entities/prompt";
 import type { SeoAsset, SiteSeo } from "@/entities/seo";
 import { SITE_URL } from "@/shared/config/site";
@@ -19,23 +20,35 @@ type WebPageJsonLdOptions = {
   url: string;
 };
 
-export function buildSiteJsonLd(seo: SiteSeo): JsonLdObject[] {
+export function buildSiteJsonLd(
+  seo: SiteSeo,
+  navigation?: HeaderNavigation | null,
+): JsonLdObject[] {
   const logo = seo.logo || seo.favicon || seo.defaultOgImage;
+  const navigationJsonLd = buildSiteNavigationJsonLd(navigation?.items || []);
 
   return [
     removeEmptyValues({
       "@context": "https://schema.org",
       "@id": `${SITE_URL}/#organization`,
       "@type": "Organization",
-      name: seo.siteName,
-      url: SITE_URL,
+      description: seo.siteDescription || seo.defaultMetaDescription,
       logo: logo ? buildImageObject(logo) : undefined,
+      name: seo.siteName,
+      sameAs: navigation?.socialLinks.map((link) => link.url),
+      url: SITE_URL,
     }),
     removeEmptyValues({
       "@context": "https://schema.org",
       "@id": `${SITE_URL}/#website`,
       "@type": "WebSite",
+      alternateName: seo.shortName !== seo.siteName ? seo.shortName : undefined,
       description: seo.siteDescription || seo.defaultMetaDescription,
+      hasPart: navigationJsonLd
+        ? {
+            "@id": `${SITE_URL}/#primary-navigation`,
+          }
+        : undefined,
       inLanguage: "ru-RU",
       name: seo.siteName,
       publisher: {
@@ -43,7 +56,8 @@ export function buildSiteJsonLd(seo: SiteSeo): JsonLdObject[] {
       },
       url: SITE_URL,
     }),
-  ];
+    navigationJsonLd,
+  ].filter((item): item is JsonLdObject => item !== null);
 }
 
 export function buildWebPageJsonLd({
@@ -81,15 +95,84 @@ export function buildPageJsonLd(
 }
 
 export function buildBreadcrumbJsonLd(items: BreadcrumbItem[]): JsonLdObject {
+  const normalizedItems = items
+    .map((item) => ({
+      name: toPlainText(item.name),
+      url: toAbsoluteUrl(item.url),
+    }))
+    .filter((item) => item.name && isSiteUrl(item.url));
+  const pageUrl = normalizedItems.at(-1)?.url || SITE_URL;
+
   return {
     "@context": "https://schema.org",
+    "@id": `${pageUrl}#breadcrumb`,
     "@type": "BreadcrumbList",
-    itemListElement: items.map((item, index) => ({
+    itemListElement: normalizedItems.map((item, index) => ({
       "@type": "ListItem",
-      item: toAbsoluteUrl(item.url),
+      item: item.url,
       name: item.name,
       position: index + 1,
+      url: item.url,
     })),
+  };
+}
+
+export function buildFaqPageJsonLd(blocks: PageBlock[]): JsonLdObject | null {
+  const questions = blocks
+    .filter(
+      (block): block is Extract<PageBlock, { type: "faq" }> => block.type === "faq",
+    )
+    .flatMap((block) => block.questions)
+    .map((question) => ({
+      answer: toPlainText(question.answer),
+      question: toPlainText(question.title),
+    }))
+    .filter((item) => item.question && item.answer);
+
+  if (questions.length === 0) {
+    return null;
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: questions.map((item) => ({
+      "@type": "Question",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+      name: item.question,
+    })),
+  };
+}
+
+export function buildSiteNavigationJsonLd(items: NavigationItem[]): JsonLdObject | null {
+  const navigationItems = flattenNavigation(items)
+    .map((item) => ({
+      name: toPlainText(item.label),
+      url: toAbsoluteUrl(item.href),
+    }))
+    .filter((item) => item.name && isSiteUrl(item.url));
+
+  if (navigationItems.length === 0) {
+    return null;
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@id": `${SITE_URL}/#primary-navigation`,
+    "@type": "ItemList",
+    itemListElement: navigationItems.map((item, index) => ({
+      "@type": "ListItem",
+      item: {
+        "@type": "SiteNavigationElement",
+        name: item.name,
+        url: item.url,
+      },
+      position: index + 1,
+    })),
+    name: "Основная навигация",
   };
 }
 
@@ -204,6 +287,53 @@ function toAbsoluteUrl(value: string): string {
   const path = value.startsWith("/") ? value : `/${value}`;
 
   return `${SITE_URL}${path}`;
+}
+
+function flattenNavigation(items: NavigationItem[]): NavigationItem[] {
+  const result: NavigationItem[] = [];
+  const seenUrls = new Set<string>();
+
+  function visit(entries: NavigationItem[]) {
+    for (const item of entries) {
+      const url = toAbsoluteUrl(item.href);
+
+      if (
+        item.target === "_self" &&
+        !item.href.startsWith("#") &&
+        isSiteUrl(url) &&
+        !seenUrls.has(url)
+      ) {
+        result.push(item);
+        seenUrls.add(url);
+      }
+
+      visit(item.children);
+    }
+  }
+
+  visit(items);
+  return result;
+}
+
+function isSiteUrl(value: string): boolean {
+  try {
+    return new URL(value).origin === new URL(SITE_URL).origin;
+  } catch {
+    return false;
+  }
+}
+
+function toPlainText(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function removeEmptyValues(source: JsonLdObject): JsonLdObject {

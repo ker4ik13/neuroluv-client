@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { splitFirstHeroBlock } from "@/entities/page";
 import { getPageBySlug } from "@/shared/api/directus/pages";
 import { getPageSeoBySlug } from "@/shared/api/directus/seo";
-import { buildPageJsonLd } from "@/shared/lib/seo/json-ld";
+import { buildBreadcrumbJsonLd, buildPageJsonLd } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
 import { JsonLd } from "@/shared/ui/json-ld";
 import { PageBlocks } from "@/widgets/page-blocks";
@@ -52,10 +52,16 @@ export default async function DynamicPage({ params }: DynamicPageProps) {
   return (
     <>
       <JsonLd
-        data={buildPageJsonLd(page, {
-          title: page.title,
-          url: pageSlug,
-        })}
+        data={[
+          buildPageJsonLd(page, {
+            title: page.title,
+            url: pageSlug,
+          }),
+          buildBreadcrumbJsonLd([
+            { name: "Главная", url: "/" },
+            { name: page.title, url: pageSlug },
+          ]),
+        ]}
       />
       {heroBlock && <PageBlocks blocks={[heroBlock]} />}
       <PageBlocks blocks={remainingBlocks} />

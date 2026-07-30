@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { SITE_URL } from "@/shared/config/site";
 import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
+import { buildBreadcrumbJsonLd } from "@/shared/lib/seo/json-ld";
 import { JsonLd } from "@/shared/ui/json-ld";
 import { CreateStudioPage } from "@/widgets/ai-pages";
 
@@ -20,7 +21,15 @@ export function generateMetadata(): Promise<Metadata> {
 export default function AiPage() {
   return (
     <>
-      <JsonLd data={AI_LANDING_JSON_LD} />
+      <JsonLd
+        data={[
+          AI_LANDING_JSON_LD,
+          buildBreadcrumbJsonLd([
+            { name: "Главная", url: "/" },
+            { name: "Нейролюб Studio", url: "/ai" },
+          ]),
+        ]}
+      />
       <CreateStudioPage kind="entry" />
     </>
   );
