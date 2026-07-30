@@ -11,6 +11,34 @@ const AI_API_URL = (
     : "http://localhost:4000/v1")
 ).replace(/\/$/, "");
 const REDIRECTS_CACHE_TTL_MS = 60_000;
+const YANDEX_METRIKA_HOSTS = [
+  "mc.yandex.ru",
+  "mc.yandex.az",
+  "mc.yandex.by",
+  "mc.yandex.co.il",
+  "mc.yandex.com",
+  "mc.yandex.com.am",
+  "mc.yandex.com.ge",
+  "mc.yandex.com.tr",
+  "mc.yandex.ee",
+  "mc.yandex.fr",
+  "mc.yandex.kg",
+  "mc.yandex.kz",
+  "mc.yandex.lt",
+  "mc.yandex.lv",
+  "mc.yandex.md",
+  "mc.yandex.tj",
+  "mc.yandex.tm",
+  "mc.yandex.uz",
+  "mc.webvisor.com",
+  "mc.webvisor.org",
+] as const;
+const YANDEX_METRIKA_HTTPS_ORIGINS = YANDEX_METRIKA_HOSTS.map(
+  (host) => `https://${host}`,
+);
+const YANDEX_METRIKA_WSS_ORIGINS = YANDEX_METRIKA_HOSTS.map(
+  (host) => `wss://${host}`,
+);
 
 type DirectusRedirect = {
   from_path: string | null;
@@ -90,16 +118,23 @@ function nextAiResponse(request: NextRequest): NextResponse {
 function buildAiContentSecurityPolicy(nonce: string): string {
   const directusOrigin = new URL(DIRECTUS_URL).origin;
   const apiOrigin = new URL(AI_API_URL).origin;
+  const metrikaHttpsOrigins = YANDEX_METRIKA_HTTPS_ORIGINS.join(" ");
+  const metrikaConnectOrigins = [
+    ...YANDEX_METRIKA_HTTPS_ORIGINS,
+    ...YANDEX_METRIKA_WSS_ORIGINS,
+  ].join(" ");
   const developmentScriptPolicy =
     process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${developmentScriptPolicy}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://mc.yandex.ru https://yastatic.net${developmentScriptPolicy}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${apiOrigin} ${directusOrigin}`,
+    `connect-src 'self' ${apiOrigin} ${directusOrigin} ${metrikaConnectOrigins}`,
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https:",
     "font-src 'self' data:",
+    `child-src blob: ${metrikaHttpsOrigins}`,
+    `frame-src blob: ${metrikaHttpsOrigins}`,
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",

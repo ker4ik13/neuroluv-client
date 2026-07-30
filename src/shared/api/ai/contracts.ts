@@ -14,6 +14,7 @@ export type AiNavigationItem = {
 	ariaLabel?: string | null;
 	href: string;
 	icon?: string | null;
+	badgeText?: string | null;
 	sort?: number | null;
 	children?: AiNavigationItem[];
 };

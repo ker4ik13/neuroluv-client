@@ -23,6 +23,12 @@ const FALLBACK_FOOTER: FooterData = {
 	copyrightText: '© 2026 Нейролюб. Все права защищены',
 	developerLabel: '@ker4ik13',
 	developerUrl: 'https://t.me/ker4ik13',
+	contactLink: {
+		id: 'contacts',
+		label: 'Контакты',
+		href: '/contacts',
+		target: '_self',
+	},
 	legalLinks: [
 		{
 			id: 'user-agreement',
@@ -52,12 +58,6 @@ const FALLBACK_FOOTER: FooterData = {
 			id: 'marketing-consent',
 			label: 'Согласие на рассылки',
 			href: '/legal/marketing-consent',
-			target: '_self',
-		},
-		{
-			id: 'contacts',
-			label: 'Контакты',
-			href: '/contacts',
 			target: '_self',
 		},
 	],

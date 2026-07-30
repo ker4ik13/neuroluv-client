@@ -1,6 +1,7 @@
 import { createElement, type ComponentType } from "react";
 import type { IconType } from "react-icons";
 import * as AiIcons from "react-icons/ai";
+import * as BsIcons from "react-icons/bs";
 import * as FaIcons from "react-icons/fa";
 
 type IconRendererProps = {
@@ -12,7 +13,7 @@ type IconRendererProps = {
 
 type IconConfig = {
   code: string;
-  library: "ai" | "fa";
+  library: "ai" | "bs" | "fa";
 };
 
 type IconProps = {
@@ -23,6 +24,7 @@ type IconProps = {
 
 const iconLibraries: Record<IconConfig["library"], Record<string, IconType>> = {
   ai: AiIcons,
+  bs: BsIcons,
   fa: FaIcons,
 };
 
@@ -94,7 +96,10 @@ function getIconComponent(
     return null;
   }
 
-  return iconLibraries[icon.library][icon.code] || null;
+  const libraryIcons = iconLibraries[icon.library];
+  const Icon = libraryIcons[icon.code];
+
+  return typeof Icon === "function" ? Icon : null;
 }
 
 function resolveIconConfig(library: string, code: string): IconConfig | null {
@@ -106,6 +111,10 @@ function resolveIconConfig(library: string, code: string): IconConfig | null {
   }
 
   if (isSupportedLibrary(normalizedLibrary)) {
+    if (!hasLibraryPrefix(normalizedLibrary, normalizedCode)) {
+      return null;
+    }
+
     return {
       code: normalizedCode,
       library: normalizedLibrary,
@@ -113,12 +122,37 @@ function resolveIconConfig(library: string, code: string): IconConfig | null {
   }
 
   if (libraryAliases.has(normalizedLibrary)) {
-    return iconAliases[normalizedCode] || null;
+    return iconAliases[normalizedCode] || inferIconConfig(normalizedCode);
   }
 
   return iconAliases[normalizedCode] || null;
 }
 
 function isSupportedLibrary(library: string): library is IconConfig["library"] {
-  return library === "ai" || library === "fa";
+  return library === "ai" || library === "bs" || library === "fa";
+}
+
+function hasLibraryPrefix(
+  library: IconConfig["library"],
+  code: string,
+): boolean {
+  return code.startsWith(
+    {
+      ai: "Ai",
+      bs: "Bs",
+      fa: "Fa",
+    }[library],
+  );
+}
+
+function inferIconConfig(code: string): IconConfig | null {
+  const library = code.startsWith("Ai")
+    ? "ai"
+    : code.startsWith("Bs")
+      ? "bs"
+      : code.startsWith("Fa")
+        ? "fa"
+        : null;
+
+  return library ? { code, library } : null;
 }

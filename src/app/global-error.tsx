@@ -26,6 +26,12 @@ const GLOBAL_ERROR_FOOTER: FooterData = {
 	developerLabel: null,
 	developerUrl: null,
 	legalLinks: [],
+	contactLink: {
+		id: 'contacts',
+		label: 'Контакты',
+		href: '/contacts',
+		target: '_self',
+	},
 };
 
 export default function GlobalError() {

@@ -297,6 +297,33 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	color: currentColor;
 }
 
+.navLabel {
+	min-width: 0;
+}
+
+.navBadge {
+	@include body-font(700);
+
+	display: inline-flex;
+	max-width: rem(84);
+	min-height: rem(18);
+	box-sizing: border-box;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	padding: rem(3) rem(7);
+	overflow: hidden;
+	color: $color-blue;
+	font-size: rem(10);
+	line-height: 1;
+	letter-spacing: 0.04em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	background: rgba($color-blue, 0.1);
+	border: rem(1) solid rgba($color-blue, 0.16);
+	border-radius: rem(100);
+}
+
 .desktopTrigger[data-state='open'] .desktopChevron {
 	transform: rotate(180deg);
 }
@@ -363,7 +390,8 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	position: absolute;
 	top: 0;
 	left: 0;
-	width: var(--navigation-content-width);
+	width: max-content;
+	max-width: calc(100vw - rem(48));
 	animation-duration: 300ms;
 	animation-timing-function: $menu-easing;
 
@@ -386,13 +414,19 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 
 .desktopDropdownInner {
 	box-sizing: border-box;
-	width: 100%;
+	width: max-content;
+	max-width: calc(100vw - rem(48));
 	padding: rem(13);
 }
 
 .desktopDropdownGrid {
 	display: grid;
-	grid-template-columns: repeat(var(--navigation-grid-columns), minmax(0, 1fr));
+	width: max-content;
+	max-width: calc(100vw - rem(74));
+	grid-template-columns: repeat(
+		var(--navigation-grid-columns),
+		minmax(rem(168), max-content)
+	);
 	gap: rem(7);
 }
 
@@ -400,8 +434,11 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	@include body-font(500);
 
 	display: flex;
+	width: 100%;
 	min-width: 0;
+	max-width: rem(286);
 	min-height: rem(48);
+	box-sizing: border-box;
 	align-items: center;
 	justify-content: flex-start;
 	gap: rem(9);
@@ -427,6 +464,11 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 
 	&:focus-visible {
 		@include focus-ring;
+	}
+
+	> .navLabel {
+		overflow-wrap: anywhere;
+		white-space: normal;
 	}
 }
 

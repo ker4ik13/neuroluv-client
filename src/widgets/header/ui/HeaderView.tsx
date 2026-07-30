@@ -277,7 +277,6 @@ function DesktopNavigation({
 
 					const columns = getDropdownColumnCount(item.children.length);
 					const contentStyle = {
-						'--navigation-content-width': getDropdownWidth(columns),
 						'--navigation-grid-columns': columns,
 					} as CSSProperties;
 					const itemValue = `desktop-section-${item.id}`;
@@ -470,15 +469,8 @@ function MobileNavigation({
 }
 
 function getDropdownColumnCount(itemCount: number): number {
-	if (itemCount > 8) return 3;
 	if (itemCount > 3) return 2;
 	return 1;
-}
-
-function getDropdownWidth(columns: number): string {
-	if (columns === 3) return 'min(900px, calc(100vw - 48px))';
-	if (columns === 2) return 'min(620px, calc(100vw - 48px))';
-	return 'min(380px, calc(100vw - 48px))';
 }
 
 function isNavigationItemActive(
@@ -517,10 +509,13 @@ function normalizePath(path: string): string {
 }
 
 function NavLinkContent({ item }: { item: NavigationItem }) {
+	const badgeText = item.badgeText?.trim();
+
 	return (
 		<>
 			<AppIcon className={styles.navIcon} icon={item.icon} />
-			<span>{item.label}</span>
+			<span className={styles.navLabel}>{item.label}</span>
+			{badgeText ? <span className={styles.navBadge}>{badgeText}</span> : null}
 		</>
 	);
 }

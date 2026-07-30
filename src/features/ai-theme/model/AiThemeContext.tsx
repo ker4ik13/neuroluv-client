@@ -4,7 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -38,7 +38,7 @@ export function AiThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = selectedTheme || storedTheme;
   const resolvedTheme = theme === "system" ? systemTheme : theme;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.aiTheme = resolvedTheme;
     document.documentElement.style.colorScheme = resolvedTheme;
   }, [resolvedTheme]);

@@ -30,6 +30,7 @@ type DirectusSiteSettingsFooter = {
 	developer_label: string | null;
 	developer_url: string | null;
 	logo: DirectusFile | string | null;
+	footer_navigation?: DirectusFooterMenuAssignment[];
 };
 
 type DirectusSocialLink = {
@@ -40,14 +41,36 @@ type DirectusSocialLink = {
 	icon: DirectusIcon | null;
 };
 
-type DirectusFooterLink = {
+type DirectusNavigationItem = {
 	id: number;
 	sort: number | null;
 	label: string | null;
 	url: string | null;
+	page_slug: string | null;
+	anchor: string | null;
 	target: '_self' | '_blank' | null;
 	is_active: boolean | null;
-	column: 'sections' | 'prompts' | 'services' | 'useful' | string | null;
+};
+
+type DirectusMenuItem = {
+	id: number;
+	sort: number | null;
+	navigation_items_id: DirectusNavigationItem | number | null;
+};
+
+type DirectusFooterMenu = {
+	id: number;
+	sort: number | null;
+	title: string | null;
+	footer_name: string | null;
+	is_active: boolean | null;
+	menu_items?: DirectusMenuItem[];
+};
+
+type DirectusFooterMenuAssignment = {
+	id: number;
+	sort: number | null;
+	navigation_menus_id: DirectusFooterMenu | number | null;
 };
 
 const FOOTER_SETTINGS_FIELDS = [
@@ -62,6 +85,23 @@ const FOOTER_SETTINGS_FIELDS = [
 	'logo.type',
 	'logo.width',
 	'logo.height',
+	'footer_navigation.id',
+	'footer_navigation.sort',
+	'footer_navigation.navigation_menus_id.id',
+	'footer_navigation.navigation_menus_id.sort',
+	'footer_navigation.navigation_menus_id.title',
+	'footer_navigation.navigation_menus_id.footer_name',
+	'footer_navigation.navigation_menus_id.is_active',
+	'footer_navigation.navigation_menus_id.menu_items.id',
+	'footer_navigation.navigation_menus_id.menu_items.sort',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.id',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.sort',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.label',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.url',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.page_slug',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.anchor',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.target',
+	'footer_navigation.navigation_menus_id.menu_items.navigation_items_id.is_active',
 ].join(',');
 
 const SOCIAL_FIELDS = [
@@ -73,16 +113,6 @@ const SOCIAL_FIELDS = [
 	'icon.code',
 	'icon.library',
 	'icon.is_active',
-].join(',');
-
-const FOOTER_LINK_FIELDS = [
-	'id',
-	'sort',
-	'label',
-	'url',
-	'target',
-	'is_active',
-	'column',
 ].join(',');
 
 const LEGAL_LINKS: FooterLink[] = [
@@ -116,26 +146,24 @@ const LEGAL_LINKS: FooterLink[] = [
 		href: '/legal/marketing-consent',
 		target: '_self',
 	},
-	{
-		id: 'contacts',
-		label: 'Контакты',
-		href: '/contacts',
-		target: '_self',
-	},
 ];
 
+const CONTACT_LINK: FooterLink = {
+	id: 'contacts',
+	label: 'Контакты',
+	href: '/contacts',
+	target: '_self',
+};
+
 export async function getFooterData(): Promise<FooterData> {
-	const [settings, socialLinks, footerLinks] = await Promise.all([
+	const [settings, socialLinks] = await Promise.all([
 		directusRequest<DirectusSiteSettingsFooter>(
-			`/items/site_settings?fields=${FOOTER_SETTINGS_FIELDS}`,
+			'/items/site_settings?fields=' + FOOTER_SETTINGS_FIELDS,
 			{ next: { revalidate: 60 } },
 		),
 		directusRequest<DirectusSocialLink[]>(
-			`/items/social_links?filter[is_active][_eq]=true&filter[show_in_footer][_eq]=true&sort=sort&fields=${SOCIAL_FIELDS}`,
-			{ next: { revalidate: 60 } },
-		),
-		directusRequest<DirectusFooterLink[]>(
-			`/items/footer_links?filter[is_active][_eq]=true&sort=sort&fields=${FOOTER_LINK_FIELDS}`,
+			'/items/social_links?filter[is_active][_eq]=true&filter[show_in_footer][_eq]=true&sort=sort&fields=' +
+				SOCIAL_FIELDS,
 			{ next: { revalidate: 60 } },
 		),
 	]);
@@ -147,54 +175,75 @@ export async function getFooterData(): Promise<FooterData> {
 		description: settings.site_description || '',
 		logo: normalizeLogo(settings.logo),
 		socialLinks: socialLinks.map(normalizeSocialLink).filter(isSocialLink),
-		columns: [
-			{
-				id: 'sections',
-				title: 'Разделы',
-				links: normalizeFooterLinks(footerLinks, 'sections') || [],
-			},
-			{
-				id: 'prompts',
-				title: 'Промпты',
-				links: normalizeFooterLinks(footerLinks, 'prompts') || [],
-			},
-			{
-				id: 'services',
-				title: 'Услуги',
-				links: normalizeFooterLinks(footerLinks, 'services') || [],
-			},
-			{
-				id: 'useful',
-				title: 'Полезное',
-				links: normalizeFooterLinks(footerLinks, 'useful') || [],
-			},
-		].filter((column) => column.links.length > 0),
+		columns: normalizeFooterColumns(settings.footer_navigation || []),
 		copyrightText:
 			settings.copyright_text ||
-			`© ${new Date().getFullYear()} ${siteName}. Все права защищены`,
+			'© ' + new Date().getFullYear() + ' ' + siteName + '. Все права защищены',
 		developerLabel: settings.developer_label,
 		developerUrl: settings.developer_url,
 		legalLinks: LEGAL_LINKS,
+		contactLink: CONTACT_LINK,
 	};
 }
 
-function normalizeFooterLinks(
-	links: DirectusFooterLink[],
-	column: DirectusFooterLink['column'],
-): FooterLink[] | null {
-	const normalizedLinks = links
-		.filter((link) => link.is_active !== false)
-		.filter((link) => link.column === column)
-		.filter((link) => link.label && link.url)
+function normalizeFooterColumns(assignments: DirectusFooterMenuAssignment[]) {
+	return assignments
+		.filter(hasPopulatedFooterMenu)
+		.filter(({ navigation_menus_id: menu }) => menu.is_active !== false)
 		.sort(sortByDirectusSort)
-		.map((link) => ({
-			id: `footer-link-${link.id}`,
-			label: link.label || '',
-			href: link.url || '/',
-			target: link.target || '_self',
-		}));
+		.map(({ navigation_menus_id: menu }) => ({
+			id: 'footer-menu-' + menu.id,
+			title: menu.footer_name || menu.title || '',
+			links: normalizeMenuLinks(menu.menu_items || []),
+		}))
+		.filter((column) => Boolean(column.title) && column.links.length > 0);
+}
 
-	return normalizedLinks.length > 0 ? normalizedLinks : null;
+function normalizeMenuLinks(items: DirectusMenuItem[]): FooterLink[] {
+	return items
+		.filter(hasPopulatedNavigationItem)
+		.filter(({ navigation_items_id: item }) => item.is_active !== false)
+		.sort(sortByDirectusSort)
+		.map(({ navigation_items_id: item }) => ({
+			id: 'footer-menu-item-' + item.id,
+			label: item.label || '',
+			href: buildItemHref(item),
+			target: item.target || '_self',
+		}))
+		.filter((link) => Boolean(link.label) && Boolean(link.href));
+}
+
+function hasPopulatedFooterMenu(
+	assignment: DirectusFooterMenuAssignment,
+): assignment is DirectusFooterMenuAssignment & {
+	navigation_menus_id: DirectusFooterMenu;
+} {
+	return (
+		typeof assignment.navigation_menus_id === 'object' &&
+		assignment.navigation_menus_id !== null
+	);
+}
+
+function hasPopulatedNavigationItem(
+	item: DirectusMenuItem,
+): item is DirectusMenuItem & {
+	navigation_items_id: DirectusNavigationItem;
+} {
+	return (
+		typeof item.navigation_items_id === 'object' &&
+		item.navigation_items_id !== null
+	);
+}
+
+function buildItemHref(item: DirectusNavigationItem): string {
+	const baseHref = item.url || (item.page_slug ? '/' + item.page_slug : '/');
+
+	if (!item.anchor) {
+		return baseHref;
+	}
+
+	const anchor = item.anchor.startsWith('#') ? item.anchor : '#' + item.anchor;
+	return baseHref === '/' ? anchor : baseHref + anchor;
 }
 
 function normalizeLogo(
@@ -256,8 +305,11 @@ function normalizeIcon(icon: DirectusIcon | null): NavigationIcon | null {
 }
 
 function sortByDirectusSort(
-	first: { sort: number | null },
-	second: { sort: number | null },
+	first: { id: number; sort: number | null },
+	second: { id: number; sort: number | null },
 ): number {
-	return (first.sort || 0) - (second.sort || 0);
+	return (
+		(first.sort ?? Number.MAX_SAFE_INTEGER) -
+			(second.sort ?? Number.MAX_SAFE_INTEGER) || first.id - second.id
+	);
 }

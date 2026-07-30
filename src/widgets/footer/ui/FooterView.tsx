@@ -75,6 +75,13 @@ export function FooterView({ footer }: FooterViewProps) {
 							url={footer.developerUrl}
 						/>
 					)}
+
+					{footer.contactLink && (
+						<FooterLinkItem
+							className={styles.contactLink}
+							link={footer.contactLink}
+						/>
+					)}
 				</div>
 			</Container>
 		</footer>
