@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getAiPublicPrompt } from '@/shared/api/ai/public';
 import { getSiteSeo } from '@/shared/api/directus/seo';
+import { resolveSeoTemplate } from '@/shared/lib/seo/metadata';
 import { PromptDetailPage } from '@/widgets/ai-pages';
 
 export async function generateMetadata({
@@ -27,13 +28,17 @@ export async function generateMetadata({
 		};
 	}
 
-	const title = prompt.seoTitle || prompt.title;
+	const variables = { SITE_NAME: siteSeo.siteName };
+	const title = resolveSeoTemplate(prompt.seoTitle || prompt.title, variables);
 	const description =
-		prompt.seoDescription || prompt.description || prompt.excerpt || undefined;
+		resolveSeoTemplate(
+			prompt.seoDescription || prompt.description || prompt.excerpt || '',
+			variables,
+		) || undefined;
 	const imageUrl = prompt.imageUrl || defaultImageUrl;
 
 	return {
-		title,
+		title: { absolute: title },
 		description,
 		alternates: { canonical },
 		openGraph: {

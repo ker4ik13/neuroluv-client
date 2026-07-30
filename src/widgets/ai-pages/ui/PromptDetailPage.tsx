@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { FiArrowRight, FiBookmark, FiImage } from "react-icons/fi";
+import { FiArrowRight, FiBookmark, FiImage, FiMaximize2 } from "react-icons/fi";
 
 import { useAiSession } from "@/features/ai-session";
 import { useAiLocale } from "@/features/ai-locale";
@@ -25,6 +25,7 @@ import {
 } from "./AiUi";
 import { AiSelect } from "./AiSelect";
 import { AiModelLogo } from "./AiModelLogo";
+import { ImageLightbox } from "./ChatImageOutput";
 import styles from "./AiPages.module.scss";
 
 type PromptVariableValue = string | number | boolean;
@@ -188,8 +189,18 @@ export function PromptDetailPage({ slug }: { slug: string }) {
               <AiCard className={styles.promptPreviewCard}>
                 <div className={styles.detailMedia}>
                   {prompt.data.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- backend/CDN URL with unknown host
-                    <img alt={t("Пример результата", "Result example")} src={prompt.data.imageUrl} />
+                    <ImageLightbox
+                      alt={t("Пример результата", "Result example")}
+                      fullUrl={prompt.data.imageUrl}
+                      previewUrl={prompt.data.imageUrl}
+                      triggerClassName={styles.mediaLightboxButton}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- backend/CDN URL with unknown host */}
+                      <img alt={t("Пример результата", "Result example")} src={prompt.data.imageUrl} />
+                      <span aria-hidden="true" className={styles.mediaFullscreenHint}>
+                        <FiMaximize2 />
+                      </span>
+                    </ImageLightbox>
                   ) : (
                     <span className={styles.mediaPlaceholder}>
                       <FiImage aria-hidden="true" />

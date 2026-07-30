@@ -1873,15 +1873,61 @@
 	padding: rem(22);
 }
 .detailMedia {
+	display: grid;
 	overflow: hidden;
-	aspect-ratio: 1.2 / 1;
+	min-height: rem(180);
+	place-items: center;
 	background: var(--ai-surface-soft);
 	border-radius: rem(17);
 }
-.detailMedia img {
+.mediaLightboxButton {
+	position: relative;
+	display: grid;
 	width: 100%;
-	height: 100%;
-	object-fit: cover;
+	max-width: 100%;
+	min-height: rem(180);
+	place-items: center;
+	padding: 0;
+	overflow: hidden;
+	line-height: 0;
+	background: transparent;
+	border: 0;
+	border-radius: inherit;
+	cursor: zoom-in;
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+.mediaLightboxButton img {
+	display: block;
+	width: auto;
+	max-width: 100%;
+	height: auto;
+	max-height: min(65dvh, rem(720));
+	object-fit: contain;
+}
+.mediaFullscreenHint {
+	position: absolute;
+	top: rem(12);
+	right: rem(12);
+	display: inline-flex;
+	width: rem(38);
+	height: rem(38);
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	font-size: rem(18);
+	background: rgba(7, 18, 29, 0.68);
+	border: rem(1) solid rgba(255, 255, 255, 0.26);
+	border-radius: rem(11);
+	box-shadow: 0 rem(5) rem(18) rgba(7, 18, 29, 0.2);
+	pointer-events: none;
+	transition: background-color 160ms ease;
+}
+.mediaLightboxButton:hover .mediaFullscreenHint,
+.mediaLightboxButton:focus-visible .mediaFullscreenHint {
+	background: var(--ai-primary);
 }
 .promptDescription {
 	margin: rem(16) rem(2) 0;
@@ -2034,16 +2080,18 @@
 }
 
 .resultCard {
-	min-height: rem(560);
 	padding: rem(14);
 }
-.resultCard > img,
 .resultCard > video {
 	display: block;
 	width: 100%;
 	min-height: rem(530);
 	max-height: rem(760);
 	object-fit: contain;
+	background: var(--ai-surface-soft);
+	border-radius: rem(16);
+}
+.resultCard > .mediaLightboxButton {
 	background: var(--ai-surface-soft);
 	border-radius: rem(16);
 }
@@ -3523,11 +3571,9 @@ a.receiptState {
 	.referralHero {
 		grid-template-columns: 1fr;
 	}
-	.resultCard,
 	.shareResult {
 		min-height: rem(420);
 	}
-	.resultCard > img,
 	.resultCard > video,
 	.shareResult > img,
 	.shareResult > video,

@@ -11,6 +11,7 @@ import {
   FiCopy,
   FiDownload,
   FiImage,
+  FiMaximize2,
   FiRefreshCw,
   FiShare2,
   FiTrash2,
@@ -44,6 +45,7 @@ import {
   FieldMessage,
   StatusBadge,
 } from "./AiUi";
+import { ImageLightbox } from "./ChatImageOutput";
 import styles from "./AiPages.module.scss";
 
 export function WorkDetailPage({ id }: { id: string }) {
@@ -445,8 +447,19 @@ function WorkResult({ work, output }: { work: AiWorkDetail; output: AiWorkOutput
 
   if (outputUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- signed/CDN URL
-      <img alt={work.title} src={outputUrl} />
+      <ImageLightbox
+        alt={work.title}
+        downloadUrl={output?.downloadUrl || work.downloadUrl}
+        fullUrl={outputUrl}
+        previewUrl={output?.previewUrl || outputUrl}
+        triggerClassName={styles.mediaLightboxButton}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- signed/CDN URL */}
+        <img alt={work.title} src={outputUrl} />
+        <span aria-hidden="true" className={styles.mediaFullscreenHint}>
+          <FiMaximize2 />
+        </span>
+      </ImageLightbox>
     );
   }
 
