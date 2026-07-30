@@ -53,12 +53,17 @@ export type AiSelectProps<Value extends AiSelectValue = string> = {
 const TYPEAHEAD_RESET_MS = 700;
 const LISTBOX_GAP_PX = 6;
 const LISTBOX_MAX_HEIGHT_PX = 320;
+const LISTBOX_MAX_WIDTH_PX = 480;
+const LISTBOX_VIEWPORT_GUTTER_PX = 12;
 
 type ListboxPlacement = "top" | "bottom";
 
 type ListboxLayout = {
-  placement: ListboxPlacement;
+  inlineOffset: number;
   maxHeight: number;
+  maxWidth: number;
+  minWidth: number;
+  placement: ListboxPlacement;
 };
 
 export function AiSelect<Value extends AiSelectValue = string>({
@@ -81,8 +86,11 @@ export function AiSelect<Value extends AiSelectValue = string>({
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [listboxLayout, setListboxLayout] = useState<ListboxLayout>({
-    placement: "bottom",
+    inlineOffset: 0,
     maxHeight: LISTBOX_MAX_HEIGHT_PX,
+    maxWidth: LISTBOX_MAX_WIDTH_PX,
+    minWidth: 0,
+    placement: "bottom",
   });
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -182,11 +190,33 @@ export function AiSelect<Value extends AiSelectValue = string>({
         0,
         Math.floor(Math.min(LISTBOX_MAX_HEIGHT_PX, availableHeight)),
       );
+      const horizontalBounds = getVisibleHorizontalBounds(trigger);
+      const availableWidth = Math.max(
+        0,
+        horizontalBounds.right - horizontalBounds.left,
+      );
+      const maxWidth = Math.floor(
+        Math.min(LISTBOX_MAX_WIDTH_PX, availableWidth),
+      );
+      const minWidth = Math.min(Math.ceil(triggerRect.width), maxWidth);
+      const listboxWidth = Math.min(
+        Math.max(Math.ceil(listbox.getBoundingClientRect().width), minWidth),
+        maxWidth,
+      );
+      const listboxLeft = Math.min(
+        Math.max(triggerRect.left, horizontalBounds.left),
+        Math.max(horizontalBounds.left, horizontalBounds.right - listboxWidth),
+      );
+      const inlineOffset = Math.round(listboxLeft - triggerRect.left);
 
       setListboxLayout((current) =>
-        current.placement === placement && current.maxHeight === maxHeight
+        current.inlineOffset === inlineOffset &&
+        current.maxHeight === maxHeight &&
+        current.maxWidth === maxWidth &&
+        current.minWidth === minWidth &&
+        current.placement === placement
           ? current
-          : { placement, maxHeight },
+          : { inlineOffset, maxHeight, maxWidth, minWidth, placement },
       );
     };
 
@@ -437,7 +467,14 @@ export function AiSelect<Value extends AiSelectValue = string>({
             id={listboxId}
             ref={listboxRef}
             role="listbox"
-            style={{ maxHeight: listboxLayout.maxHeight } as CSSProperties}
+            style={
+              {
+                left: listboxLayout.inlineOffset,
+                maxHeight: listboxLayout.maxHeight,
+                maxWidth: listboxLayout.maxWidth,
+                minWidth: listboxLayout.minWidth,
+              } as CSSProperties
+            }
           >
             {optionSections.map((section, sectionIndex) => {
               const renderedOptions = section.options.map(({ option, index }) => (
@@ -616,6 +653,35 @@ function getVisibleVerticalBounds(element: HTMLElement): {
   });
 
   return { top, bottom: Math.max(top, bottom) };
+}
+
+function getVisibleHorizontalBounds(element: HTMLElement): {
+  left: number;
+  right: number;
+} {
+  const visualViewport = window.visualViewport;
+  let left =
+    (visualViewport?.offsetLeft ?? 0) + LISTBOX_VIEWPORT_GUTTER_PX;
+  let right = visualViewport
+    ? visualViewport.offsetLeft +
+      visualViewport.width -
+      LISTBOX_VIEWPORT_GUTTER_PX
+    : window.innerWidth - LISTBOX_VIEWPORT_GUTTER_PX;
+  let ancestor = element.parentElement;
+
+  while (ancestor) {
+    const { overflowX } = window.getComputedStyle(ancestor);
+    if (overflowX !== "visible") {
+      const rect = ancestor.getBoundingClientRect();
+      const contentLeft = rect.left + ancestor.clientLeft;
+      const contentRight = contentLeft + ancestor.clientWidth;
+      left = Math.max(left, contentLeft);
+      right = Math.min(right, contentRight);
+    }
+    ancestor = ancestor.parentElement;
+  }
+
+  return { left, right: Math.max(left, right) };
 }
 
 function getClippingAncestors(element: HTMLElement): HTMLElement[] {

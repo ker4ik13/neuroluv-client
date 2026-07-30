@@ -36,6 +36,26 @@
 	}
 }
 
+.logoBrand {
+	svg {
+		font-size: rem(18);
+	}
+}
+
+.logoChatGpt {
+	color: var(--ai-text);
+}
+
+.logoGptImage {
+	color: var(--ai-primary);
+	background: color-mix(in srgb, var(--ai-primary) 9%, var(--ai-surface));
+	border-color: color-mix(in srgb, var(--ai-primary) 26%, var(--ai-border));
+}
+
+.logoMedium.logoBrand svg {
+	font-size: rem(20);
+}
+
 :global(html[data-ai-theme='dark']) .logoMonochrome img {
 	filter: brightness(0) invert(1);
 }

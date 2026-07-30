@@ -1875,7 +1875,6 @@
 .detailMedia {
 	display: grid;
 	overflow: hidden;
-	min-height: rem(180);
 	place-items: center;
 	background: var(--ai-surface-soft);
 	border-radius: rem(17);
@@ -1885,7 +1884,6 @@
 	display: grid;
 	width: 100%;
 	max-width: 100%;
-	min-height: rem(180);
 	place-items: center;
 	padding: 0;
 	overflow: hidden;
@@ -1984,7 +1982,7 @@
 	margin-bottom: rem(22);
 }
 .filterStrip > * {
-	min-width: rem(170);
+	min-width: rem(220);
 }
 .filterStrip select {
 	min-height: rem(44);
@@ -2084,11 +2082,13 @@
 }
 .resultCard > video {
 	display: block;
-	width: 100%;
-	min-height: rem(530);
-	max-height: rem(760);
+	width: auto;
+	max-width: 100%;
+	height: auto;
+	max-height: min(65dvh, rem(720));
+	margin-inline: auto;
 	object-fit: contain;
-	background: var(--ai-surface-soft);
+	background: #000;
 	border-radius: rem(16);
 }
 .resultCard > .mediaLightboxButton {
@@ -3574,7 +3574,6 @@ a.receiptState {
 	.shareResult {
 		min-height: rem(420);
 	}
-	.resultCard > video,
 	.shareResult > img,
 	.shareResult > video,
 	.deletedResult,

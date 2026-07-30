@@ -103,12 +103,11 @@
 .value,
 .placeholder,
 .optionLabel {
-	overflow: hidden;
 	font-size: rem(15);
 	font-weight: 700;
 	line-height: 1.25;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow-wrap: anywhere;
+	white-space: normal;
 }
 
 .placeholder {
@@ -128,6 +127,7 @@
 .optionDescription,
 .description {
 	color: var(--ai-muted);
+	overflow-wrap: anywhere;
 }
 
 .chevron {
@@ -144,16 +144,16 @@
 
 .listbox {
 	position: absolute;
-	left: 0;
 	z-index: 80;
 	display: grid;
-	width: 100%;
+	width: max-content;
 	max-height: rem(320);
+	max-width: min(rem(480), calc(100vw - rem(24)));
 	box-sizing: border-box;
 	gap: rem(4);
 	margin: 0;
 	padding: rem(6);
-	overflow-y: auto;
+	overflow: hidden auto;
 	overscroll-behavior: contain;
 	list-style: none;
 	background: var(--ai-surface);
