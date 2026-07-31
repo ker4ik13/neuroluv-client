@@ -15,7 +15,11 @@ const ATTRIBUTION_QUERY_PARAMETERS = new Set([
 	'yzclid',
 ]);
 
-const ANALYTICS_DIAGNOSTIC_QUERY_PARAMETERS = new Set(['_ym_debug']);
+const ANALYTICS_DIAGNOSTIC_QUERY_PARAMETERS = new Set([
+	'_ym_debug',
+	'_ym_lang',
+	'_ym_status-check',
+]);
 
 export function isAttributionQueryParameter(name: string): boolean {
 	const normalizedName = name.toLowerCase();
@@ -34,7 +38,7 @@ export function shouldPreserveAnalyticsQueryParameter(name: string): boolean {
 	);
 }
 
-export function getAttributionSearchParams(
+export function getAnalyticsSearchParams(
 	search: string | URLSearchParams,
 ): URLSearchParams {
 	const source =
@@ -42,7 +46,7 @@ export function getAttributionSearchParams(
 	const result = new URLSearchParams();
 
 	source.forEach((value, key) => {
-		if (isAttributionQueryParameter(key)) {
+		if (shouldPreserveAnalyticsQueryParameter(key)) {
 			result.append(key, value);
 		}
 	});
@@ -60,7 +64,7 @@ export function buildAttributionUrl(
 		: `/${pathname}`;
 	const url = new URL(normalizedPathname || '/', origin);
 
-	url.search = getAttributionSearchParams(search).toString();
+	url.search = getAnalyticsSearchParams(search).toString();
 
 	return url.href;
 }
