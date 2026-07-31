@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { shouldPreserveAnalyticsQueryParameter } from "@/shared/lib/analytics/tracking-query";
 
 const DEFAULT_DIRECTUS_URL = "https://dev.cms.neuroluv.ru";
 const DIRECTUS_URL = (
@@ -197,14 +198,24 @@ function normalizeRedirects(redirects: DirectusRedirect[]): RedirectRule[] {
   const rules = new Map<string, RedirectRule>();
 
   redirects.forEach((redirect) => {
-    if (!redirect.from_path || !redirect.to_url || redirect.is_active === false) {
+    if (
+      !redirect.from_path ||
+      !redirect.to_url ||
+      redirect.is_active === false
+    ) {
       return;
     }
 
-    const fromPath = normalizePath(redirect.from_path);
+    const rawFromPath = redirect.from_path.trim();
     const toUrl = redirect.to_url.trim();
 
-    if (!fromPath || !toUrl) {
+    if (!isSupportedRedirectSource(rawFromPath) || !toUrl) {
+      return;
+    }
+
+    const fromPath = normalizePath(rawFromPath);
+
+    if (isRelativeSelfRedirect(fromPath, toUrl)) {
       return;
     }
 
@@ -224,11 +235,16 @@ function buildRedirectTarget(request: NextRequest, redirect: RedirectRule): URL 
     ? new URL(redirect.toUrl)
     : new URL(normalizeTargetPath(redirect.toUrl), request.nextUrl.origin);
 
-  if (redirect.preserveQuery && request.nextUrl.search) {
+  if (request.nextUrl.search) {
     const sourceParams = new URLSearchParams(request.nextUrl.search);
 
     sourceParams.forEach((value, key) => {
-      if (!target.searchParams.has(key)) {
+      if (
+        (redirect.preserveQuery ||
+          (target.origin === request.nextUrl.origin &&
+            shouldPreserveAnalyticsQueryParameter(key))) &&
+        !target.searchParams.has(key)
+      ) {
         target.searchParams.append(key, value);
       }
     });
@@ -259,6 +275,18 @@ function normalizeTargetPath(path: string): string {
 
 function isAbsoluteUrl(url: string): boolean {
   return /^https?:\/\//i.test(url);
+}
+
+function isSupportedRedirectSource(path: string): boolean {
+  return Boolean(path) && !/[?#*]/.test(path) && !/\/{2,}/.test(path);
+}
+
+function isRelativeSelfRedirect(fromPath: string, toUrl: string): boolean {
+  if (isAbsoluteUrl(toUrl) || /[?#]/.test(toUrl)) {
+    return false;
+  }
+
+  return normalizePath(toUrl) === fromPath;
 }
 
 function buildDuplicateSlashesTarget(request: NextRequest): URL | null {

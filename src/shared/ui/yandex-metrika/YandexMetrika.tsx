@@ -2,6 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import {
+  buildAttributionUrl,
+  sanitizeAnalyticsReferrer,
+} from "@/shared/lib/analytics/tracking-query";
 
 const METRIKA_SCRIPT_URL = "https://mc.yandex.ru/metrika/tag.js";
 const METRIKA_SCRIPT_SELECTOR = `script[src="${METRIKA_SCRIPT_URL}"]`;
@@ -14,7 +18,7 @@ type YandexMetrikaFunction = ((...args: unknown[]) => void) & {
 type YandexMetrikaState = {
   counterId: string;
   initialized: boolean;
-  lastPath: string | null;
+  lastUrl: string | null;
 };
 
 type YandexMetrikaProps = {
@@ -52,18 +56,25 @@ export function YandexMetrika({ counterId }: YandexMetrikaProps) {
       state.initialized = true;
     }
 
-    // Auth and billing routes may carry secrets in the query string.
-    const path = normalizeTrackedPath(pathname);
+    // Keep attribution parameters while excluding auth and billing secrets.
+    const trackedUrl = buildAttributionUrl(
+      window.location.origin,
+      pathname || "/",
+      window.location.search,
+    );
 
-    if (state.lastPath === path) {
+    if (state.lastUrl === trackedUrl) {
       return;
     }
 
-    const previousPath = state.lastPath;
-    state.lastPath = path;
+    const previousUrl = state.lastUrl;
+    const referer =
+      previousUrl ||
+      sanitizeAnalyticsReferrer(document.referrer, window.location.origin);
+    state.lastUrl = trackedUrl;
 
-    ym(counterId, "hit", path, {
-      ...(previousPath ? { referer: previousPath } : {}),
+    ym(counterId, "hit", trackedUrl, {
+      ...(referer ? { referer } : {}),
       title: document.title,
     });
   }, [counterId, pathname]);
@@ -96,7 +107,7 @@ function ensureMetrikaState(counterId: string): YandexMetrikaState {
   const state: YandexMetrikaState = {
     counterId,
     initialized: false,
-    lastPath: null,
+    lastUrl: null,
   };
 
   window.__neuroluvYandexMetrika = state;
@@ -128,12 +139,4 @@ function ensureMetrikaScript(): void {
   script.dataset.neuroluvYandexMetrika = "true";
   script.src = METRIKA_SCRIPT_URL;
   document.head.append(script);
-}
-
-function normalizeTrackedPath(pathname: string | null): string {
-  if (!pathname) {
-    return "/";
-  }
-
-  return pathname.startsWith("/") ? pathname : "/" + pathname;
 }
