@@ -28,18 +28,40 @@ self.addEventListener('push', (event) => {
 		typeof payload.tag === 'string' && payload.tag
 			? payload.tag.slice(0, 160)
 			: 'neuroluv-ai';
+	const icon = safeNotificationAsset(
+		payload.icon,
+		'/web-app-manifest-192x192.png',
+	);
+	const image = safeNotificationAsset(payload.image, null);
 
 	event.waitUntil(
 		self.registration.showNotification(title, {
 			badge: '/favicon-96x96.png',
 			body,
 			data: { href },
-			icon: '/web-app-manifest-192x192.png',
+			icon,
+			...(image ? { image } : {}),
 			renotify: false,
 			tag,
 		}),
 	);
 });
+
+function safeNotificationAsset(value, fallback) {
+	if (typeof value !== 'string' || !value) return fallback;
+	try {
+		const url = new URL(value, self.location.origin);
+		if (
+			url.protocol !== 'https:' &&
+			!(url.protocol === 'http:' && url.origin === self.location.origin)
+		) {
+			return fallback;
+		}
+		return url.href;
+	} catch {
+		return fallback;
+	}
+}
 
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();

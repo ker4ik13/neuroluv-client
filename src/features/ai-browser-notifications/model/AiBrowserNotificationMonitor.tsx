@@ -8,6 +8,8 @@ import {
 	aiApiFetch,
 	type AiPage,
 	type AiPaymentSummary,
+	type AiPublicModel,
+	type AiRunDetail,
 	type AiRunSummary,
 	type AiUserProfile,
 } from '@/shared/api/ai';
@@ -131,7 +133,7 @@ export function AiBrowserNotificationMonitor() {
 							: isRecentNewRun);
 
 					if (justFinished) {
-						if (!pushActiveRef.current) notifyRun(run, locale);
+						if (!pushActiveRef.current) void notifyRun(run, locale);
 						window.dispatchEvent(
 							new CustomEvent(AI_RUN_UPDATED_EVENT, { detail: run }),
 						);
@@ -241,17 +243,11 @@ export function AiBrowserNotificationMonitor() {
 	return null;
 }
 
-function notifyRun(run: AiRunSummary, locale: string): void {
+async function notifyRun(run: AiRunSummary, locale: string): Promise<void> {
 	const succeeded =
 		run.status === 'succeeded' || run.status === 'partially_succeeded';
-	const title =
-		locale === 'en-US'
-			? succeeded
-				? 'Generation completed'
-				: 'Generation failed'
-			: succeeded
-				? 'Генерация завершена'
-				: 'Ошибка генерации';
+	const assets = await loadRunNotificationAssets(run);
+	const title = `${locale === 'en-US' ? 'Neuroluv' : 'Нейролюб'} — ${run.modelName}`;
 	const fallback =
 		locale === 'en-US'
 			? succeeded
@@ -262,13 +258,56 @@ function notifyRun(run: AiRunSummary, locale: string): void {
 				: 'Откройте чат, чтобы посмотреть подробности';
 	const href =
 		succeeded && run.workId ? `/ai/works/${run.workId}` : chatHref(run);
+	const body = succeeded
+		? run.modality === 'text'
+			? assets.responseText || fallback
+			: run.prompt || fallback
+		: run.errorMessage || fallback;
 
-	void showNotificationOnce(`run:${run.id}:${run.status}`, title, {
-		body: succeeded
-			? `${run.modelName}: ${fallback}`
-			: `${run.modelName}: ${run.errorMessage || fallback}`,
+	await showNotificationOnce(`run:${run.id}:${run.status}`, title, {
+		body,
 		href,
+		icon: assets.icon,
+		image: succeeded ? assets.image : null,
 	});
+}
+
+async function loadRunNotificationAssets(run: AiRunSummary): Promise<{
+	icon: string | null;
+	image: string | null;
+	responseText: string | null;
+}> {
+	const [detailPayload, modelsPayload] = await Promise.all([
+		aiApiFetch<AiRunDetail | AiApiEnvelope<AiRunDetail>>(
+			`/runs/${encodeURIComponent(run.id)}`,
+		).catch(() => null),
+		aiApiFetch<AiPublicModel[] | AiApiEnvelope<AiPublicModel[]>>(
+			`/catalog/models?modality=${encodeURIComponent(run.modality)}`,
+			{ csrf: false },
+		).catch(() => null),
+	]);
+	const detail = detailPayload ? unwrapData(detailPayload) : null;
+	const models = modelsPayload ? unwrapData(modelsPayload) : [];
+	const model = models.find((candidate) => candidate.id === run.modelId);
+	const imageOutput = detail?.outputs.find(
+		(output) =>
+			output.type === 'image' &&
+			output.assetAvailable !== false &&
+			Boolean(output.previewUrl || output.outputUrl || output.url),
+	);
+	const textOutput = detail?.outputs.find(
+		(output) => output.type === 'text' && Boolean(output.text?.trim()),
+	);
+
+	return {
+		icon: model?.logoUrl || null,
+		image:
+			imageOutput?.previewUrl ||
+			imageOutput?.outputUrl ||
+			imageOutput?.url ||
+			null,
+		responseText: textOutput?.text?.trim() || null,
+	};
 }
 
 function notifyPayment(
@@ -306,7 +345,12 @@ function chatHref(run: AiRunSummary): string {
 async function showNotificationOnce(
 	key: string,
 	title: string,
-	input: { body: string; href: string },
+	input: {
+		body: string;
+		href: string;
+		icon?: string | null;
+		image?: string | null;
+	},
 ): Promise<void> {
 	if (
 		!browserNotificationsSupported() ||
@@ -324,9 +368,10 @@ async function showNotificationOnce(
 			);
 			await registration.showNotification(title, {
 				badge: '/favicon-96x96.png',
-				body: input.body,
+				body: input.body.slice(0, 400),
 				data: { href: input.href },
-				icon: '/web-app-manifest-192x192.png',
+				icon: input.icon || '/web-app-manifest-192x192.png',
+				...(input.image ? { image: input.image } : {}),
 				tag: key,
 			});
 			return;
@@ -337,7 +382,9 @@ async function showNotificationOnce(
 
 	try {
 		const notification = new Notification(title, {
-			body: input.body,
+			body: input.body.slice(0, 400),
+			icon: input.icon || '/web-app-manifest-192x192.png',
+			...(input.image ? { image: input.image } : {}),
 			tag: key,
 		});
 		notification.onclick = () => {
