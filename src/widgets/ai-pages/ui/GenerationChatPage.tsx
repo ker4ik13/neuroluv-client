@@ -131,8 +131,11 @@ type ChatTurn = {
   modelId: string;
   modelName: string;
   submissionState: "submitting" | "active" | "failed";
+  uploadStates?: Record<string, AttachmentUploadState>;
   submitError?: string | null;
 };
+
+type AttachmentUploadState = "uploading" | "uploaded" | "failed";
 
 type ChatMessageAttachment = AiMessageAttachment & {
   localObjectUrl?: boolean;
@@ -200,6 +203,8 @@ const SAFE_TEXT_REFERENCE_MIME_TYPES = new Set([
 ]);
 const PLATFORM_REFERENCE_FILE_LIMIT = 14;
 const PLATFORM_REFERENCE_TOTAL_BYTES_LIMIT = 160 * 1024 * 1024;
+const COLLAPSIBLE_USER_MESSAGE_LENGTH = 420;
+const COLLAPSIBLE_USER_MESSAGE_LINES = 7;
 const TERMINAL_RUN_STATUSES = new Set(["succeeded", "partially_succeeded", "failed", "cancelled"]);
 const PRICE_PREVIEW_PROMPT = "Предварительный расчёт стоимости";
 const CATALOG_CACHE_TTL_MS = 5 * 60_000;
@@ -1571,6 +1576,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     const idempotencyKey = crypto.randomUUID();
     const submittedAt = new Date().toISOString();
     const inputFiles = submittedReferences.map(toLocalMessageAttachment);
+    const uploadStates = Object.fromEntries(
+      inputFiles.map((file) => [file.id, "uploading" as const]),
+    );
 
     submitLock.current = true;
     initialThreadScrollPending.current = false;
@@ -1590,6 +1598,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         modelId: submittedModel.id,
         modelName: submittedModel.name,
         submissionState: "submitting",
+        uploadStates,
       },
     ]);
     consumeReferences();
@@ -1643,10 +1652,28 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             {
               method: "POST",
               body: upload,
-              timeoutMs: 60_000,
+              // A file upload must survive background-tab throttling. The browser
+              // and transport still report genuine connection failures.
+              timeoutMs: null,
             },
           );
-          return unwrapAiData(uploadPayload);
+          const uploadedFile = unwrapAiData(uploadPayload);
+          if (viewEpoch.current === submissionEpoch) {
+            setTurns((current) =>
+              current.map((turn) =>
+                turn.id === clientId
+                  ? {
+                      ...turn,
+                      uploadStates: {
+                        ...turn.uploadStates,
+                        [reference.id]: "uploaded",
+                      },
+                    }
+                  : turn,
+              ),
+            );
+          }
+          return uploadedFile;
         }),
       );
       const inputFileIds = uploadedFiles.map((file) => file.id);
@@ -1656,7 +1683,15 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       if (viewEpoch.current === submissionEpoch) {
         setTurns((current) =>
           current.map((turn) =>
-            turn.id === clientId ? { ...turn, inputFiles: cloudInputFiles } : turn,
+            turn.id === clientId
+              ? {
+                  ...turn,
+                  inputFiles: cloudInputFiles,
+                  uploadStates: Object.fromEntries(
+                    cloudInputFiles.map((file) => [file.id, "uploaded" as const]),
+                  ),
+                }
+              : turn,
           ),
         );
       }
@@ -1719,7 +1754,17 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         setTurns((current) =>
           current.map((turn) =>
             turn.id === clientId
-              ? { ...turn, submissionState: "failed", submitError: message }
+              ? {
+                  ...turn,
+                  submissionState: "failed",
+                  submitError: message,
+                  uploadStates: Object.fromEntries(
+                    Object.entries(turn.uploadStates || {}).map(([id, state]) => [
+                      id,
+                      state === "uploading" ? "failed" : state,
+                    ]),
+                  ),
+                }
               : turn,
           ),
         );
@@ -2372,6 +2417,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                       run={turn.run}
                       submissionState={turn.submissionState}
                       submitError={turn.submitError}
+                      uploadStates={turn.uploadStates}
                       onUpdate={updateTurn}
                       onRetry={() => retryFailedTurn(turn)}
                       retryDisabled={hasPendingTurn}
@@ -2832,6 +2878,7 @@ function ChatTurnMessage({
   initialOutputs,
   submissionState,
   submitError,
+  uploadStates,
   onUpdate,
   onRetry,
   retryDisabled,
@@ -2845,6 +2892,7 @@ function ChatTurnMessage({
   initialOutputs: AiRunOutput[];
   submissionState: ChatTurn["submissionState"];
   submitError?: string | null;
+  uploadStates?: Record<string, AttachmentUploadState>;
   onUpdate: (run: AiRunSummary, outputs?: AiRunOutput[]) => void;
   onRetry: () => Promise<void>;
   retryDisabled: boolean;
@@ -2867,7 +2915,8 @@ function ChatTurnMessage({
       ? mergeRunOutputs(initialOutputs, resolvedOutputs.outputs)
       : initialOutputs;
   const isFinished = run ? TERMINAL_RUN_STATUSES.has(run.status) : false;
-  const isGenerating = submissionState === "submitting" || Boolean(run && !isFinished);
+  const isGenerating = Boolean(run && !isFinished);
+  const showAssistant = Boolean(run) || submissionState === "failed";
   const hasSuccessfulResult = Boolean(
     run && ["succeeded", "partially_succeeded"].includes(run.status),
   );
@@ -3011,16 +3060,16 @@ function ChatTurnMessage({
           }`}
         >
           {inputFiles.length ? (
-            <ChatMessageAttachments files={inputFiles} />
+            <ChatMessageAttachments files={inputFiles} uploadStates={uploadStates} />
           ) : null}
-          {prompt ? <p className={styles.userMessageBubble}>{prompt}</p> : null}
+          {prompt ? <CollapsibleUserPrompt prompt={prompt} /> : null}
         </div>
         <div className={styles.userMessageMeta}>
           <time dateTime={messageCreatedAt}>{formatMessageDate(messageCreatedAt, locale)}</time>
           <CopyMessageButton label={t("Скопировать запрос", "Copy prompt")} text={prompt} tone="user" />
         </div>
       </div>
-      <div className={styles.assistantRow}>
+      {showAssistant ? <div className={styles.assistantRow}>
         <div className={styles.assistantIdentity}>
           <AiModelLogo
             label={effectiveModelName}
@@ -3090,8 +3139,42 @@ function ChatTurnMessage({
             </div>
           ) : null}
         </div>
-      </div>
+      </div> : null}
     </article>
+  );
+}
+
+function CollapsibleUserPrompt({ prompt }: { prompt: string }) {
+  const { t } = useAiLocale();
+  const [expanded, setExpanded] = useState(false);
+  const collapsible =
+    prompt.length > COLLAPSIBLE_USER_MESSAGE_LENGTH ||
+    prompt.split(/\r?\n/).length > COLLAPSIBLE_USER_MESSAGE_LINES;
+
+  return (
+    <div className={styles.userMessageBubble}>
+      <p
+        className={`${styles.userMessageText} ${
+          collapsible && !expanded ? styles.userMessageTextCollapsed : ""
+        }`}
+      >
+        {prompt}
+      </p>
+      {collapsible ? (
+        <button
+          aria-expanded={expanded}
+          className={styles.userMessageToggle}
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? t("Свернуть", "Show less") : t("Показать полностью", "Show more")}
+          <FiChevronDown
+            aria-hidden="true"
+            className={expanded ? styles.userMessageToggleExpanded : undefined}
+          />
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -3144,13 +3227,24 @@ function CopyMessageButton({
 
 function ChatMessageAttachments({
   files,
+  uploadStates,
 }: {
   files: ChatMessageAttachment[];
+  uploadStates?: Record<string, AttachmentUploadState>;
 }) {
   const { locale, t } = useAiLocale();
   return (
     <ul aria-label={t("Прикреплённые файлы", "Attached files")} className={styles.messageAttachments}>
       {files.map((file) => {
+        const uploadState = uploadStates?.[file.id];
+        const uploadStateClass =
+          uploadState === "uploading"
+            ? styles.messageAttachmentUploading
+            : uploadState === "uploaded"
+              ? styles.messageAttachmentUploaded
+              : uploadState === "failed"
+                ? styles.messageAttachmentFailed
+                : "";
         const isImage = file.mimeType?.startsWith("image/") && file.previewUrl;
         const label = file.name || (isImage ? t("Изображение", "Image") : t("Файл", "File"));
         const details = formatAttachmentDetails(file, locale);
@@ -3176,7 +3270,7 @@ function ChatMessageAttachments({
           <li
             className={`${styles.messageAttachmentItem} ${
               isImage ? styles.messageAttachmentImage : ""
-            }`}
+            } ${uploadStateClass}`}
             key={file.id}
           >
             {file.assetAvailable !== false && file.previewUrl ? (
@@ -3195,7 +3289,28 @@ function ChatMessageAttachments({
             ) : (
               <div className={styles.messageAttachmentPreview}>{content}</div>
             )}
-            {file.assetAvailable !== false && downloadHref ? (
+            {uploadState ? (
+              <span
+                aria-label={
+                  uploadState === "uploading"
+                    ? t(`Загружается ${label}`, `Uploading ${label}`)
+                    : uploadState === "uploaded"
+                      ? t(`Загружено ${label}`, `Uploaded ${label}`)
+                      : t(`Не удалось загрузить ${label}`, `Failed to upload ${label}`)
+                }
+                className={styles.messageAttachmentUploadStatus}
+                role="status"
+              >
+                {uploadState === "uploading" ? (
+                  <FiRefreshCw aria-hidden="true" />
+                ) : uploadState === "uploaded" ? (
+                  <FiCheck aria-hidden="true" />
+                ) : (
+                  <FiX aria-hidden="true" />
+                )}
+              </span>
+            ) : null}
+            {file.assetAvailable !== false && downloadHref && uploadState !== "uploading" && uploadState !== "failed" ? (
               <a
                 aria-label={`${t("Скачать файл", "Download file")} ${label}`}
                 className={styles.messageAttachmentDownload}

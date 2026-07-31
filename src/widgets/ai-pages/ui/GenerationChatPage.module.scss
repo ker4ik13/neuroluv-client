@@ -729,6 +729,52 @@
 	font-size: rem(15);
 }
 
+.userMessageText {
+	margin: 0;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+
+.userMessageTextCollapsed {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 7;
+}
+
+.userMessageToggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: rem(5);
+	margin-top: rem(8);
+	padding: rem(5) rem(9);
+	color: #fff;
+	font: inherit;
+	font-size: rem(11);
+	font-weight: 750;
+	background: rgba(255, 255, 255, 0.14);
+	border: 0;
+	border-radius: rem(9);
+	cursor: pointer;
+
+	svg {
+		transition: transform 180ms ease;
+	}
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.22);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.userMessageToggleExpanded {
+	transform: rotate(180deg);
+}
+
 .userMessageMeta {
 	display: flex;
 	align-items: center;
@@ -808,6 +854,58 @@
 	width: rem(88);
 	height: rem(88);
 	flex: 0 0 rem(88);
+}
+
+.messageAttachmentUploadStatus {
+	position: absolute;
+	z-index: 2;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	pointer-events: none;
+}
+
+.messageAttachmentUploading,
+.messageAttachmentFailed {
+	.messageAttachmentUploadStatus {
+		inset: 0;
+		background: rgba(6, 30, 47, 0.52);
+		border-radius: rem(13);
+		backdrop-filter: blur(rem(1.5));
+
+		svg {
+			width: rem(25);
+			height: rem(25);
+		}
+	}
+}
+
+.messageAttachmentUploading {
+	.messageAttachmentUploadStatus svg {
+		animation: chat-spin 850ms linear infinite;
+	}
+}
+
+.messageAttachmentUploaded {
+	.messageAttachmentUploadStatus {
+		top: rem(5);
+		right: rem(5);
+		width: rem(25);
+		height: rem(25);
+		color: #0b6f43;
+		background: #dff8eb;
+		border: rem(2) solid rgba(255, 255, 255, 0.9);
+		border-radius: 50%;
+		box-shadow: 0 rem(4) rem(12) rgba(6, 68, 42, 0.22);
+		animation: attachment-complete 320ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+}
+
+.messageAttachmentFailed {
+	.messageAttachmentUploadStatus {
+		background: rgba(126, 25, 39, 0.66);
+	}
 }
 
 .messageAttachmentImage {
@@ -2105,6 +2203,18 @@
 	}
 }
 
+@keyframes attachment-complete {
+	from {
+		transform: scale(0.45);
+		opacity: 0;
+	}
+
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.history,
 	.settings,
@@ -2116,7 +2226,13 @@
 	.spinningIcon,
 	.conversationLoading svg,
 	.quoteSpinner,
-	.typingIndicator span {
+	.typingIndicator span,
+	.messageAttachmentUploadStatus,
+	.messageAttachmentUploadStatus svg {
 		animation: none;
+	}
+
+	.userMessageToggle svg {
+		transition: none;
 	}
 }

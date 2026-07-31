@@ -3,7 +3,7 @@ import type { AiApiProblem } from './contracts';
 
 type AiFetchOptions = Omit<RequestInit, 'body'> & {
 	body?: unknown;
-	timeoutMs?: number;
+	timeoutMs?: number | null;
 	csrf?: boolean;
 };
 
@@ -42,7 +42,8 @@ export async function aiApiFetch<T>(
 		...requestOptions
 	} = options;
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+	const timeoutId =
+		timeoutMs === null ? null : setTimeout(() => controller.abort(), timeoutMs);
 	const headers = new Headers(options.headers);
 	const method = (options.method || 'GET').toUpperCase();
 
@@ -120,7 +121,7 @@ export async function aiApiFetch<T>(
 			code: 'service_unavailable',
 		});
 	} finally {
-		clearTimeout(timeoutId);
+		if (timeoutId !== null) clearTimeout(timeoutId);
 	}
 }
 
