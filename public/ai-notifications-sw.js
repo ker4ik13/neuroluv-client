@@ -17,7 +17,7 @@ self.addEventListener('push', (event) => {
 	const title =
 		typeof payload.title === 'string' && payload.title
 			? payload.title.slice(0, 160)
-			: 'Нейролюб Studio';
+			: 'Нейросеть';
 	const body =
 		typeof payload.body === 'string' ? payload.body.slice(0, 400) : '';
 	const href =

@@ -247,7 +247,8 @@ async function notifyRun(run: AiRunSummary, locale: string): Promise<void> {
 	const succeeded =
 		run.status === 'succeeded' || run.status === 'partially_succeeded';
 	const assets = await loadRunNotificationAssets(run);
-	const title = `${locale === 'en-US' ? 'Neuroluv' : 'Нейролюб'} — ${run.modelName}`;
+	const title =
+		run.modelName || (locale === 'en-US' ? 'AI model' : 'Нейросеть');
 	const fallback =
 		locale === 'en-US'
 			? succeeded
@@ -263,11 +264,17 @@ async function notifyRun(run: AiRunSummary, locale: string): Promise<void> {
 			? assets.responseText || fallback
 			: run.prompt || fallback
 		: run.errorMessage || fallback;
+	// macOS and iOS often omit the optional notification `image`. For successful
+	// image runs, also use the result in the visible `icon` media slot.
+	const icon =
+		succeeded && run.modality === 'image' && assets.image
+			? assets.image
+			: assets.icon;
 
 	await showNotificationOnce(`run:${run.id}:${run.status}`, title, {
 		body,
 		href,
-		icon: assets.icon,
+		icon,
 		image: succeeded ? assets.image : null,
 	});
 }
