@@ -11,7 +11,10 @@ import type {
 	NavigationItem,
 	SocialLink,
 } from '@/entities/navigation';
-import { useBodyScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
+import {
+	useBodyScrollLock,
+	useViewportScrollLock,
+} from '@/shared/lib/dom/useBodyScrollLock';
 import { AppIcon } from '@/shared/ui/app-icon';
 import { BrandIcon } from '@/shared/ui/brand-icon';
 import { Container } from '@/shared/ui/container';
@@ -34,7 +37,8 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 	const [mobileSectionId, setMobileSectionId] = useState<number | null>(null);
 	const isNavigationOpen = Boolean(desktopValue) || isMobileMenuOpen;
 
-	useBodyScrollLock(isNavigationOpen);
+	useBodyScrollLock(isMobileMenuOpen);
+	useViewportScrollLock(Boolean(desktopValue));
 
 	useEffect(() => {
 		function handleEscape(event: KeyboardEvent) {
@@ -249,6 +253,7 @@ function DesktopNavigation({
 		<NavigationMenu.Root
 			aria-label='Основная навигация'
 			className={styles.desktopNavigation}
+			data-viewport-scroll-lock-navigation
 			delayDuration={DESKTOP_MENU_DELAY_MS}
 			ref={navigationRef}
 			skipDelayDuration={DESKTOP_MENU_SKIP_DELAY_MS}

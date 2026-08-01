@@ -37,7 +37,10 @@ import {
 	type AiNavigationResponse,
 	type AiSession,
 } from '@/shared/api/ai';
-import { useBodyScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
+import {
+	useBodyScrollLock,
+	useViewportScrollLock,
+} from '@/shared/lib/dom/useBodyScrollLock';
 import { formatCreditNumber, formatCredits } from '@/shared/lib/formatCredits';
 import { AppIcon } from '@/shared/ui/app-icon';
 import { Container } from '@/shared/ui/container';
@@ -115,7 +118,8 @@ function AiShellContent({
 	const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
 	const isNavigationOpen = Boolean(desktopValue) || isMenuOpen;
 
-	useBodyScrollLock(isNavigationOpen);
+	useBodyScrollLock(isMenuOpen);
+	useViewportScrollLock(Boolean(desktopValue));
 
 	useEffect(() => {
 		let isMounted = true;
@@ -456,6 +460,7 @@ function DesktopNavigation({
 		<NavigationMenu.Root
 			aria-label={t('Навигация AI', 'AI navigation')}
 			className={styles.desktopNav}
+			data-viewport-scroll-lock-navigation
 			delayDuration={DESKTOP_MENU_DELAY_MS}
 			ref={navigationRef}
 			skipDelayDuration={DESKTOP_MENU_SKIP_DELAY_MS}
