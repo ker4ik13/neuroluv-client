@@ -112,6 +112,11 @@ export type AiPublicModel = {
 	} | null;
 	available: boolean;
 	unavailableReason?: string | null;
+	freeAllowance?: {
+		benefitCode: 'gpt_5_mini_text' | 'nano_banana_2_image';
+		total: number;
+		remaining: number;
+	} | null;
 };
 
 export type AiQuoteRequest = {

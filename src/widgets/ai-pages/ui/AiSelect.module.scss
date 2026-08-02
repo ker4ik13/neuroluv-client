@@ -91,6 +91,13 @@
 	gap: rem(9);
 }
 
+.optionBadge {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	margin-left: auto;
+}
+
 .optionVisual {
 	display: inline-flex;
 	width: rem(28);

@@ -2236,3 +2236,25 @@
 		transition: none;
 	}
 }
+.freeAllowanceBadge {
+	display: inline-flex;
+	min-width: rem(38);
+	height: rem(25);
+	align-items: center;
+	justify-content: center;
+	gap: rem(5);
+	padding: 0 rem(8);
+	color: #087fdb;
+	font-size: rem(12);
+	font-weight: 800;
+	line-height: 1;
+	white-space: nowrap;
+	background: rgba(8, 127, 219, 0.1);
+	border: rem(1) solid rgba(8, 127, 219, 0.2);
+	border-radius: rem(999);
+
+	svg {
+		width: rem(13);
+		height: rem(13);
+	}
+}

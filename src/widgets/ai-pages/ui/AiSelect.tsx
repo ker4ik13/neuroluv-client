@@ -29,6 +29,7 @@ export type AiSelectOption<Value extends AiSelectValue = string> = {
   selectedLabel?: string;
   description?: string;
   visual?: ReactNode;
+  badge?: ReactNode;
   disabled?: boolean;
   group?: AiSelectOptionGroup;
 };
@@ -455,6 +456,9 @@ export function AiSelect<Value extends AiSelectValue = string>({
                 <span className={styles.valueDescription}>{selectedOption.description}</span>
               ) : null}
             </span>
+            {selectedOption?.badge ? (
+              <span className={styles.optionBadge}>{selectedOption.badge}</span>
+            ) : null}
           </span>
           <FiChevronDown aria-hidden="true" className={styles.chevron} />
         </button>
@@ -507,6 +511,9 @@ export function AiSelect<Value extends AiSelectValue = string>({
                         <span className={styles.optionDescription}>{option.description}</span>
                       ) : null}
                     </span>
+                    {option.badge ? (
+                      <span className={styles.optionBadge}>{option.badge}</span>
+                    ) : null}
                   </span>
                   <span aria-hidden="true" className={styles.checkSlot}>
                     {index === selectedIndex ? <FiCheck /> : null}

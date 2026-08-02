@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   type CSSProperties,
@@ -24,6 +23,7 @@ import {
   FiDownload,
   FiExternalLink,
   FiFileText,
+  FiGift,
   FiImage,
   FiMessageCircle,
   FiMinus,
@@ -165,7 +165,7 @@ type VideoModeCapability = NonNullable<
 const EMPTY_DRAFT: Draft = {
   idempotencyKey: "",
   conversationId: "",
-  contextEnabled: true,
+  contextEnabled: false,
   catalogPromptOverride: false,
   promptId: null,
   promptCompatibleModelIds: [],
@@ -227,7 +227,6 @@ function toPersistedDraft(draft: Draft): Draft {
 }
 
 export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
-  const router = useRouter();
   const { locale, isEnglish, t } = useAiLocale();
   const { session, isLoading: isSessionLoading } = useAiSession();
   const modality = getModality(kind);
@@ -238,6 +237,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     null,
     { cacheTtlMs: CATALOG_CACHE_TTL_MS },
   );
+  const reloadModels = models.reload;
   const tools = useAiResource<AiPublicTool[]>(
     isTool ? "/catalog/tools?code=photo-to-prompt" : null,
     null,
@@ -250,7 +250,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   const toolFields = useMemo(() => visibleToolFields(tool), [tool]);
   const [draft, setDraft] = useState<Draft>({
     ...EMPTY_DRAFT,
-    contextEnabled: canUseContext,
+    contextEnabled: false,
   });
   const availableModels = useMemo(() => {
     const source = models.data || [];
@@ -276,8 +276,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   );
   const capabilities = selectedModel?.capabilities;
   const supportsContext =
-    kind === "text" ||
-    (kind === "image" && (!selectedModel || capabilities?.supportsContext === true));
+    session.authenticated &&
+    (kind === "text" ||
+      (kind === "image" && (!selectedModel || capabilities?.supportsContext === true)));
   const [draftReady, setDraftReady] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [references, setReferences] = useState<PendingReference[]>([]);
@@ -435,7 +436,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         } | null>("neuroluv-ai:create-preset", null);
         const nextDraft = {
           ...EMPTY_DRAFT,
-          contextEnabled: canUseContext,
+          contextEnabled: false,
           ...saved,
           // Sources from the prompt catalog, public works and retries are one-shot.
           // Persisting them makes an ordinary new chat inherit incompatible input.
@@ -452,11 +453,13 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         } as Draft;
 
         if (!canUseContext) nextDraft.contextEnabled = false;
+        if (!nextDraft.conversationId) nextDraft.contextEnabled = false;
         if (preset) {
           // Every external preset starts a clean conversation. Otherwise a saved
           // draft can overwrite the preset model or mix a catalog prompt with an
           // unrelated existing chat.
           nextDraft.conversationId = "";
+          nextDraft.contextEnabled = false;
           if (preset.promptId) {
             nextDraft.prompt = "";
             nextDraft.negativePrompt = "";
@@ -490,7 +493,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         }
         setDraft(nextDraft);
       } catch {
-        setDraft({ ...EMPTY_DRAFT, contextEnabled: canUseContext });
+        setDraft({ ...EMPTY_DRAFT, contextEnabled: false });
       } finally {
         loadedStorageKey.current = storageKey;
         setDraftReady(true);
@@ -571,7 +574,10 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     if (!draftReady || !availableModels.length) return;
     const current = availableModels.find((model) => model.id === draft.modelId);
     const selected =
-      current || availableModels.find((model) => model.available) || availableModels[0];
+      (current?.available ? current : null) ||
+      availableModels.find((model) => model.available) ||
+      current ||
+      availableModels[0];
     const capability = selected.capabilities;
     const timer = window.setTimeout(() => {
       setDraft((value) => ({
@@ -952,7 +958,13 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         "The selected model does not support this generation format",
       )
     : null;
+  const modelAvailabilityMessage =
+    selectedModel && !selectedModel.available
+      ? selectedModel.unavailableReason ||
+        t("Модель временно недоступна", "The model is temporarily unavailable")
+      : null;
   const quoteBlockMessage =
+    modelAvailabilityMessage ||
     operationBlockMessage ||
     referenceVisibilityMessage ||
     referenceCapabilityMessage ||
@@ -1378,12 +1390,13 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       !broadcastedTerminalRuns.current.has(run.id)
     ) {
       broadcastedTerminalRuns.current.add(run.id);
+      if (!session.authenticated) reloadModels();
       broadcastConversationChange(
         run.conversationId || activeConversationId.current,
         "terminal",
       );
     }
-  }, [broadcastConversationChange]);
+  }, [broadcastConversationChange, reloadModels, session.authenticated]);
 
   async function retryFailedTurn(turn: ChatTurn): Promise<void> {
     const sourceRun = turn.run;
@@ -1446,6 +1459,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     firstMessage: string,
     submissionEpoch: number,
   ): Promise<string> {
+    if (!session.authenticated) return "";
     if (submittedDraft.conversationId) return submittedDraft.conversationId;
     const payload = await aiApiFetch<AiConversation | AiApiEnvelope<AiConversation>>(
       "/conversations",
@@ -1521,10 +1535,6 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitLock.current) return;
-    if (!session.authenticated) {
-      router.push(`/ai/auth?returnTo=${encodeURIComponent(window.location.pathname)}`);
-      return;
-    }
     if (isConversationLoading) {
       setQuoteError(t("Дождитесь загрузки чата", "Wait for the chat to load"));
       return;
@@ -1744,6 +1754,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         );
       }
       conversationHistory.reload();
+      if (!session.authenticated) void models.refresh();
       broadcastConversationChange(
         nextRun.conversationId || conversationId,
         "started",
@@ -1975,6 +1986,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     setDraft((current) => ({
       ...current,
       conversationId: "",
+      contextEnabled: false,
       idempotencyKey: "",
       prompt: "",
       catalogPromptOverride: false,
@@ -2096,21 +2108,35 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   );
   const modelFamilyOptions = useMemo<AiSelectOption<string>[]>(
     () =>
-      modelFamilies.map((family) => ({
-        value: family.key,
-        label: family.label,
-        disabled: family.entries.every(({ model }) => !model.available),
-        visual: (
-          <AiModelLogo
-            label={family.label}
-            logoUrl={
-              family.entries.find(({ model }) => model.available)?.model.logoUrl ||
-              family.entries[0]?.model.logoUrl
-            }
-          />
-        ),
-      })),
-    [modelFamilies],
+      modelFamilies.map((family) => {
+        const freeAllowance = summarizeFamilyFreeAllowance(family);
+        return {
+          value: family.key,
+          label: family.label,
+          disabled: family.entries.every(({ model }) => !model.available),
+          visual: (
+            <AiModelLogo
+              label={family.label}
+              logoUrl={
+                family.entries.find(({ model }) => model.available)?.model.logoUrl ||
+                family.entries[0]?.model.logoUrl
+              }
+            />
+          ),
+          ...(freeAllowance
+            ? {
+                badge: (
+                  <FreeAllowanceBadge
+                    isEnglish={isEnglish}
+                    remaining={freeAllowance.remaining}
+                    total={freeAllowance.total}
+                  />
+                ),
+              }
+            : {}),
+        };
+      }),
+    [isEnglish, modelFamilies],
   );
   const modelVersionOptions = useMemo<AiSelectOption<string>[]>(
     () => createModelVersionOptions(selectedModelFamily, isEnglish),
@@ -2692,7 +2718,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   </span>
                 </span>
                 <button
-                  aria-label={session.authenticated ? t("Отправить сообщение", "Send message") : t("Войти и отправить", "Sign in and send")}
+                  aria-label={t("Отправить сообщение", "Send message")}
                   className={styles.sendButton}
                   disabled={
                     isSubmitting ||
@@ -3671,12 +3697,63 @@ function createModelVersionOptions(
     label: presentation.variant,
     selectedLabel: presentation.variant,
     visual: <AiModelLogo label={model.name} logoUrl={model.logoUrl} />,
-    description: model.available
-      ? undefined
-      : model.unavailableReason?.trim() ||
-        (isEnglish ? "Temporarily unavailable" : "Временно недоступна"),
+    ...(model.freeAllowance
+      ? {
+          badge: (
+            <FreeAllowanceBadge
+              isEnglish={isEnglish}
+              remaining={model.freeAllowance.remaining}
+              total={model.freeAllowance.total}
+            />
+          ),
+        }
+      : {}),
+    ...(model.available
+      ? {}
+      : {
+          description:
+            model.unavailableReason?.trim() ||
+            (isEnglish ? "Temporarily unavailable" : "Временно недоступна"),
+        }),
     disabled: !model.available,
   }));
+}
+
+function summarizeFamilyFreeAllowance(family: ModelFamily): {
+  remaining: number;
+  total: number;
+} | null {
+  const allowances = family.entries.flatMap(({ model }) =>
+    model.freeAllowance ? [model.freeAllowance] : [],
+  );
+  if (!allowances.length) return null;
+  return allowances.reduce(
+    (summary, allowance) => ({
+      remaining: summary.remaining + allowance.remaining,
+      total: summary.total + allowance.total,
+    }),
+    { remaining: 0, total: 0 },
+  );
+}
+
+function FreeAllowanceBadge({
+  isEnglish,
+  remaining,
+  total,
+}: {
+  isEnglish: boolean;
+  remaining: number;
+  total: number;
+}) {
+  const label = isEnglish
+    ? `${remaining} of ${total} free generations left`
+    : `Осталось бесплатно: ${remaining} из ${total}`;
+  return (
+    <span aria-label={label} className={styles.freeAllowanceBadge} title={label}>
+      <FiGift aria-hidden="true" />
+      <span>{remaining}</span>
+    </span>
+  );
 }
 
 function resolveModelPresentation(

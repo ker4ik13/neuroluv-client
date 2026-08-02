@@ -1,5 +1,6 @@
 import { AI_API_URL } from '@/shared/config/ai';
 import type { AiApiProblem } from './contracts';
+import { getAiDeviceFingerprint } from './deviceFingerprint';
 
 type AiFetchOptions = Omit<RequestInit, 'body'> & {
 	body?: unknown;
@@ -49,6 +50,10 @@ export async function aiApiFetch<T>(
 
 	if (!headers.has('x-request-id')) {
 		headers.set('x-request-id', crypto.randomUUID());
+	}
+	if (!headers.has('x-neuroluv-device-id')) {
+		const fingerprint = await getAiDeviceFingerprint();
+		if (fingerprint) headers.set('x-neuroluv-device-id', fingerprint);
 	}
 
 	if (isJsonBody(body) && !headers.has('content-type')) {
