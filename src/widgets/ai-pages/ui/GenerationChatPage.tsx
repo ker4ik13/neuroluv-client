@@ -1706,16 +1706,21 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
         );
       }
 
-      const runPayload = await aiApiFetch<AiRunSummary | AiApiEnvelope<AiRunSummary>>("/runs", {
+      const runPayload = await aiApiFetch<AiRunSummary | AiApiEnvelope<AiRunSummary>>(
+        "/runs",
+        {
           method: "POST",
           body: {
             idempotencyKey,
             quoteId: freshQuote.quoteId,
             operation: submittedOperation,
             modelId: submittedDraft.modelId,
-            conversationId,
-            contextEnabled: supportsContext ? submittedDraft.contextEnabled : false,
-          ...(submittedUseConversationReference ? { useConversationReference: true } : {}),
+            ...(conversationId ? { conversationId } : {}),
+            contextEnabled:
+              session.authenticated && supportsContext && Boolean(conversationId)
+                ? submittedDraft.contextEnabled
+                : false,
+            ...(submittedUseConversationReference ? { useConversationReference: true } : {}),
             ...(submittedDraft.promptId
               ? { promptId: submittedDraft.promptId }
               : {}),
@@ -1725,7 +1730,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             ...(submittedDraft.publicPromptUseToken
               ? { publicPromptUseToken: submittedDraft.publicPromptUseToken }
               : {}),
-          ...(submittedDraft.repeatRunId ? { retryRunId: submittedDraft.repeatRunId } : {}),
+            ...(submittedDraft.repeatRunId
+              ? { retryRunId: submittedDraft.repeatRunId }
+              : {}),
             ...(submittedTool ? { toolId: submittedTool.id } : {}),
             parameters: buildParameters(
               submittedDraft,
@@ -1736,7 +1743,8 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
             inputFileIds,
           },
           timeoutMs: 30_000,
-      });
+        },
+      );
       const nextRun = unwrapAiData(runPayload);
       if (viewEpoch.current === submissionEpoch) {
         setTurns((current) =>
