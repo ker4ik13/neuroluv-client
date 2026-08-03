@@ -1,0 +1,1 @@
+export { AnalyticsQueryPersistence } from './AnalyticsQueryPersistence';

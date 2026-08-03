@@ -7,6 +7,7 @@ import {
   DIRECTUS_PREVIEW_TOKEN,
 } from "@/shared/config/directus";
 import { SITE_URL } from "@/shared/config/site";
+import { preserveAnalyticsQueryInUrl } from "@/shared/lib/analytics/tracking-query";
 import { canReadDirectusItemStatus } from "@/shared/lib/preview/directus-preview";
 
 export const dynamic = "force-dynamic";
@@ -62,9 +63,12 @@ export async function GET(request: NextRequest) {
   const mode = await draftMode();
   mode.enable();
 
-  const redirectUrl = new URL(
+  const previewUrl = new URL(
     getPreviewPath(collection, record.slug),
     getPreviewBaseUrl(request),
+  );
+  const redirectUrl = new URL(
+    String(preserveAnalyticsQueryInUrl(previewUrl, request.url)),
   );
   const response = NextResponse.redirect(redirectUrl);
 

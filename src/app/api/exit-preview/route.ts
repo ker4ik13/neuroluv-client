@@ -1,5 +1,6 @@
 import { draftMode } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { preserveAnalyticsQueryInUrl } from "@/shared/lib/analytics/tracking-query";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,12 @@ export async function GET(request: NextRequest) {
   mode.disable();
 
   const nextPath = request.nextUrl.searchParams.get("next") || "/";
-  const redirectUrl = new URL(normalizeNextPath(nextPath), request.url);
+  const redirectUrl = new URL(
+    String(
+      preserveAnalyticsQueryInUrl(normalizeNextPath(nextPath), request.url),
+    ),
+    request.url,
+  );
   const response = NextResponse.redirect(redirectUrl);
 
   response.headers.set("Cache-Control", "no-store, max-age=0");

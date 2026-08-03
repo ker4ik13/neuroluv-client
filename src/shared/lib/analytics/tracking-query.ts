@@ -54,6 +54,46 @@ export function getAnalyticsSearchParams(
 	return result;
 }
 
+export function preserveAnalyticsQueryInUrl(
+	target: string | URL | null | undefined,
+	sourceHref: string,
+): string | URL | null | undefined {
+	if (target === null || target === undefined) {
+		return target;
+	}
+
+	try {
+		const sourceUrl = new URL(sourceHref);
+		const targetUrl = new URL(target.toString(), sourceUrl);
+
+		if (
+			(targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') ||
+			targetUrl.origin !== sourceUrl.origin
+		) {
+			return target;
+		}
+
+		let changed = false;
+		const sourceParams = getAnalyticsSearchParams(sourceUrl.searchParams);
+		const targetParameterNames = new Set(
+			[...targetUrl.searchParams.keys()].map((key) => key.toLowerCase()),
+		);
+
+		sourceParams.forEach((value, key) => {
+			if (targetParameterNames.has(key.toLowerCase())) {
+				return;
+			}
+
+			targetUrl.searchParams.append(key, value);
+			changed = true;
+		});
+
+		return changed ? targetUrl.href : target;
+	} catch {
+		return target;
+	}
+}
+
 export function buildAttributionUrl(
 	origin: string,
 	pathname: string,

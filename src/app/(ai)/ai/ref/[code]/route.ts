@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { AI_API_URL } from "@/shared/config/ai";
+import { preserveAnalyticsQueryInUrl } from "@/shared/lib/analytics/tracking-query";
 
 const REFERRAL_CODE_PATTERN = /^[A-Za-z0-9_-]{4,64}$/;
 const TRACKING_PARAMETERS = [
@@ -15,14 +16,21 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
+  const landingUrl = new URL(
+    String(preserveAnalyticsQueryInUrl("/ai", request.url)),
+    request.url,
+  );
 
   if (!REFERRAL_CODE_PATTERN.test(code)) {
-    return NextResponse.redirect(new URL("/ai", request.url), 302);
+    return NextResponse.redirect(landingUrl, 302);
   }
 
   const attributionUrl = new URL(`${AI_API_URL}/referrals/entry`);
   attributionUrl.searchParams.set("code", code);
-  attributionUrl.searchParams.set("landing", "/ai");
+  attributionUrl.searchParams.set(
+    "landing",
+    `${landingUrl.pathname}${landingUrl.search}${landingUrl.hash}`,
+  );
 
   for (const [sourceName, targetName] of TRACKING_PARAMETERS) {
     const value = request.nextUrl.searchParams.get(sourceName);
