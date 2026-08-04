@@ -8,6 +8,11 @@ import "./globals.scss";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://neuroluv.ru"),
+  alternates: {
+    types: {
+      "application/rss+xml": "/yandex-news.xml",
+    },
+  },
 };
 
 export default function RootLayout({

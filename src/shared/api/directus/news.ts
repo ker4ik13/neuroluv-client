@@ -344,6 +344,7 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
 });
 
 const PAGE_SIZE = 30;
+const YANDEX_NEWS_FRESHNESS_DAYS = 8;
 
 type NewsDetailPageDataWithBlocks = NewsDetailPageData & {
   blocks: PageBlock[];
@@ -449,6 +450,32 @@ export async function getNewsBySlug(slug: string): Promise<NewsDetail | null> {
   );
 
   return normalizeNewsDetail(news[0] || null, preview.enabled);
+}
+
+export async function getRecentNewsForYandexFeed(
+  referenceDate = new Date(),
+): Promise<NewsDetail[]> {
+  const freshnessBoundary = new Date(
+    referenceDate.getTime() - YANDEX_NEWS_FRESHNESS_DAYS * 24 * 60 * 60 * 1_000,
+  );
+  const params = new URLSearchParams({
+    fields: NEWS_DETAIL_FIELDS,
+    limit: "-1",
+    sort: "-published_at,-id",
+  });
+
+  params.set("filter[status][_eq]", "published");
+  params.set("filter[published_at][_gte]", freshnessBoundary.toISOString());
+  params.set("filter[published_at][_lte]", referenceDate.toISOString());
+
+  const news = await directusRequest<DirectusNewsItem[]>(
+    `/items/news?${params.toString()}`,
+    { next: { revalidate: 60 } },
+  );
+
+  return news
+    .map((item) => normalizeNewsDetail(item))
+    .filter((item): item is NewsDetail => item !== null);
 }
 
 export async function getRelatedNews(
