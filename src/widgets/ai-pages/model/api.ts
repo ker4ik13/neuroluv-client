@@ -24,6 +24,7 @@ export type ResourceState<T> = {
 type ResourceOptions<T> = {
 	cacheTtlMs?: number;
 	merge?: (current: T | null, incoming: T) => T;
+	revalidateInitial?: boolean;
 };
 
 const resourceRefreshControllers = new WeakMap<
@@ -53,6 +54,7 @@ export function useAiResource<T>(
 	const localizedPath = path ? withAiLocale(path, locale) : null;
 	const cacheTtlMs = options.cacheTtlMs ?? 0;
 	const merge = options.merge;
+	const revalidateInitial = options.revalidateInitial ?? false;
 	const cachedPayload =
 		localizedPath && cacheTtlMs > 0
 			? readAiApiCache<T | AiApiEnvelope<T>>(localizedPath)
@@ -128,7 +130,11 @@ export function useAiResource<T>(
 		if (!localizedPath) {
 			return;
 		}
-		if (initialData !== null && requestVersion === 0) {
+		if (
+			initialData !== null &&
+			requestVersion === 0 &&
+			!revalidateInitial
+		) {
 			return abortRefresh;
 		}
 
@@ -183,7 +189,13 @@ export function useAiResource<T>(
 			controller.abort();
 			abortRefresh();
 		};
-	}, [cacheTtlMs, initialData, localizedPath, requestVersion]);
+	}, [
+		cacheTtlMs,
+		initialData,
+		localizedPath,
+		requestVersion,
+		revalidateInitial,
+	]);
 
 	return { data, error, errorStatus, isLoading, reload, refresh, update };
 }

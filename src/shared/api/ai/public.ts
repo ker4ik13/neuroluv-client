@@ -12,9 +12,21 @@ import type {
 
 const PUBLIC_FETCH_TIMEOUT_MS = 3_000;
 
+type PublicFetchOptions = {
+	throwOnError?: boolean;
+};
+
+export async function getAiPublicPromptCatalog(): Promise<AiPromptCatalog | null> {
+	return fetchAiPublic<AiPromptCatalog>(
+		'/catalog/prompts?page=1&pageSize=12&sort=newest',
+		{ throwOnError: true },
+	);
+}
+
 export async function getAiPublicPrompt(slug: string): Promise<AiPromptDetail | null> {
 	const payload = await fetchAiPublic<AiApiEnvelope<AiPromptDetail>>(
 		`/catalog/prompts/${encodeURIComponent(slug)}`,
+		{ throwOnError: true },
 	);
 
 	return payload?.data ?? null;
@@ -87,7 +99,10 @@ export async function getAiPublicShare(
 	}
 }
 
-async function fetchAiPublic<T>(path: string): Promise<T | null> {
+async function fetchAiPublic<T>(
+	path: string,
+	options: PublicFetchOptions = {},
+): Promise<T | null> {
 	try {
 		const response = await fetch(`${AI_API_URL}${path}`, {
 			headers: { accept: 'application/json' },
@@ -95,9 +110,19 @@ async function fetchAiPublic<T>(path: string): Promise<T | null> {
 			signal: AbortSignal.timeout(PUBLIC_FETCH_TIMEOUT_MS),
 		});
 
-		if (!response.ok) return null;
+		if (!response.ok) {
+			if (options.throwOnError && response.status !== 404) {
+				throw new Error(`AI public request failed with status ${response.status}`);
+			}
+
+			return null;
+		}
 		return (await response.json()) as T;
-	} catch {
+	} catch (error) {
+		if (options.throwOnError) {
+			throw error;
+		}
+
 		return null;
 	}
 }

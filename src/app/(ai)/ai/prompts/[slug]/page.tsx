@@ -1,8 +1,15 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getAiPublicPrompt } from '@/shared/api/ai/public';
 import { getSiteSeo } from '@/shared/api/directus/seo';
 import { resolveSeoTemplate } from '@/shared/lib/seo/metadata';
 import { PromptDetailPage } from '@/widgets/ai-pages';
+
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+	return [];
+}
 
 export async function generateMetadata({
 	params,
@@ -64,5 +71,8 @@ export default async function Page({
 	params: Promise<{ slug: string }>;
 }) {
 	const { slug } = await params;
-	return <PromptDetailPage slug={slug} />;
+	const prompt = await getAiPublicPrompt(slug);
+	if (!prompt) notFound();
+
+	return <PromptDetailPage initialPrompt={prompt} slug={slug} />;
 }

@@ -30,12 +30,20 @@ import styles from "./AiPages.module.scss";
 
 type PromptVariableValue = string | number | boolean;
 
-export function PromptDetailPage({ slug }: { slug: string }) {
+export function PromptDetailPage({
+  initialPrompt = null,
+  slug,
+}: {
+  initialPrompt?: AiPromptDetail | null;
+  slug: string;
+}) {
   const router = useRouter();
   const { session } = useAiSession();
   const { t } = useAiLocale();
   const prompt = useAiResource<AiPromptDetail>(
     `/catalog/prompts/${encodeURIComponent(slug)}`,
+    initialPrompt,
+    { revalidateInitial: true },
   );
   const models = useAiResource<AiPublicModel[]>("/catalog/models");
   const [modelId, setModelId] = useState("");

@@ -5,7 +5,7 @@ import { getFooterData } from '@/shared/api/directus/footer';
 import { getStudioHeaderNavigation } from '@/shared/api/directus/navigation';
 import { AiShell } from '@/widgets/ai-shell';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export const metadata: Metadata = {
 	title: {

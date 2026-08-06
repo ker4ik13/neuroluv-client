@@ -55,31 +55,27 @@ const INITIAL_FILTERS: PromptFilters = {
 };
 
 export function PromptsPage({
-  initialSearchParams = {},
+  initialCatalog = null,
 }: {
-  initialSearchParams?: Record<string, string | undefined>;
+  initialCatalog?: AiPromptCatalog | null;
 }) {
   const router = useRouter();
   const { session } = useAiSession();
   const { isEnglish, t } = useAiLocale();
-  const [filters, setFilters] = useState<PromptFilters>(() => ({
-    search: initialSearchParams.search || "",
-    modality: initialSearchParams.modality || "",
-    modelId: initialSearchParams.model || "",
-    category: initialSearchParams.category || "",
-    sort: normalizePromptSort(initialSearchParams.sort),
-    favoritesOnly:
-      initialSearchParams.favorites === "1" || initialSearchParams.favorites === "true",
-  }));
+  const [filters, setFilters] = useState<PromptFilters>(INITIAL_FILTERS);
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
-  const [promptCatalog, setPromptCatalog] = useState<AiPromptCatalog | null>(null);
+  const [promptCatalog, setPromptCatalog] = useState<AiPromptCatalog | null>(
+    initialCatalog,
+  );
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(!initialCatalog);
   const [catalogRequestVersion, setCatalogRequestVersion] = useState(0);
   const [isPaginationPending, setIsPaginationPending] = useState(false);
   const [paginationError, setPaginationError] = useState<string | null>(null);
+  const hasCatalogDataRef = useRef(Boolean(initialCatalog));
   const paginationRequestRef = useRef<string | null>(null);
+  const preserveInitialCatalogRef = useRef(Boolean(initialCatalog));
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const catalogPath = useMemo(
@@ -123,15 +119,33 @@ export function PromptsPage({
   }
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const nextFilters = getPromptFiltersFromLocation();
+
+      setFilters((current) =>
+        arePromptFiltersEqual(current, nextFilters) ? current : nextFilters,
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    const preserveInitialCatalog =
+      preserveInitialCatalogRef.current &&
+      catalogRequestVersion === 0 &&
+      catalogPath === buildPromptCatalogPath(INITIAL_FILTERS, 1);
+
+    if (!preserveInitialCatalog) hasCatalogDataRef.current = false;
 
     paginationRequestRef.current = null;
     queueMicrotask(() => {
       if (!active) return;
-      setPromptCatalog(null);
+      if (!preserveInitialCatalog) setPromptCatalog(null);
       setCatalogError(null);
-      setIsCatalogLoading(true);
+      setIsCatalogLoading(!preserveInitialCatalog);
       setIsPaginationPending(false);
       setPaginationError(null);
     });
@@ -139,14 +153,20 @@ export function PromptsPage({
     aiApiFetch<AiPromptCatalog>(catalogPath, { signal: controller.signal })
       .then((data) => {
         if (!active) return;
+        hasCatalogDataRef.current = true;
         setPromptCatalog(data);
       })
       .catch((error: unknown) => {
         if (!active || controller.signal.aborted) return;
-        setCatalogError(getAiErrorMessage(error));
+        if (!hasCatalogDataRef.current) {
+          setCatalogError(getAiErrorMessage(error));
+        }
       })
       .finally(() => {
-        if (active) setIsCatalogLoading(false);
+        if (active) {
+          preserveInitialCatalogRef.current = false;
+          setIsCatalogLoading(false);
+        }
       });
 
     return () => {
@@ -569,6 +589,34 @@ function SidebarOptions({
 function normalizePromptSort(value?: string): PromptSort {
   if (value === "popular" || value === "title") return value;
   return "newest";
+}
+
+function getPromptFiltersFromLocation(): PromptFilters {
+  const params = new URLSearchParams(window.location.search);
+  const favorites = params.get("favorites");
+
+  return {
+    search: params.get("search") || "",
+    modality: params.get("modality") || "",
+    modelId: params.get("model") || "",
+    category: params.get("category") || "",
+    sort: normalizePromptSort(params.get("sort") || undefined),
+    favoritesOnly: favorites === "1" || favorites === "true",
+  };
+}
+
+function arePromptFiltersEqual(
+  first: PromptFilters,
+  second: PromptFilters,
+): boolean {
+  return (
+    first.search === second.search &&
+    first.modality === second.modality &&
+    first.modelId === second.modelId &&
+    first.category === second.category &&
+    first.sort === second.sort &&
+    first.favoritesOnly === second.favoritesOnly
+  );
 }
 
 function buildPromptImageSrcSet(value: string): string {
