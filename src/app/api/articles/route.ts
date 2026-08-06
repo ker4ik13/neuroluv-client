@@ -2,37 +2,32 @@ import { NextResponse } from "next/server";
 
 import type { NewsSortOrder } from "@/entities/news";
 import { getArticlesPageData } from "@/shared/api/directus/articles";
+import {
+  getBoundedQueryParam,
+  normalizeApiPage,
+} from "@/shared/lib/api/query-params";
 
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
-  const topic = getQueryParam(searchParams, "topic");
+  const topic = getBoundedQueryParam(searchParams, "topic");
 
   try {
     const data = await getArticlesPageData({
-      page: normalizePage(searchParams.get("page")),
-      q: getQueryParam(searchParams, "q"),
+      page: normalizeApiPage(searchParams.get("page")),
+      q: getBoundedQueryParam(searchParams, "q"),
       sort: normalizeSort(searchParams.get("sort")),
-      tag: topic ? null : getQueryParam(searchParams, "tag"),
+      tag: topic ? null : getBoundedQueryParam(searchParams, "tag"),
       topic,
     });
 
-    return NextResponse.json(data);
-  } catch {
+    return NextResponse.json(data, { headers: getPublicCacheHeaders() });
+  } catch (error) {
+    console.error("Failed to load articles API data", error);
     return NextResponse.json(
       { message: "Failed to load articles" },
       { status: 500 },
     );
   }
-}
-
-function normalizePage(value: string | null): number {
-  const page = Number(value);
-
-  if (!Number.isFinite(page) || page < 1) {
-    return 1;
-  }
-
-  return Math.floor(page);
 }
 
 function normalizeSort(value: string | null): NewsSortOrder {
@@ -43,8 +38,8 @@ function normalizeSort(value: string | null): NewsSortOrder {
   return "fresh";
 }
 
-function getQueryParam(searchParams: URLSearchParams, key: string): string | null {
-  const value = searchParams.get(key);
-
-  return value || null;
+function getPublicCacheHeaders(): HeadersInit {
+  return {
+    "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+  };
 }

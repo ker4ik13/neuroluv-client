@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getNewsDetailPageData } from "@/shared/api/directus/news";
+import {
+  getNewsDetailPageData,
+  getNewsMetadataBySlug,
+} from "@/shared/api/directus/news";
 import {
   buildBreadcrumbJsonLd,
   buildNewsArticleJsonLd,
@@ -28,24 +31,24 @@ export async function generateMetadata({
   params,
 }: NewsDetailRouteProps): Promise<Metadata> {
   const { slug } = await params;
-  const data = await getNewsDetailPageData(slug);
+  const item = await getNewsMetadataBySlug(slug);
 
-  if (!data) {
+  if (!item) {
     return {};
   }
 
-  return buildPageMetadata(data.item.seo, {
-    author: data.item.author?.name,
-    canonicalPath: `/news/${data.item.slug}`,
-    fallbackDescription: data.item.description,
-    fallbackImage: data.item.image,
+  return buildPageMetadata(item.seo, {
+    author: item.author?.name,
+    canonicalPath: `/news/${item.slug}`,
+    fallbackDescription: item.description,
+    fallbackImage: item.image,
     fallbackTitle: "{TITLE} | {SITE_NAME}",
     openGraphType: "article",
-    publishedTime: data.item.publishedAt,
+    publishedTime: item.publishedAt,
     variables: {
-      AUTHOR: data.item.author?.name,
-      TITLE: data.item.title,
-      URL: `/news/${data.item.slug}`,
+      AUTHOR: item.author?.name,
+      TITLE: item.title,
+      URL: `/news/${item.slug}`,
     },
   });
 }

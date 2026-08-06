@@ -1,6 +1,7 @@
 import "server-only";
 
 import { draftMode } from "next/headers";
+import { cache } from "react";
 
 import type { DirectusRequestOptions } from "@/shared/api/directus/client";
 import { DIRECTUS_PREVIEW_TOKEN } from "@/shared/config/directus";
@@ -10,7 +11,7 @@ export type DirectusPreviewContext = {
   requestOptions: DirectusRequestOptions;
 };
 
-export async function getDirectusPreviewContext(): Promise<DirectusPreviewContext> {
+export const getDirectusPreviewContext = cache(async function getDirectusPreviewContext(): Promise<DirectusPreviewContext> {
   const mode = await draftMode();
 
   if (!mode.isEnabled) {
@@ -27,7 +28,7 @@ export async function getDirectusPreviewContext(): Promise<DirectusPreviewContex
       token: DIRECTUS_PREVIEW_TOKEN,
     },
   };
-}
+});
 
 export function canReadDirectusItemStatus(
   status: string | null | undefined,

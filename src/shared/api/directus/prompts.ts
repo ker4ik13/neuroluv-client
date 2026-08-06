@@ -20,9 +20,8 @@ import type {
 import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
-  PAGE_BLOCK_FIELDS,
+  getDirectusPageBlocksBySlug,
   normalizePageBlocks,
-  type DirectusPageBlock,
 } from "@/shared/api/directus/pages";
 import {
   DIRECTUS_SEO_FIELDS,
@@ -548,10 +547,11 @@ export async function getPromptsPageData({
   const collectionPromptIds = collection
     ? await getPromptIdsByCollectionSlug(collection)
     : null;
-  const requestedLimit = getListLimit(page);
+  const normalizedPage = Math.max(1, Math.trunc(page));
   const promptsParams = new URLSearchParams({
     fields: PROMPT_FIELDS,
-    limit: String(requestedLimit + 1),
+    limit: String(PAGE_SIZE + 1),
+    offset: String((normalizedPage - 1) * PAGE_SIZE),
     sort: getSort(sort),
   });
 
@@ -566,11 +566,6 @@ export async function getPromptsPageData({
     type,
   });
 
-  const sidebarPromptsParams = new URLSearchParams({
-    fields: PROMPT_FIELDS,
-    limit: "100",
-    sort: "-views_count,-published_at,-id",
-  });
   const totalParams = new URLSearchParams();
   const goalCountsParams = new URLSearchParams();
   const kindCountsParams = new URLSearchParams();
@@ -584,7 +579,6 @@ export async function getPromptsPageData({
   tagCountsParams.set("aggregate[count]", "id");
   tagCountsParams.set("groupBy[]", "prompt_tags_id");
   tagCountsParams.set("filter[prompts_id][status][_eq]", "published");
-  applyPublishedFilter(sidebarPromptsParams);
   applyPublishedFilter(totalParams);
   applyPublishedFilter(goalCountsParams);
   applyPublishedFilter(kindCountsParams);
@@ -598,15 +592,14 @@ export async function getPromptsPageData({
     type,
   });
 
+  const shouldLoadFacets = normalizedPage === 1;
   const [
     prompts,
-    sidebarPrompts,
     totalRows,
     goalCountRows,
     kindCountRows,
     tagCountRows,
     contentKinds,
-    formats,
     tags,
     goals,
     neuralNetworks,
@@ -616,52 +609,59 @@ export async function getPromptsPageData({
         `/items/prompts?${promptsParams.toString()}`,
         { next: { revalidate: 60 } },
       ),
-      directusRequest<DirectusPromptItem[]>(
-        `/items/prompts?${sidebarPromptsParams.toString()}`,
-        { next: { revalidate: 60 } },
-      ),
-      directusRequest<DirectusAggregateCount[]>(
-        `/items/prompts?${totalParams.toString()}`,
-        { next: { revalidate: 60 } },
-      ),
-      directusRequest<DirectusPromptGoalCount[]>(
-        `/items/prompts?${goalCountsParams.toString()}`,
-        { next: { revalidate: 60 } },
-      ),
-      directusRequest<DirectusPromptKindCount[]>(
-        `/items/prompts?${kindCountsParams.toString()}`,
-        { next: { revalidate: 60 } },
-      ),
-      optionalDirectusRequest<DirectusPromptTagCount[]>(
-        `/items/prompts_tags?${tagCountsParams.toString()}`,
-        [],
-        { next: { revalidate: 60 } },
-      ),
-      optionalDirectusRequest<DirectusTaxonomy[]>(
-        `/items/prompt_content_kinds?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
-        [],
-        { next: { revalidate: 60 } },
-      ),
-      optionalDirectusRequest<DirectusPromptFormat[]>(
-        `/items/prompt_formats?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS},code`,
-        [],
-        { next: { revalidate: 60 } },
-      ),
-      optionalDirectusRequest<DirectusTaxonomy[]>(
-        `/items/prompt_tags?filter[is_active][_eq]=true&filter[is_filterable][_eq]=true&sort=sort&fields=${PROMPT_TAG_FIELDS}`,
-        [],
-        { next: { revalidate: 60 } },
-      ),
-      optionalDirectusRequest<DirectusTaxonomy[]>(
-        `/items/prompt_goals?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS},is_filterable`,
-        [],
-        { next: { revalidate: 60 } },
-      ),
-      optionalDirectusRequest<DirectusNeuralNetwork[]>(
-        `/items/neural_networks?filter[is_active][_eq]=true&sort=sort&fields=${NETWORK_FIELDS}`,
-        [],
-        { next: { revalidate: 60 } },
-      ),
+      shouldLoadFacets
+        ? directusRequest<DirectusAggregateCount[]>(
+            `/items/prompts?${totalParams.toString()}`,
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
+      shouldLoadFacets
+        ? directusRequest<DirectusPromptGoalCount[]>(
+            `/items/prompts?${goalCountsParams.toString()}`,
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
+      shouldLoadFacets
+        ? directusRequest<DirectusPromptKindCount[]>(
+            `/items/prompts?${kindCountsParams.toString()}`,
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
+      shouldLoadFacets
+        ? optionalDirectusRequest<DirectusPromptTagCount[]>(
+            `/items/prompts_tags?${tagCountsParams.toString()}`,
+            [],
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
+      shouldLoadFacets
+        ? optionalDirectusRequest<DirectusTaxonomy[]>(
+            `/items/prompt_content_kinds?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+            [],
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
+      shouldLoadFacets
+        ? optionalDirectusRequest<DirectusTaxonomy[]>(
+            `/items/prompt_tags?filter[is_active][_eq]=true&filter[is_filterable][_eq]=true&sort=sort&fields=${PROMPT_TAG_FIELDS}`,
+            [],
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
+      shouldLoadFacets
+        ? optionalDirectusRequest<DirectusTaxonomy[]>(
+            `/items/prompt_goals?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS},is_filterable`,
+            [],
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
+      shouldLoadFacets
+        ? optionalDirectusRequest<DirectusNeuralNetwork[]>(
+            `/items/neural_networks?filter[is_active][_eq]=true&sort=sort&fields=${NETWORK_FIELDS}`,
+            [],
+            { next: { revalidate: 60 } },
+          )
+        : Promise.resolve([]),
     ]);
 
   const normalizedPrompts = prompts.map((item) => normalizePromptItem(item)).filter(isPromptItem);
@@ -670,15 +670,15 @@ export async function getPromptsPageData({
   const tagCounts = normalizeTagCounts(tagCountRows);
 
   return {
-    hasMore: normalizedPrompts.length > requestedLimit,
-    prompts: normalizedPrompts.slice(0, requestedLimit),
-    sidebarPrompts: sidebarPrompts.map((item) => normalizePromptItem(item)).filter(isPromptItem),
+    hasMore: normalizedPrompts.length > PAGE_SIZE,
+    prompts: normalizedPrompts.slice(0, PAGE_SIZE),
+    sidebarPrompts: [],
     totalCount: normalizeAggregateCount(totalRows),
     types: [],
     contentKinds: contentKinds
       .map((item) => normalizeTaxonomyWithCount(item, kindCounts))
       .filter(isTaxonomy),
-    formats: formats.map(normalizeTaxonomy).filter(isTaxonomy),
+    formats: [],
     tags: tags
       .map((item) => normalizeTaxonomyWithCount(item, tagCounts))
       .filter(isTaxonomy)
@@ -1140,10 +1140,6 @@ function normalizeTaxonomyWithCount(
   };
 }
 
-function getListLimit(page: number): number {
-  return Math.max(1, page) * PAGE_SIZE;
-}
-
 async function getPromptIdsByCollectionSlug(slug: string): Promise<number[]> {
   const params = new URLSearchParams({
     fields: "prompts_id",
@@ -1186,6 +1182,30 @@ export async function getPromptBySlug(slug: string): Promise<PromptDetail | null
   );
 
   return normalizePromptDetail(prompts[0] || null, preview.enabled);
+}
+
+export async function getPromptMetadataBySlug(
+  slug: string,
+): Promise<PromptItem | null> {
+  const preview = await getDirectusPreviewContext();
+  const params = new URLSearchParams({
+    fields: PROMPT_FIELDS,
+    limit: "1",
+  });
+
+  if (!preview.enabled) {
+    applyPublishedFilter(params);
+  }
+
+  params.set("filter[slug][_eq]", slug);
+
+  const prompts = await directusRequest<DirectusPromptItem[]>(
+    `/items/prompts?${params.toString()}`,
+    preview.requestOptions,
+  );
+  const prompt = prompts[0];
+
+  return prompt ? normalizePromptItem(prompt, preview.enabled) : null;
 }
 
 export async function getRelatedPrompts(
@@ -1248,24 +1268,9 @@ export async function getPromptDetailPageData(
 }
 
 async function getPromptPageBlocksBySlug(slug: string): Promise<PageBlock[]> {
-  const preview = await getDirectusPreviewContext();
-  const params = new URLSearchParams({
-    fields: PAGE_BLOCK_FIELDS,
-    limit: "1",
-  });
+  const blocks = await getDirectusPageBlocksBySlug("prompts", slug);
 
-  if (!preview.enabled) {
-    applyPublishedFilter(params);
-  }
-
-  params.set("filter[slug][_eq]", slug);
-
-  const prompts = await directusRequest<{ blocks?: DirectusPageBlock[] }[]>(
-    `/items/prompts?${params.toString()}`,
-    preview.requestOptions,
-  );
-
-  return normalizePageBlocks(prompts[0]?.blocks || []);
+  return normalizePageBlocks(blocks);
 }
 
 async function getRelatedPromptIdsByCurrentCollections(

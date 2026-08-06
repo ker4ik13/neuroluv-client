@@ -16,10 +16,9 @@ import type {
 import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
-  PAGE_BLOCK_FIELDS,
+  getDirectusPageBlocksBySlug,
   hydratePageBlocks,
   normalizePageBlocks,
-  type DirectusPageBlock,
 } from "@/shared/api/directus/pages";
 import {
   DIRECTUS_SEO_FIELDS,
@@ -208,7 +207,7 @@ type DirectusArticleItem = {
   content_blocks?: DirectusContentBlock[];
 } & DirectusSeoFields;
 
-const ARTICLE_FIELDS = [
+const ARTICLE_CARD_FIELDS = [
   "id",
   "sort",
   "status",
@@ -233,17 +232,6 @@ const ARTICLE_FIELDS = [
   "author.avatar.type",
   "author.avatar.width",
   "author.avatar.height",
-  "mini_cta.id",
-  "mini_cta.is_active",
-  "mini_cta.title",
-  "mini_cta.description",
-  "mini_cta.buttons.sort",
-  "mini_cta.buttons.hero_buttons_id.id",
-  "mini_cta.buttons.hero_buttons_id.label",
-  "mini_cta.buttons.hero_buttons_id.url",
-  "mini_cta.buttons.hero_buttons_id.target",
-  "mini_cta.buttons.hero_buttons_id.variant",
-  "mini_cta.buttons.hero_buttons_id.is_active",
   "tags.sort",
   "tags.article_tags_id.id",
   "tags.article_tags_id.sort",
@@ -258,7 +246,6 @@ const ARTICLE_FIELDS = [
   "topics.article_topics_id.slug",
   "topics.article_topics_id.description",
   "topics.article_topics_id.is_active",
-  DIRECTUS_SEO_FIELDS,
   "content_blocks.id",
   "content_blocks.sort",
   "content_blocks.collection",
@@ -273,12 +260,44 @@ const ARTICLE_FIELDS = [
   "content_blocks.item:content_image.image.height",
 ].join(",");
 
+const ARTICLE_METADATA_FIELDS = [
+  "id",
+  "status",
+  "title",
+  "slug",
+  "description",
+  "created_at",
+  "updated_at",
+  "image.id",
+  "image.title",
+  "image.type",
+  "image.width",
+  "image.height",
+  "author.id",
+  "author.first_name",
+  "author.last_name",
+  "author.title",
+  DIRECTUS_SEO_FIELDS,
+].join(",");
+
 const TAXONOMY_FIELDS = ["id", "sort", "title", "slug", "description", "is_active"].join(
   ",",
 );
 
 const ARTICLE_DETAIL_FIELDS = [
-  ARTICLE_FIELDS,
+  ARTICLE_CARD_FIELDS,
+  DIRECTUS_SEO_FIELDS,
+  "mini_cta.id",
+  "mini_cta.is_active",
+  "mini_cta.title",
+  "mini_cta.description",
+  "mini_cta.buttons.sort",
+  "mini_cta.buttons.hero_buttons_id.id",
+  "mini_cta.buttons.hero_buttons_id.label",
+  "mini_cta.buttons.hero_buttons_id.url",
+  "mini_cta.buttons.hero_buttons_id.target",
+  "mini_cta.buttons.hero_buttons_id.variant",
+  "mini_cta.buttons.hero_buttons_id.is_active",
   "content_blocks.id",
   "content_blocks.sort",
   "content_blocks.collection",
@@ -383,10 +402,11 @@ export async function getArticlesPageData({
   topic,
 }: GetArticlesPageDataParams = {}): Promise<NewsPageData> {
   const activeTag = topic ? null : tag;
-  const requestedLimit = getListLimit(page);
+  const normalizedPage = Math.max(1, Math.trunc(page));
   const articlesParams = new URLSearchParams({
-    fields: ARTICLE_FIELDS,
-    limit: String(requestedLimit + 1),
+    fields: ARTICLE_CARD_FIELDS,
+    limit: String(PAGE_SIZE + 1),
+    offset: String((normalizedPage - 1) * PAGE_SIZE),
     sort: sort === "old" ? "created_at,id" : "-created_at,-id",
   });
 
@@ -406,45 +426,72 @@ export async function getArticlesPageData({
   }
 
   const sidebarArticlesParams = new URLSearchParams({
-    fields: ARTICLE_FIELDS,
+    fields: ARTICLE_CARD_FIELDS,
     limit: "12",
     sort: "-created_at,-id",
   });
 
   sidebarArticlesParams.set("filter[status][_eq]", "published");
 
+  const shouldLoadFacets = normalizedPage === 1;
   const [articles, sidebarArticles, topics, tags] = await Promise.all([
     directusRequest<DirectusArticleItem[]>(
       `/items/articles?${articlesParams.toString()}`,
       { next: { revalidate: 60 } },
     ),
-    directusRequest<DirectusArticleItem[]>(
-      `/items/articles?${sidebarArticlesParams.toString()}`,
-      { next: { revalidate: 60 } },
-    ),
-    directusRequest<DirectusTaxonomy[]>(
-      `/items/article_topics?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
-      { next: { revalidate: 60 } },
-    ),
-    directusRequest<DirectusTaxonomy[]>(
-      `/items/article_tags?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
-      { next: { revalidate: 60 } },
-    ),
+    shouldLoadFacets
+      ? directusRequest<DirectusArticleItem[]>(
+          `/items/articles?${sidebarArticlesParams.toString()}`,
+          { next: { revalidate: 60 } },
+        )
+      : Promise.resolve([]),
+    shouldLoadFacets
+      ? directusRequest<DirectusTaxonomy[]>(
+          `/items/article_topics?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+          { next: { revalidate: 60 } },
+        )
+      : Promise.resolve([]),
+    shouldLoadFacets
+      ? directusRequest<DirectusTaxonomy[]>(
+          `/items/article_tags?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+          { next: { revalidate: 60 } },
+        )
+      : Promise.resolve([]),
   ]);
 
   const normalizedArticles = articles.map((item) => normalizeArticleItem(item)).filter(isArticleItem);
 
   return {
-    hasMore: normalizedArticles.length > requestedLimit,
-    news: normalizedArticles.slice(0, requestedLimit),
+    hasMore: normalizedArticles.length > PAGE_SIZE,
+    news: normalizedArticles.slice(0, PAGE_SIZE),
     sidebarNews: sidebarArticles.map((item) => normalizeArticleItem(item)).filter(isArticleItem),
     topics: topics.map(normalizeTaxonomy).filter(isTaxonomy),
     tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
   };
 }
 
-function getListLimit(page: number): number {
-  return Math.max(1, page) * PAGE_SIZE;
+export async function getArticleMetadataBySlug(
+  slug: string,
+): Promise<NewsItem | null> {
+  const preview = await getDirectusPreviewContext();
+  const params = new URLSearchParams({
+    fields: ARTICLE_METADATA_FIELDS,
+    limit: "1",
+  });
+
+  if (!preview.enabled) {
+    params.set("filter[status][_eq]", "published");
+  }
+
+  params.set("filter[slug][_eq]", slug);
+
+  const articles = await directusRequest<DirectusArticleItem[]>(
+    `/items/articles?${params.toString()}`,
+    preview.requestOptions,
+  );
+  const article = articles[0];
+
+  return article ? normalizeArticleItem(article, preview.enabled) : null;
 }
 
 export async function getArticleBySlug(slug: string): Promise<NewsDetail | null> {
@@ -473,7 +520,7 @@ export async function getRelatedArticles(
   limit = 6,
 ): Promise<NewsItem[]> {
   const params = new URLSearchParams({
-    fields: ARTICLE_FIELDS,
+    fields: ARTICLE_CARD_FIELDS,
     limit: String(limit),
     sort: "-created_at,-id",
   });
@@ -511,24 +558,9 @@ export async function getArticleDetailPageData(
 }
 
 async function getArticlePageBlocksBySlug(slug: string): Promise<PageBlock[]> {
-  const preview = await getDirectusPreviewContext();
-  const params = new URLSearchParams({
-    fields: PAGE_BLOCK_FIELDS,
-    limit: "1",
-  });
+  const blocks = await getDirectusPageBlocksBySlug("articles", slug);
 
-  if (!preview.enabled) {
-    params.set("filter[status][_eq]", "published");
-  }
-
-  params.set("filter[slug][_eq]", slug);
-
-  const articles = await directusRequest<{ blocks?: DirectusPageBlock[] }[]>(
-    `/items/articles?${params.toString()}`,
-    preview.requestOptions,
-  );
-
-  return hydratePageBlocks(normalizePageBlocks(articles[0]?.blocks || []));
+  return hydratePageBlocks(normalizePageBlocks(blocks));
 }
 
 export async function getArticleSlugs(): Promise<string[]> {

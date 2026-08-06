@@ -90,7 +90,9 @@ export function NewsPage({
             basePath: config.basePath,
             currentPage,
             onComplete: (nextData) => {
-              setLocalData(nextData);
+              setLocalData((currentData) =>
+                appendNewsPageData(currentData, nextData),
+              );
               setCurrentPage((page) => page + 1);
             },
             setIsPending: setIsPaginationPending,
@@ -627,6 +629,28 @@ async function loadNextNewsPage({
     statusRef.current = false;
     setIsPending(false);
   }
+}
+
+function appendNewsPageData(
+  currentData: NewsPageData,
+  nextData: NewsPageData,
+): NewsPageData {
+  const knownIds = new Set(currentData.news.map((item) => item.id));
+
+  return {
+    hasMore: nextData.hasMore,
+    news: [
+      ...currentData.news,
+      ...nextData.news.filter((item) => !knownIds.has(item.id)),
+    ],
+    sidebarNews:
+      nextData.sidebarNews.length > 0
+        ? nextData.sidebarNews
+        : currentData.sidebarNews,
+    tags: nextData.tags.length > 0 ? nextData.tags : currentData.tags,
+    topics:
+      nextData.topics.length > 0 ? nextData.topics : currentData.topics,
+  };
 }
 
 function buildNewsApiHref({

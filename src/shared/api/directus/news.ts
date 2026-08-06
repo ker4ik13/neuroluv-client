@@ -16,10 +16,9 @@ import type {
 import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
-  PAGE_BLOCK_FIELDS,
+  getDirectusPageBlocksBySlug,
   hydratePageBlocks,
   normalizePageBlocks,
-  type DirectusPageBlock,
 } from "@/shared/api/directus/pages";
 import {
   DIRECTUS_SEO_FIELDS,
@@ -203,7 +202,7 @@ type DirectusNewsItem = {
   content_blocks?: DirectusContentBlock[];
 } & DirectusSeoFields;
 
-const NEWS_FIELDS = [
+const NEWS_CARD_FIELDS = [
   "id",
   "sort",
   "status",
@@ -234,6 +233,43 @@ const NEWS_FIELDS = [
   "author.avatar.type",
   "author.avatar.width",
   "author.avatar.height",
+  "tags.sort",
+  "tags.news_tags_id.id",
+  "tags.news_tags_id.sort",
+  "tags.news_tags_id.title",
+  "tags.news_tags_id.slug",
+  "tags.news_tags_id.description",
+  "tags.news_tags_id.is_active",
+].join(",");
+
+const NEWS_METADATA_FIELDS = [
+  "id",
+  "status",
+  "title",
+  "slug",
+  "description",
+  "mini_description",
+  "published_at",
+  "updated_at",
+  "image.id",
+  "image.title",
+  "image.type",
+  "image.width",
+  "image.height",
+  "author.id",
+  "author.first_name",
+  "author.last_name",
+  "author.title",
+  DIRECTUS_SEO_FIELDS,
+].join(",");
+
+const TAXONOMY_FIELDS = ["id", "sort", "title", "slug", "description", "is_active"].join(
+  ",",
+);
+
+const NEWS_DETAIL_FIELDS = [
+  NEWS_CARD_FIELDS,
+  DIRECTUS_SEO_FIELDS,
   "mini_cta.id",
   "mini_cta.is_active",
   "mini_cta.title",
@@ -245,22 +281,6 @@ const NEWS_FIELDS = [
   "mini_cta.buttons.hero_buttons_id.target",
   "mini_cta.buttons.hero_buttons_id.variant",
   "mini_cta.buttons.hero_buttons_id.is_active",
-  "tags.sort",
-  "tags.news_tags_id.id",
-  "tags.news_tags_id.sort",
-  "tags.news_tags_id.title",
-  "tags.news_tags_id.slug",
-  "tags.news_tags_id.description",
-  "tags.news_tags_id.is_active",
-  DIRECTUS_SEO_FIELDS,
-].join(",");
-
-const TAXONOMY_FIELDS = ["id", "sort", "title", "slug", "description", "is_active"].join(
-  ",",
-);
-
-const NEWS_DETAIL_FIELDS = [
-  NEWS_FIELDS,
   "content_blocks.id",
   "content_blocks.sort",
   "content_blocks.collection",
@@ -366,10 +386,11 @@ export async function getNewsPageData({
   topic,
 }: GetNewsPageDataParams = {}): Promise<NewsPageData> {
   const activeTag = topic ? null : tag;
-  const requestedLimit = getListLimit(page);
+  const normalizedPage = Math.max(1, Math.trunc(page));
   const newsParams = new URLSearchParams({
-    fields: NEWS_FIELDS,
-    limit: String(requestedLimit + 1),
+    fields: NEWS_CARD_FIELDS,
+    limit: String(PAGE_SIZE + 1),
+    offset: String((normalizedPage - 1) * PAGE_SIZE),
     sort: sort === "old" ? "published_at,id" : "-published_at,-id",
   });
 
@@ -390,45 +411,72 @@ export async function getNewsPageData({
   }
 
   const sidebarNewsParams = new URLSearchParams({
-    fields: NEWS_FIELDS,
+    fields: NEWS_CARD_FIELDS,
     limit: "12",
     sort: "-published_at,-id",
   });
 
   sidebarNewsParams.set("filter[status][_eq]", "published");
 
+  const shouldLoadFacets = normalizedPage === 1;
   const [news, sidebarNews, topics, tags] = await Promise.all([
     directusRequest<DirectusNewsItem[]>(
       `/items/news?${newsParams.toString()}`,
       { next: { revalidate: 60 } },
     ),
-    directusRequest<DirectusNewsItem[]>(
-      `/items/news?${sidebarNewsParams.toString()}`,
-      { next: { revalidate: 60 } },
-    ),
-    directusRequest<DirectusTaxonomy[]>(
-      `/items/news_topics?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
-      { next: { revalidate: 60 } },
-    ),
-    directusRequest<DirectusTaxonomy[]>(
-      `/items/news_tags?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
-      { next: { revalidate: 60 } },
-    ),
+    shouldLoadFacets
+      ? directusRequest<DirectusNewsItem[]>(
+          `/items/news?${sidebarNewsParams.toString()}`,
+          { next: { revalidate: 60 } },
+        )
+      : Promise.resolve([]),
+    shouldLoadFacets
+      ? directusRequest<DirectusTaxonomy[]>(
+          `/items/news_topics?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+          { next: { revalidate: 60 } },
+        )
+      : Promise.resolve([]),
+    shouldLoadFacets
+      ? directusRequest<DirectusTaxonomy[]>(
+          `/items/news_tags?filter[is_active][_eq]=true&sort=sort&fields=${TAXONOMY_FIELDS}`,
+          { next: { revalidate: 60 } },
+        )
+      : Promise.resolve([]),
   ]);
 
   const normalizedNews = news.map((item) => normalizeNewsItem(item)).filter(isNewsItem);
 
   return {
-    hasMore: normalizedNews.length > requestedLimit,
-    news: normalizedNews.slice(0, requestedLimit),
+    hasMore: normalizedNews.length > PAGE_SIZE,
+    news: normalizedNews.slice(0, PAGE_SIZE),
     sidebarNews: sidebarNews.map((item) => normalizeNewsItem(item)).filter(isNewsItem),
     topics: topics.map(normalizeTaxonomy).filter(isTaxonomy),
     tags: tags.map(normalizeTaxonomy).filter(isTaxonomy),
   };
 }
 
-function getListLimit(page: number): number {
-  return Math.max(1, page) * PAGE_SIZE;
+export async function getNewsMetadataBySlug(
+  slug: string,
+): Promise<NewsItem | null> {
+  const preview = await getDirectusPreviewContext();
+  const params = new URLSearchParams({
+    fields: NEWS_METADATA_FIELDS,
+    limit: "1",
+  });
+
+  if (!preview.enabled) {
+    params.set("filter[status][_eq]", "published");
+  }
+
+  params.set("filter[slug][_eq]", slug);
+
+  const rows = await directusRequest<DirectusNewsItem[]>(
+    `/items/news?${params.toString()}`,
+    preview.requestOptions,
+  );
+  const item = rows[0];
+
+  return item ? normalizeNewsItem(item, preview.enabled) : null;
 }
 
 export async function getNewsBySlug(slug: string): Promise<NewsDetail | null> {
@@ -483,7 +531,7 @@ export async function getRelatedNews(
   limit = 6,
 ): Promise<NewsItem[]> {
   const params = new URLSearchParams({
-    fields: NEWS_FIELDS,
+    fields: NEWS_CARD_FIELDS,
     limit: String(limit),
     sort: "-published_at,-id",
   });
@@ -521,24 +569,9 @@ export async function getNewsDetailPageData(
 }
 
 async function getNewsPageBlocksBySlug(slug: string): Promise<PageBlock[]> {
-  const preview = await getDirectusPreviewContext();
-  const params = new URLSearchParams({
-    fields: PAGE_BLOCK_FIELDS,
-    limit: "1",
-  });
+  const blocks = await getDirectusPageBlocksBySlug("news", slug);
 
-  if (!preview.enabled) {
-    params.set("filter[status][_eq]", "published");
-  }
-
-  params.set("filter[slug][_eq]", slug);
-
-  const news = await directusRequest<{ blocks?: DirectusPageBlock[] }[]>(
-    `/items/news?${params.toString()}`,
-    preview.requestOptions,
-  );
-
-  return hydratePageBlocks(normalizePageBlocks(news[0]?.blocks || []));
+  return hydratePageBlocks(normalizePageBlocks(blocks));
 }
 
 export async function getNewsSlugs(): Promise<string[]> {

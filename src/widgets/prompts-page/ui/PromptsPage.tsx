@@ -112,7 +112,9 @@ export function PromptsPage({
             activeParams,
             currentPage,
             onComplete: (nextData) => {
-              setLocalData(nextData);
+              setLocalData((currentData) =>
+                appendPromptsPageData(currentData, nextData),
+              );
               setCurrentPage((page) => page + 1);
             },
             setIsPending: setIsPaginationPending,
@@ -204,7 +206,7 @@ export function PromptsPage({
         <PromptsSidebar activeParams={activeParams} data={localData} />
       </div>
 
-      {localData.sidebarPrompts.length > 0 && (
+      {localData.goals.length > 0 && (
         <section className={styles.collections}>
           <div className={styles.sectionHead}>
             <h2>Подборки</h2>
@@ -622,6 +624,40 @@ async function loadNextPromptsPage({
     statusRef.current = false;
     setIsPending(false);
   }
+}
+
+function appendPromptsPageData(
+  currentData: PromptsPageData,
+  nextData: PromptsPageData,
+): PromptsPageData {
+  const knownIds = new Set(currentData.prompts.map((item) => item.id));
+
+  return {
+    ...currentData,
+    hasMore: nextData.hasMore,
+    prompts: [
+      ...currentData.prompts,
+      ...nextData.prompts.filter((item) => !knownIds.has(item.id)),
+    ],
+    sidebarPrompts:
+      nextData.sidebarPrompts.length > 0
+        ? nextData.sidebarPrompts
+        : currentData.sidebarPrompts,
+    totalCount: nextData.totalCount || currentData.totalCount,
+    contentKinds:
+      nextData.contentKinds.length > 0
+        ? nextData.contentKinds
+        : currentData.contentKinds,
+    formats:
+      nextData.formats.length > 0 ? nextData.formats : currentData.formats,
+    goals: nextData.goals.length > 0 ? nextData.goals : currentData.goals,
+    neuralNetworks:
+      nextData.neuralNetworks.length > 0
+        ? nextData.neuralNetworks
+        : currentData.neuralNetworks,
+    tags: nextData.tags.length > 0 ? nextData.tags : currentData.tags,
+    types: nextData.types.length > 0 ? nextData.types : currentData.types,
+  };
 }
 
 function buildPromptsApiHref(

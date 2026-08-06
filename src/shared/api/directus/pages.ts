@@ -1,3 +1,6 @@
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
+
 import type { NavigationIcon } from "@/entities/navigation";
 import type {
   Page,
@@ -31,7 +34,11 @@ import type {
   PageUseCasesBlock,
   PageZeroBlock,
 } from "@/entities/page";
-import { directusRequest } from "@/shared/api/directus/client";
+import {
+  directusRequest,
+  directusSearch,
+  type DirectusRequestOptions,
+} from "@/shared/api/directus/client";
 import {
   buildDirectusContentBlockFields,
   normalizeDirectusContentBlocks,
@@ -779,30 +786,50 @@ const ZERO_BLOCK_FIELDS = [
   ...buildDirectusContentBlockFields("content_blocks"),
 ].join(",");
 
-export const PAGE_BLOCK_FIELDS = PAGE_FIELDS.split(",")
-  .filter((field) => !["id", "title", "slug"].includes(field))
-  .join(",");
+const PAGE_ROOT_FIELDS = ["id", "title", "slug"] as const;
+const PAGE_BLOCK_SKELETON_FIELDS = [
+  "blocks.id",
+  "blocks.sort",
+  "blocks.collection",
+] as const;
+const PAGE_FIELD_LIST = PAGE_FIELDS.split(",");
 
-export async function getPageBySlug(slug: string): Promise<Page | null> {
+export type DirectusBlockOwnerCollection =
+  | "articles"
+  | "news"
+  | "pages"
+  | "prompts";
+
+const getCachedPublishedPageBySlug = unstable_cache(
+  async (slug: string) => loadPageBySlug(slug, true),
+  ["directus-published-page-by-slug-v2"],
+  { revalidate: 60, tags: ["directus-pages"] },
+);
+
+const getCachedPublishedFallbackPage = unstable_cache(
+  async () => loadFallbackPage(true),
+  ["directus-published-fallback-page-v2"],
+  { revalidate: 60, tags: ["directus-pages"] },
+);
+
+const getCachedPublishedPageBlocksBySlug = unstable_cache(
+  async (collection: DirectusBlockOwnerCollection, slug: string) =>
+    loadPageBlocksBySlug(collection, slug, true),
+  ["directus-published-page-blocks-by-slug-v2"],
+  { revalidate: 60, tags: ["directus-page-blocks"] },
+);
+
+export const getPageBySlug = cache(async function getPageBySlug(
+  slug: string,
+): Promise<Page | null> {
   const preview = await getDirectusPreviewContext();
-  const params = new URLSearchParams({
-    fields: PAGE_FIELDS,
-    limit: "1",
-  });
 
   if (!preview.enabled) {
-    params.set("filter[status][_eq]", "published");
+    return getCachedPublishedPageBySlug(slug);
   }
 
-  params.set("filter[slug][_eq]", slug);
-
-  const pages = await directusRequest<DirectusPage[]>(
-    `/items/pages?${params.toString()}`,
-    preview.requestOptions,
-  );
-
-  return hydratePageDynamicBlocks(normalizePage(pages[0] || null));
-}
+  return loadPageBySlug(slug, false, preview.requestOptions);
+});
 
 export async function getHomePage(): Promise<Page | null> {
   const homePage = await getPageBySlug("/");
@@ -811,23 +838,178 @@ export async function getHomePage(): Promise<Page | null> {
     return homePage;
   }
 
-  const params = new URLSearchParams({
-    fields: PAGE_FIELDS,
-    limit: "1",
-    sort: "sort,id",
-  });
   const preview = await getDirectusPreviewContext();
 
   if (!preview.enabled) {
-    params.set("filter[status][_eq]", "published");
+    return getCachedPublishedFallbackPage();
   }
 
-  const pages = await directusRequest<DirectusPage[]>(
-    `/items/pages?${params.toString()}`,
-    preview.requestOptions,
+  return loadFallbackPage(false, preview.requestOptions);
+}
+
+export async function getDirectusPageBlocksBySlug(
+  collection: DirectusBlockOwnerCollection,
+  slug: string,
+): Promise<DirectusPageBlock[]> {
+  const preview = await getDirectusPreviewContext();
+
+  if (!preview.enabled) {
+    return getCachedPublishedPageBlocksBySlug(collection, slug);
+  }
+
+  return loadPageBlocksBySlug(collection, slug, false, preview.requestOptions);
+}
+
+async function loadPageBySlug(
+  slug: string,
+  publishedOnly: boolean,
+  options: DirectusRequestOptions = {},
+): Promise<Page | null> {
+  const page = await loadBlockOwnerBySlug<DirectusPage>({
+    collection: "pages",
+    includePageFields: true,
+    options,
+    publishedOnly,
+    slug,
+  });
+
+  return hydratePageDynamicBlocks(normalizePage(page));
+}
+
+async function loadFallbackPage(
+  publishedOnly: boolean,
+  options: DirectusRequestOptions = {},
+): Promise<Page | null> {
+  const page = await loadBlockOwner<DirectusPage>({
+    collection: "pages",
+    filter: publishedOnly ? { status: { _eq: "published" } } : undefined,
+    includePageFields: true,
+    options,
+    sort: ["sort", "id"],
+  });
+
+  return hydratePageDynamicBlocks(normalizePage(page));
+}
+
+async function loadPageBlocksBySlug(
+  collection: DirectusBlockOwnerCollection,
+  slug: string,
+  publishedOnly: boolean,
+  options: DirectusRequestOptions = {},
+): Promise<DirectusPageBlock[]> {
+  const owner = await loadBlockOwnerBySlug<{ blocks?: DirectusPageBlock[] }>({
+    collection,
+    includePageFields: false,
+    options,
+    publishedOnly,
+    slug,
+  });
+
+  return owner?.blocks || [];
+}
+
+async function loadBlockOwnerBySlug<T>({
+  collection,
+  includePageFields,
+  options,
+  publishedOnly,
+  slug,
+}: {
+  collection: DirectusBlockOwnerCollection;
+  includePageFields: boolean;
+  options: DirectusRequestOptions;
+  publishedOnly: boolean;
+  slug: string;
+}): Promise<T | null> {
+  return loadBlockOwner<T>({
+    collection,
+    filter: {
+      ...(publishedOnly ? { status: { _eq: "published" } } : {}),
+      slug: { _eq: slug },
+    },
+    includePageFields,
+    options,
+  });
+}
+
+async function loadBlockOwner<T>({
+  collection,
+  filter,
+  includePageFields,
+  options,
+  sort,
+}: {
+  collection: DirectusBlockOwnerCollection;
+  filter?: Record<string, unknown>;
+  includePageFields: boolean;
+  options: DirectusRequestOptions;
+  sort?: string[];
+}): Promise<T | null> {
+  const skeletonFields = [
+    ...(includePageFields ? PAGE_ROOT_FIELDS : []),
+    ...PAGE_BLOCK_SKELETON_FIELDS,
+  ];
+  const skeletonRows = await directusSearch<DirectusPage[]>(
+    collection,
+    {
+      fields: skeletonFields,
+      filter,
+      limit: 1,
+      sort,
+    },
+    options,
+  );
+  const skeleton = skeletonRows[0] || null;
+
+  if (!skeleton) {
+    return null;
+  }
+
+  if (!skeleton.blocks?.length) {
+    return skeleton as T;
+  }
+
+  const fields = selectPageFields(
+    skeleton.blocks || [],
+    includePageFields,
+  );
+  const rows = await directusSearch<T[]>(
+    collection,
+    {
+      fields,
+      filter,
+      limit: 1,
+      sort,
+    },
+    options,
   );
 
-  return hydratePageDynamicBlocks(normalizePage(pages[0] || null));
+  return rows[0] || null;
+}
+
+function selectPageFields(
+  blocks: DirectusPageBlock[],
+  includePageFields: boolean,
+): string[] {
+  const collections = new Set(
+    blocks
+      .map((block) => block.collection)
+      .filter((collection): collection is string => Boolean(collection)),
+  );
+  const collectionPrefixes = [...collections].map(
+    (collection) => `blocks.item:${collection}.`,
+  );
+
+  return PAGE_FIELD_LIST.filter((field) => {
+    if (
+      PAGE_BLOCK_SKELETON_FIELDS.some((baseField) => baseField === field) ||
+      (includePageFields && PAGE_ROOT_FIELDS.some((rootField) => rootField === field))
+    ) {
+      return true;
+    }
+
+    return collectionPrefixes.some((prefix) => field.startsWith(prefix));
+  });
 }
 
 function normalizePage(page: DirectusPage | null): Page | null {

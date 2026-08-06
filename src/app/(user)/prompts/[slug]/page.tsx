@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getPromptDetailPageData } from "@/shared/api/directus/prompts";
+import {
+  getPromptDetailPageData,
+  getPromptMetadataBySlug,
+} from "@/shared/api/directus/prompts";
 import {
   buildBreadcrumbJsonLd,
   buildPromptJsonLd,
@@ -28,24 +31,24 @@ export async function generateMetadata({
   params,
 }: PromptDetailRouteProps): Promise<Metadata> {
   const { slug } = await params;
-  const data = await getPromptDetailPageData(slug);
+  const item = await getPromptMetadataBySlug(slug);
 
-  if (!data) {
+  if (!item) {
     return {};
   }
 
-  return buildPageMetadata(data.item.seo, {
-    author: data.item.author?.name,
-    canonicalPath: `/prompts/${data.item.slug}`,
-    fallbackDescription: data.item.description,
-    fallbackImage: data.item.image,
+  return buildPageMetadata(item.seo, {
+    author: item.author?.name,
+    canonicalPath: `/prompts/${item.slug}`,
+    fallbackDescription: item.description,
+    fallbackImage: item.image,
     fallbackTitle: "{TITLE} | {SITE_NAME}",
     openGraphType: "article",
-    publishedTime: data.item.publishedAt,
+    publishedTime: item.publishedAt,
     variables: {
-      AUTHOR: data.item.author?.name,
-      TITLE: data.item.title,
-      URL: `/prompts/${data.item.slug}`,
+      AUTHOR: item.author?.name,
+      TITLE: item.title,
+      URL: `/prompts/${item.slug}`,
     },
   });
 }

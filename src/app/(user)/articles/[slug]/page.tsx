@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getArticleDetailPageData } from "@/shared/api/directus/articles";
+import {
+  getArticleDetailPageData,
+  getArticleMetadataBySlug,
+} from "@/shared/api/directus/articles";
 import {
   buildBlogArticleJsonLd,
   buildBreadcrumbJsonLd,
@@ -28,24 +31,24 @@ export async function generateMetadata({
   params,
 }: ArticleDetailRouteProps): Promise<Metadata> {
   const { slug } = await params;
-  const data = await getArticleDetailPageData(slug);
+  const item = await getArticleMetadataBySlug(slug);
 
-  if (!data) {
+  if (!item) {
     return {};
   }
 
-  return buildPageMetadata(data.item.seo, {
-    author: data.item.author?.name,
-    canonicalPath: `/articles/${data.item.slug}`,
-    fallbackDescription: data.item.description,
-    fallbackImage: data.item.image,
+  return buildPageMetadata(item.seo, {
+    author: item.author?.name,
+    canonicalPath: `/articles/${item.slug}`,
+    fallbackDescription: item.description,
+    fallbackImage: item.image,
     fallbackTitle: "{TITLE} | {SITE_NAME}",
     openGraphType: "article",
-    publishedTime: data.item.publishedAt,
+    publishedTime: item.publishedAt,
     variables: {
-      AUTHOR: data.item.author?.name,
-      TITLE: data.item.title,
-      URL: `/articles/${data.item.slug}`,
+      AUTHOR: item.author?.name,
+      TITLE: item.title,
+      URL: `/articles/${item.slug}`,
     },
   });
 }
