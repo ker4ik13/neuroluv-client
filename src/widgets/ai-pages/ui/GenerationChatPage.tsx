@@ -3266,99 +3266,119 @@ function ChatMessageAttachments({
   files: ChatMessageAttachment[];
   uploadStates?: Record<string, AttachmentUploadState>;
 }) {
-  const { locale, t } = useAiLocale();
+  const { t } = useAiLocale();
   return (
     <ul aria-label={t("Прикреплённые файлы", "Attached files")} className={styles.messageAttachments}>
-      {files.map((file) => {
-        const uploadState = uploadStates?.[file.id];
-        const uploadStateClass =
-          uploadState === "uploading"
-            ? styles.messageAttachmentUploading
-            : uploadState === "uploaded"
-              ? styles.messageAttachmentUploaded
-              : uploadState === "failed"
-                ? styles.messageAttachmentFailed
-                : "";
-        const isImage = file.mimeType?.startsWith("image/") && file.previewUrl;
-        const label = file.name || (isImage ? t("Изображение", "Image") : t("Файл", "File"));
-        const details = formatAttachmentDetails(file, locale);
-        const downloadHref = file.downloadUrl || file.previewUrl;
-        const content = (
-          <>
-            {isImage ? (
-              // eslint-disable-next-line @next/next/no-img-element -- signed or local private URL
-              <img alt="" src={file.previewUrl || undefined} />
-            ) : (
-              <span className={styles.messageAttachmentIcon}>
-                <FiPaperclip aria-hidden="true" />
-              </span>
-            )}
-            <span className={styles.messageAttachmentText}>
-              <strong>{label}</strong>
-              {details ? <small>{details}</small> : null}
-            </span>
-          </>
-        );
-
-        return (
-          <li
-            className={`${styles.messageAttachmentItem} ${
-              isImage ? styles.messageAttachmentImage : ""
-            } ${uploadStateClass}`}
-            key={file.id}
-          >
-            {file.assetAvailable !== false && file.previewUrl ? (
-              <ImageLightbox
-                alt={label}
-                characteristics={details}
-                downloadUrl={downloadHref}
-                fileName={label}
-                fullUrl={isImage ? downloadHref || file.previewUrl : file.previewUrl}
-                kind={isImage ? "image" : "document"}
-                previewUrl={file.previewUrl}
-                triggerClassName={styles.messageAttachmentPreview}
-              >
-                {content}
-              </ImageLightbox>
-            ) : (
-              <div className={styles.messageAttachmentPreview}>{content}</div>
-            )}
-            {uploadState ? (
-              <span
-                aria-label={
-                  uploadState === "uploading"
-                    ? t(`Загружается ${label}`, `Uploading ${label}`)
-                    : uploadState === "uploaded"
-                      ? t(`Загружено ${label}`, `Uploaded ${label}`)
-                      : t(`Не удалось загрузить ${label}`, `Failed to upload ${label}`)
-                }
-                className={styles.messageAttachmentUploadStatus}
-                role="status"
-              >
-                {uploadState === "uploading" ? (
-                  <FiRefreshCw aria-hidden="true" />
-                ) : uploadState === "uploaded" ? (
-                  <FiCheck aria-hidden="true" />
-                ) : (
-                  <FiX aria-hidden="true" />
-                )}
-              </span>
-            ) : null}
-            {file.assetAvailable !== false && downloadHref && uploadState !== "uploading" && uploadState !== "failed" ? (
-              <a
-                aria-label={`${t("Скачать файл", "Download file")} ${label}`}
-                className={styles.messageAttachmentDownload}
-                download={label}
-                href={downloadHref}
-                title={t("Скачать файл", "Download file")}
-              >
-                <FiDownload aria-hidden="true" />
-              </a>
-            ) : null}
-          </li>
-        );
-      })}
+      {files.map((file) => (
+        <ChatMessageAttachmentItem file={file} key={file.id} uploadState={uploadStates?.[file.id]} />
+      ))}
     </ul>
+  );
+}
+
+function ChatMessageAttachmentItem({
+  file,
+  uploadState,
+}: {
+  file: ChatMessageAttachment;
+  uploadState?: AttachmentUploadState;
+}) {
+  const { locale, t } = useAiLocale();
+  const metadataPortrait =
+    file.width && file.height ? Number(file.height) > Number(file.width) : null;
+  const [measuredPortrait, setMeasuredPortrait] = useState<boolean | null>(null);
+  const isPortrait = metadataPortrait ?? measuredPortrait ?? false;
+  const isImage = Boolean(file.mimeType?.startsWith("image/") && file.previewUrl);
+
+  const uploadStateClass =
+    uploadState === "uploading"
+      ? styles.messageAttachmentUploading
+      : uploadState === "uploaded"
+        ? styles.messageAttachmentUploaded
+        : uploadState === "failed"
+          ? styles.messageAttachmentFailed
+          : "";
+  const label = file.name || (isImage ? t("Изображение", "Image") : t("Файл", "File"));
+  const details = formatAttachmentDetails(file, locale);
+  const downloadHref = file.downloadUrl || file.previewUrl;
+  const content = (
+    <>
+      {isImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- signed or local private URL
+        <img
+          alt=""
+          src={file.previewUrl || undefined}
+          onLoad={(event) =>
+            setMeasuredPortrait(event.currentTarget.naturalHeight > event.currentTarget.naturalWidth)
+          }
+        />
+      ) : (
+        <span className={styles.messageAttachmentIcon}>
+          <FiPaperclip aria-hidden="true" />
+        </span>
+      )}
+      <span className={styles.messageAttachmentText}>
+        <strong>{label}</strong>
+        {details ? <small>{details}</small> : null}
+      </span>
+    </>
+  );
+
+  return (
+    <li
+      className={`${styles.messageAttachmentItem} ${isImage ? styles.messageAttachmentImage : ""} ${
+        isImage && isPortrait ? styles.messageAttachmentPortrait : ""
+      } ${uploadStateClass}`}
+    >
+      {file.assetAvailable !== false && file.previewUrl ? (
+        <ImageLightbox
+          alt={label}
+          characteristics={details}
+          downloadUrl={downloadHref}
+          fileName={label}
+          fullUrl={isImage ? downloadHref || file.previewUrl : file.previewUrl}
+          kind={isImage ? "image" : "document"}
+          previewUrl={file.previewUrl}
+          triggerClassName={styles.messageAttachmentPreview}
+        >
+          {content}
+        </ImageLightbox>
+      ) : (
+        <div className={styles.messageAttachmentPreview}>{content}</div>
+      )}
+      {uploadState ? (
+        <span
+          aria-label={
+            uploadState === "uploading"
+              ? t(`Загружается ${label}`, `Uploading ${label}`)
+              : uploadState === "uploaded"
+                ? t(`Загружено ${label}`, `Uploaded ${label}`)
+                : t(`Не удалось загрузить ${label}`, `Failed to upload ${label}`)
+          }
+          className={styles.messageAttachmentUploadStatus}
+          role="status"
+        >
+          {uploadState === "uploading" ? (
+            <FiRefreshCw aria-hidden="true" />
+          ) : uploadState === "uploaded" ? (
+            <FiCheck aria-hidden="true" />
+          ) : (
+            <FiX aria-hidden="true" />
+          )}
+        </span>
+      ) : null}
+      {file.assetAvailable !== false && downloadHref && uploadState !== "uploading" && uploadState !== "failed" ? (
+        <a
+          aria-label={`${t("Скачать файл", "Download file")} ${label}`}
+          className={styles.messageAttachmentDownload}
+          download={label}
+          href={downloadHref}
+          title={t("Скачать файл", "Download file")}
+        >
+          <FiDownload aria-hidden="true" />
+        </a>
+      ) : null}
+    </li>
   );
 }
 
@@ -4059,6 +4079,7 @@ function DurationField({
   const currentIndex = requestedIndex >= 0 ? requestedIndex : 0;
   const currentValue = allowedValues[currentIndex];
   const labelId = "generation-duration-label";
+  const durationTicks = getDurationTicks(allowedValues);
 
   return (
     <div className={styles.durationField}>
@@ -4083,14 +4104,44 @@ function DurationField({
       <div
         aria-hidden="true"
         className={styles.durationTicks}
-        style={{ gridTemplateColumns: `repeat(${allowedValues.length}, minmax(0, 1fr))` }}
       >
-        {allowedValues.map((duration) => (
-          <span key={duration}>{duration}</span>
+        {durationTicks.map((tick) => (
+          <span
+            data-edge={tick.index === 0 ? "start" : tick.index === allowedValues.length - 1 ? "end" : undefined}
+            key={tick.value}
+            style={{ left: `${tick.position}%` }}
+          >
+            {tick.value}
+          </span>
         ))}
       </div>
     </div>
   );
+}
+
+function getDurationTicks(values: number[]): Array<{
+  index: number;
+  position: number;
+  value: number;
+}> {
+  const allTicks = values.map((value, index) => ({
+    index,
+    position: values.length > 1 ? (index / (values.length - 1)) * 100 : 0,
+    value,
+  }));
+  if (allTicks.length <= 7) return allTicks;
+
+  const fiveSecondTicks = allTicks.filter((tick) => tick.value % 5 === 0);
+  if (fiveSecondTicks.length >= 2) return fiveSecondTicks;
+
+  const lastIndex = allTicks.length - 1;
+  const sampleCount = Math.min(6, allTicks.length);
+  const sampleIndexes = new Set(
+    Array.from({ length: sampleCount }, (_, index) =>
+      Math.round((index * lastIndex) / Math.max(sampleCount - 1, 1)),
+    ),
+  );
+  return allTicks.filter((tick) => sampleIndexes.has(tick.index));
 }
 
 function formatDuration(value: number, isEnglish = false): string {
