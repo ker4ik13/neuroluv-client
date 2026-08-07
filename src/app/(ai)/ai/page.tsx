@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { SITE_URL } from "@/shared/config/site";
 import { buildAiPageMetadata } from "@/shared/lib/seo/ai-metadata";
@@ -18,7 +19,9 @@ export function generateMetadata(): Promise<Metadata> {
   );
 }
 
-export default function AiPage() {
+export default async function AiPage() {
+  const nonce = (await headers()).get("x-nonce") || undefined;
+
   return (
     <>
       <JsonLd
@@ -29,6 +32,7 @@ export default function AiPage() {
             { name: "Нейролюб Studio", url: "/ai" },
           ]),
         ]}
+        nonce={nonce}
       />
       <CreateStudioPage kind="entry" />
     </>

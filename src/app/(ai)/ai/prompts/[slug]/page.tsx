@@ -5,12 +5,6 @@ import { getSiteSeo } from '@/shared/api/directus/seo';
 import { resolveSeoTemplate } from '@/shared/lib/seo/metadata';
 import { PromptDetailPage } from '@/widgets/ai-pages';
 
-export const revalidate = 60;
-
-export async function generateStaticParams() {
-	return [];
-}
-
 export async function generateMetadata({
 	params,
 }: {

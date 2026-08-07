@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 import type { FooterData } from '@/entities/footer';
 import type { HeaderNavigation } from '@/entities/navigation';
 import { getFooterData } from '@/shared/api/directus/footer';
 import { getStudioHeaderNavigation } from '@/shared/api/directus/navigation';
 import { AiShell } from '@/widgets/ai-shell';
-
-export const revalidate = 60;
 
 export const metadata: Metadata = {
 	title: {
@@ -25,6 +24,11 @@ export default async function AiLayout({
 }: {
 	children: React.ReactNode;
 }) {
+	// The AI namespace uses a per-request CSP nonce. Rendering it from the Full
+	// Route Cache would pair cached HTML with a new CSP header and make the
+	// browser reject every Next.js script.
+	await connection();
+
 	let navigation: HeaderNavigation | null = null;
 	let footer: FooterData | null = null;
 

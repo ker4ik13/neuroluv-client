@@ -1,8 +1,9 @@
 type JsonLdProps = {
   data: unknown;
+  nonce?: string;
 };
 
-export function JsonLd({ data }: JsonLdProps) {
+export function JsonLd({ data, nonce }: JsonLdProps) {
   const normalizedData = normalizeJsonLd(data);
 
   if (!normalizedData) {
@@ -14,6 +15,7 @@ export function JsonLd({ data }: JsonLdProps) {
       dangerouslySetInnerHTML={{
         __html: JSON.stringify(normalizedData).replace(/</g, "\\u003c"),
       }}
+      nonce={nonce}
       type="application/ld+json"
     />
   );
