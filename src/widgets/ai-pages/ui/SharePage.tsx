@@ -23,6 +23,7 @@ import { useAiResource } from "../model/api";
 import { formatDate } from "../model/format";
 import { writeLocalJson } from "../model/storage";
 import { AiButton, AiCard, AiPage, FieldMessage } from "./AiUi";
+import { ImageGalleryProvider, ImageLightbox } from "./ChatImageOutput";
 import styles from "./AiPages.module.scss";
 
 export function SharePage({
@@ -169,16 +170,23 @@ export function SharePage({
               ) : null}
             </div>
             {share.data.sourceReferences?.length ? (
-              <div className={styles.publicPromptReferences}>
-                {share.data.sourceReferences.map((reference, index) => (
-                  // eslint-disable-next-line @next/next/no-img-element -- signed private asset URL
-                  <img
-                    alt={t(`Референс ${index + 1}`, `Reference ${index + 1}`)}
-                    key={`${reference.previewUrl}-${index}`}
-                    src={reference.previewUrl}
-                  />
-                ))}
-              </div>
+              <ImageGalleryProvider>
+                <div className={styles.publicPromptReferences}>
+                  {share.data.sourceReferences.map((reference, index) => (
+                    <ImageLightbox
+                      alt={t(`Референс ${index + 1}`, `Reference ${index + 1}`)}
+                      fullUrl={reference.previewUrl}
+                      galleryId={`share-reference-${index}`}
+                      key={`${reference.previewUrl}-${index}`}
+                      previewUrl={reference.previewUrl}
+                      triggerClassName={styles.publicPromptReferenceButton}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- signed private asset URL */}
+                      <img alt="" src={reference.previewUrl} />
+                    </ImageLightbox>
+                  ))}
+                </div>
+              </ImageGalleryProvider>
             ) : null}
             <p>
               {share.data.prompt

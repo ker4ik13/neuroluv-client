@@ -166,6 +166,7 @@ export type PagePromptCard = {
   viewsCount: number;
   neuralNetwork: string | null;
   image: PageImage | null;
+  images: PageImage[];
   autoplay: boolean;
 };
 

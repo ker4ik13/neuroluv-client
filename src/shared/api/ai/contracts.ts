@@ -61,6 +61,17 @@ export type AiSession = {
 	wallet: AiWalletSummary | null;
 };
 
+export type AiTelegramRegistration = {
+	displayName: string;
+	telegramUsername: string | null;
+	returnTo: string;
+};
+
+export type AiTelegramRegistrationResult = AiSession & {
+	csrfToken: string;
+	returnTo: string;
+};
+
 export type AiModelModality = 'text' | 'image' | 'video' | 'vision';
 
 export type AiModelCapabilities = {
@@ -70,6 +81,7 @@ export type AiModelCapabilities = {
 	durations?: number[];
 	resolutions?: string[];
 	qualities?: string[];
+	backgrounds?: string[];
 	acceptsReference?: boolean;
 	acceptsNegativePrompt?: boolean;
 	acceptsSound?: boolean;
@@ -275,12 +287,31 @@ export type AiPage<T> = {
 	hasMore: boolean;
 };
 
+export type AiPromptMedia = {
+	id: string;
+	url: string;
+	title?: string | null;
+	type?: string | null;
+	width?: number | null;
+	height?: number | null;
+};
+
+export type AiPromptButton = {
+	id: string;
+	label: string;
+	url: string;
+	target: '_self' | '_blank';
+	variant: 'primary' | 'secondary' | 'outline';
+};
+
 export type AiPromptCard = {
 	id: string;
 	slug: string;
 	title: string;
 	excerpt?: string | null;
 	imageUrl?: string | null;
+	media?: AiPromptMedia[];
+	buttons?: AiPromptButton[];
 	modality: AiModelModality;
 	modelNames: string[];
 	category?: string | null;

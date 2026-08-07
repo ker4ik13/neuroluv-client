@@ -7,6 +7,15 @@ const directusUrl = new URL(
 const nextConfig: NextConfig = {
 	allowedDevOrigins: ['144.31.221.28'],
 	poweredByHeader: false,
+	async rewrites() {
+		if (process.env.NODE_ENV !== 'development') return [];
+		return [
+			{
+				source: '/v1/:path*',
+				destination: 'http://127.0.0.1:4000/v1/:path*',
+			},
+		];
+	},
 	async redirects() {
 		return [
 			{

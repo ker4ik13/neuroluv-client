@@ -1796,6 +1796,8 @@ function normalizePromptItems(prompts: DirectusPrompt[]): PagePromptCard[] {
 }
 
 function normalizePromptCard(prompt: DirectusPrompt): PagePromptCard {
+  const images = normalizePromptImages(prompt.images || []);
+
   return {
     id: prompt.id,
     title: prompt.title || "",
@@ -1808,7 +1810,8 @@ function normalizePromptCard(prompt: DirectusPrompt): PagePromptCard {
       typeof prompt.neural_network === "object" && prompt.neural_network !== null
         ? prompt.neural_network.name
         : null,
-    image: normalizePromptImage(prompt.images || []),
+    image: images[0] || null,
+    images,
     autoplay: prompt.autoplay === true,
   };
 }
@@ -1823,13 +1826,12 @@ function isPublishedDirectusPrompt(
   );
 }
 
-function normalizePromptImage(images: DirectusPromptImageJunction[]): PageImage | null {
-  const image = [...images]
+function normalizePromptImages(images: DirectusPromptImageJunction[]): PageImage[] {
+  return [...images]
     .sort((first, second) => (first.sort || 0) - (second.sort || 0))
     .map((item) => item.directus_files_id)
-    .find(Boolean);
-
-  return normalizeImage(image || null, "Промпт");
+    .map((image) => normalizeImage(image || null, "Промпт"))
+    .filter((image): image is PageImage => image !== null);
 }
 
 function normalizeArticlesSelectionMode(

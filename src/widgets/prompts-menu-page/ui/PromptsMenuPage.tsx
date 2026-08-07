@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { FaMagic } from "react-icons/fa";
 
 import type {
   PromptsMenuPageData,
@@ -111,7 +113,18 @@ function NetworkChip({ network }: { network: PromptTaxonomy }) {
       className={styles.networkChip}
       href={`/prompts-menu/network-${network.slug}`}
     >
-      <span className={styles.networkDot} aria-hidden="true" />
+      <span className={styles.networkLogo} aria-hidden="true">
+        {network.logo ? (
+          <Image
+            alt=""
+            height={20}
+            src={network.logo.url}
+            width={20}
+          />
+        ) : (
+          <FaMagic />
+        )}
+      </span>
       <span>{network.title}</span>
       <small>{network.count || 0}</small>
     </Link>

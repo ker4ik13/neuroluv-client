@@ -102,12 +102,30 @@
 	}
 }
 
-.networkDot {
-	width: rem(6);
-	height: rem(6);
-	flex: 0 0 rem(6);
-	background: $color-cyan;
-	border-radius: 50%;
+.networkLogo {
+	display: inline-flex;
+	width: rem(24);
+	height: rem(24);
+	flex: 0 0 rem(24);
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	color: $color-cyan;
+	background: rgba($color-cyan, 0.08);
+	border: rem(1) solid rgba($color-cyan, 0.18);
+	border-radius: rem(7);
+
+	img {
+		display: block;
+		width: rem(20);
+		height: rem(20);
+		object-fit: contain;
+	}
+
+	svg {
+		width: rem(14);
+		height: rem(14);
+	}
 }
 
 .collectionsBlock {

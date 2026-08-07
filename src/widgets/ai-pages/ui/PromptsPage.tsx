@@ -27,6 +27,7 @@ import {
   type AiPublicModel,
 } from "@/shared/api/ai";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
+import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 
 import { getAiErrorMessage, toQueryString, useAiResource } from "../model/api";
 import { AiButton, AiPage, AsyncState, FieldMessage } from "./AiUi";
@@ -490,28 +491,26 @@ function PromptCard({
   t: (russian: string, english: string) => string;
   onToggleFavorite: () => void;
 }) {
+  const customButton = prompt.buttons?.[0];
+  const useHref = customButton?.url || `/ai/prompts/${prompt.slug}`;
+
   return (
     <article className={styles.promptCard}>
-      <Link className={styles.promptCardMedia} href={`/ai/prompts/${prompt.slug}`}>
-        {prompt.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- URL выдаёт backend/CDN
-          <img
-            alt=""
-            decoding="async"
-            fetchPriority={priority ? "high" : "auto"}
-            height={864}
-            loading={priority ? "eager" : "lazy"}
-            sizes="(max-width: 700px) calc(100vw - 32px), (max-width: 1080px) calc(50vw - 36px), 300px"
-            src={prompt.imageUrl}
-            srcSet={buildPromptImageSrcSet(prompt.imageUrl)}
-            width={720}
-          />
-        ) : (
+      <PromptCardMedia
+        alt={prompt.title}
+        className={styles.promptCardMedia}
+        href={`/ai/prompts/${prompt.slug}`}
+        image={prompt.imageUrl ? { id: "legacy", url: prompt.imageUrl } : null}
+        images={prompt.media || []}
+        priority={priority}
+        sizes="(max-width: 700px) calc(100vw - 32px), (max-width: 1080px) calc(50vw - 36px), 300px"
+      >
+        {!prompt.imageUrl ? (
           <span className={styles.promptCardPlaceholder}>
             <FiImage aria-hidden="true" />
           </span>
-        )}
-      </Link>
+        ) : null}
+      </PromptCardMedia>
 
       <div className={styles.promptCardBody}>
         <div className={styles.promptCardBadges}>
@@ -525,9 +524,20 @@ function PromptCard({
           {prompt.title}
         </Link>
         <div className={styles.promptCardActions}>
-          <Link className={styles.promptUseLink} href={`/ai/prompts/${prompt.slug}`}>
-            {t("Использовать", "Use")}
-          </Link>
+          {customButton ? (
+            <a
+              className={styles.promptUseLink}
+              href={useHref}
+              rel={customButton.target === "_blank" ? "noreferrer" : undefined}
+              target={customButton.target}
+            >
+              {t("Использовать", "Use")}
+            </a>
+          ) : (
+            <Link className={styles.promptUseLink} href={useHref}>
+              {t("Использовать", "Use")}
+            </Link>
+          )}
           <AiButton
             aria-label={
               prompt.favorite
@@ -619,25 +629,6 @@ function arePromptFiltersEqual(
   );
 }
 
-function buildPromptImageSrcSet(value: string): string {
-  return [360, 540, 720, 960]
-    .map((width) => `${withPromptImageWidth(value, width)} ${width}w`)
-    .join(", ");
-}
-
-function withPromptImageWidth(value: string, width: number): string {
-  try {
-    const url = new URL(value);
-    url.searchParams.set("width", String(width));
-    url.searchParams.set("height", String(Math.round(width * 1.2)));
-    url.searchParams.set("fit", "cover");
-    url.searchParams.set("quality", "78");
-    url.searchParams.set("format", "webp");
-    return url.toString();
-  } catch {
-    return value;
-  }
-}
 
 function buildPromptCatalogPath(filters: PromptFilters, page: number): string {
   return `/catalog/prompts${toQueryString({

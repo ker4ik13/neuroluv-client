@@ -158,6 +158,18 @@ export function WorkDetailPage({ id }: { id: string }) {
     }
   }
 
+  async function copyPrompt() {
+    const prompt = work.data?.prompt?.trim();
+    if (!prompt) return;
+    setActionError(null);
+    try {
+      await writeClipboardText(prompt);
+      setNotice(t("Промпт скопирован", "Prompt copied"));
+    } catch {
+      setActionError(t("Не удалось скопировать промпт", "Unable to copy the prompt"));
+    }
+  }
+
   async function handleFavorite() {
     if (!work.data) return;
     const favorite = !work.data.favorite;
@@ -273,12 +285,6 @@ export function WorkDetailPage({ id }: { id: string }) {
                   </span>
                   {work.data.modelName ? <strong>{work.data.modelName}</strong> : null}
                 </div>
-                {work.data.prompt?.trim() ? (
-                  <section className={styles.workPrompt}>
-                    <h2>{t("Использованный промпт", "Used prompt")}</h2>
-                    <p>{work.data.prompt}</p>
-                  </section>
-                ) : null}
                 {outputs.length > 1 ? (
                   <OutputPicker
                     outputs={outputs}
@@ -286,6 +292,23 @@ export function WorkDetailPage({ id }: { id: string }) {
                     title={work.data.title}
                     onSelect={setSelectedOutputId}
                   />
+                ) : null}
+                {work.data.prompt?.trim() ? (
+                  <section className={styles.workPrompt}>
+                    <div className={styles.workPromptHeader}>
+                      <h2>{t("Использованный промпт", "Used prompt")}</h2>
+                      <button
+                        aria-label={t("Скопировать промпт", "Copy prompt")}
+                        className={styles.workPromptCopy}
+                        onClick={() => void copyPrompt()}
+                        title={t("Скопировать промпт", "Copy prompt")}
+                        type="button"
+                      >
+                        <FiCopy aria-hidden="true" />
+                      </button>
+                    </div>
+                    <p>{work.data.prompt}</p>
+                  </section>
                 ) : null}
               </AiCard>
 

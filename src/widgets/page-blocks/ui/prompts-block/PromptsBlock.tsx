@@ -59,6 +59,7 @@ function PromptCard({ prompt }: { prompt: PagePromptCard }) {
           autoPlay={prompt.autoplay}
           className={styles.imageWrap}
           image={prompt.image}
+          images={prompt.images}
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       )}

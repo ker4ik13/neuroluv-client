@@ -1,4 +1,5 @@
 export { AuthPage } from './ui/AuthPage';
+export { TelegramRegistrationPage } from './ui/TelegramRegistrationPage';
 export { AccountEmailActionPage } from './ui/AccountEmailActionPage';
 export { BalancePage } from './ui/BalancePage';
 export { CreateStudioPage } from './ui/CreateStudioPage';

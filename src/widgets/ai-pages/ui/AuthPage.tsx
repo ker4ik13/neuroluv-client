@@ -189,25 +189,11 @@ export function AuthPage({
 		if (!telegram?.authorizationUrl) {
 			return;
 		}
-		if (mode === 'register' && (!termsAccepted || !privacyAccepted)) {
-			setError(
-				t(
-					'Подтвердите условия сервиса и политику обработки данных',
-					'Accept the terms of service and privacy policy',
-				),
-			);
-			return;
-		}
 
 		setError(null);
 		setIsTelegramRedirecting(true);
 		try {
-			const authorizationUrl = new URL(telegram.authorizationUrl);
-			if (mode === 'register') {
-				authorizationUrl.searchParams.set('termsAccepted', 'true');
-				authorizationUrl.searchParams.set('privacyAccepted', 'true');
-			}
-			window.location.assign(authorizationUrl.toString());
+			window.location.assign(new URL(telegram.authorizationUrl).toString());
 		} catch {
 			setIsTelegramRedirecting(false);
 			setError(
@@ -531,12 +517,10 @@ export function AuthPage({
 								<FiSend aria-hidden='true' />
 								{isTelegramRedirecting
 									? t('Переходим…', 'Redirecting…')
-									: mode === 'login'
-										? t('Войти через Telegram', 'Sign in with Telegram')
-										: t(
-												'Зарегистрироваться через Telegram',
-												'Register with Telegram',
-											)}
+									: t(
+											'Продолжить через Telegram',
+											'Continue with Telegram',
+										)}
 							</button>
 						</>
 					) : null}
@@ -572,7 +556,7 @@ export function AuthPage({
 	);
 }
 
-function AuthIntro() {
+export function AuthIntro() {
 	const { t } = useAiLocale();
 
 	return (

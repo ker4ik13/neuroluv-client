@@ -410,12 +410,10 @@ $sticky-sidebar-top: 112;
 	border-radius: rem(24);
 	box-shadow: 0 rem(12) rem(28) rgba(0, 0, 0, 0.07);
 	transition:
-		box-shadow 160ms ease,
-		transform 160ms ease;
+		box-shadow 160ms ease;
 
 	&:hover {
 		box-shadow: 0 rem(16) rem(34) rgba(0, 0, 0, 0.1);
-		transform: translateY(rem(-2));
 	}
 
 	&:focus-visible {
@@ -489,12 +487,19 @@ $sticky-sidebar-top: 112;
 
 	display: inline-flex;
 	align-items: center;
+	gap: rem(5);
 	padding: rem(6) rem(10);
 	color: $color-ink;
 	font-size: rem(12);
 	line-height: 1;
 	background: $color-surface;
 	border-radius: rem(16);
+
+	> svg {
+		width: rem(13);
+		height: rem(13);
+		flex: 0 0 rem(13);
+	}
 
 	@media (max-width: em($breakpoint-mobile)) {
 		font-size: rem(10);
@@ -748,14 +753,33 @@ $sticky-sidebar-top: 112;
 		color 160ms ease;
 }
 
-.networkChip {
-	span {
-		width: rem(8);
-		height: rem(8);
-		flex: 0 0 rem(8);
-		background: $color-cyan;
-		border-radius: 50%;
+.networkLogo {
+	display: inline-flex;
+	width: rem(22);
+	height: rem(22);
+	flex: 0 0 rem(22);
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	color: $color-cyan;
+	background: $color-white;
+	border: rem(1) solid rgba($color-ink, 0.1);
+	border-radius: rem(7);
+
+	img,
+	svg {
+		display: block;
+		width: 72%;
+		height: 72%;
+		object-fit: contain;
 	}
+}
+
+.networkLogoCompact {
+	width: rem(16);
+	height: rem(16);
+	flex-basis: rem(16);
+	border-radius: rem(5);
 }
 
 .tagChip {
@@ -768,10 +792,6 @@ $sticky-sidebar-top: 112;
 .tagChipActive {
 	color: $color-white;
 	background: $color-cyan;
-
-	span {
-		background: $color-white;
-	}
 }
 
 .telegramCard {

@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaArrowRight, FaBars, FaMagic, FaTelegram } from "react-icons/fa";
+import { FiSmartphone } from "react-icons/fi";
+import { GiBiceps } from "react-icons/gi";
 
 import type {
   PromptItem,
@@ -356,7 +358,7 @@ function PromptCard({
   const type = prompt.contentKind || prompt.types[0];
 
   return (
-    <Link className={styles.card} href={prompt.href}>
+    <article className={styles.card}>
       <PromptCardMedia
         alt={
           prompt.image
@@ -365,7 +367,9 @@ function PromptCard({
         }
         autoPlay={prompt.autoplay}
         className={styles.cardImage}
+        href={prompt.href}
         image={prompt.image}
+        images={prompt.images}
         sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 290px"
       >
         <span className={styles.cardPlaceholder}>
@@ -373,20 +377,31 @@ function PromptCard({
         </span>
       </PromptCardMedia>
 
-      <span className={styles.cardBody}>
+      <Link className={styles.cardBody} href={prompt.href}>
         <span className={styles.badges}>
           {type && <span className={styles.badgePrimary}>{type.title}</span>}
           {prompt.neuralNetwork && (
-            <span className={styles.badge}>{prompt.neuralNetwork.title}</span>
+            <span className={styles.badge}>
+              <PromptNetworkLogo network={prompt.neuralNetwork} compact />
+              {prompt.neuralNetwork.title}
+            </span>
           )}
-          {prompt.format && <span className={styles.badge}>{prompt.format}</span>}
+          {prompt.format && (
+            <span className={styles.badge}>
+              <FiSmartphone aria-hidden="true" />
+              {prompt.format}
+            </span>
+          )}
           {prompt.difficultyLabel && (
-            <span className={styles.badge}>{prompt.difficultyLabel}</span>
+            <span className={styles.badge}>
+              <GiBiceps aria-hidden="true" />
+              {prompt.difficultyLabel}
+            </span>
           )}
         </span>
         <span className={styles.cardTitle}>{prompt.title}</span>
-      </span>
-    </Link>
+      </Link>
+    </article>
   );
 }
 
@@ -444,7 +459,7 @@ function PromptsSidebar({
                 })}
                 key={`network-${network.id}`}
               >
-                <span />
+                <PromptNetworkLogo network={network} />
                 {network.title}
               </Link>
             ))}
@@ -488,6 +503,32 @@ function PromptsSidebar({
         </div>
       </SmartStickySidebar>
     </Noindex>
+  );
+}
+
+function PromptNetworkLogo({
+  compact = false,
+  network,
+}: {
+  compact?: boolean;
+  network: PromptsPageData["neuralNetworks"][number];
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`${styles.networkLogo} ${compact ? styles.networkLogoCompact : ""}`}
+    >
+      {network.logo ? (
+        <Image
+          alt=""
+          height={compact ? 14 : 18}
+          src={network.logo.url}
+          width={compact ? 14 : 18}
+        />
+      ) : (
+        <FaMagic />
+      )}
+    </span>
   );
 }
 

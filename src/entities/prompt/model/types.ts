@@ -1,4 +1,5 @@
 import type { PageSeo } from "@/entities/seo";
+import type { NavigationIcon } from "@/entities/navigation";
 
 export type PromptImage = {
   id: string;
@@ -14,6 +15,7 @@ export type PromptTaxonomy = {
   title: string;
   slug: string;
   description: string;
+  logo?: PromptImage | null;
   count?: number;
   isFilterable?: boolean;
   seoNoindex?: boolean;
@@ -99,6 +101,7 @@ export type PromptContentButton = {
   href: string;
   target: "_self" | "_blank";
   variant: "primary" | "secondary" | "outline";
+  icon: NavigationIcon | null;
 };
 
 export type PromptContentCard = {
@@ -113,6 +116,8 @@ export type PromptContentStep = {
   id: number;
   title: string;
   description: string;
+  isWarning: boolean;
+  buttons: PromptContentButton[];
 };
 
 export type PromptItem = {
@@ -123,6 +128,7 @@ export type PromptItem = {
   description: string;
   image: PromptImage | null;
   images: PromptImage[];
+  buttons: PromptContentButton[];
   autoplay: boolean;
   aiEnabled: boolean;
   isPaid: boolean;

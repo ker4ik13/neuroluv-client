@@ -236,7 +236,7 @@
 		grid-template-columns: rem(27) minmax(0, 1fr);
 		align-items: start;
 		gap: rem(7);
-		padding: rem(9) rem(8);
+		padding: rem(9) rem(44) rem(9) rem(8);
 		color: var(--ai-text);
 		text-align: left;
 		background: transparent;
@@ -261,16 +261,31 @@
 			gap: rem(3);
 		}
 
-		strong,
 		time {
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
 		}
 
-		strong {
+		.historyTitle {
+			display: block;
+			min-width: 0;
+			overflow: hidden;
 			font-size: rem(12);
 			line-height: 1.35;
+			white-space: nowrap;
+
+			> span {
+				display: block;
+				width: max-content;
+				min-width: 100%;
+				transform: translateX(0);
+			}
+		}
+
+		.historyTitle:not(.historyTitleOverflowing) > span {
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 
 		time {
@@ -289,13 +304,20 @@
 
 	.historyItemRow {
 		position: relative;
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) rem(30);
-		align-items: center;
-		gap: rem(3);
+		display: block;
+		width: 100%;
+	}
+
+	.historyItemRow:hover .historyTitleOverflowing > span,
+	.historyItemRow:focus-within .historyTitleOverflowing > span {
+		animation: history-title-marquee var(--history-title-duration) ease-in-out 300ms infinite alternate;
 	}
 
 	.historyDeleteButton {
+		position: absolute;
+		top: 50%;
+		right: rem(7);
+		z-index: 1;
 		display: inline-flex;
 		width: rem(30);
 		height: rem(30);
@@ -308,6 +330,7 @@
 		border: 0;
 		border-radius: rem(8);
 		cursor: pointer;
+		transform: translateY(-50%);
 
 		&:hover {
 			color: #b42336;
@@ -333,6 +356,12 @@
 			color: #fff;
 			background: var(--ai-primary);
 		}
+	}
+}
+
+@keyframes history-title-marquee {
+	to {
+		transform: translateX(calc(-1 * var(--history-title-shift)));
 	}
 }
 
@@ -1012,8 +1041,12 @@
 .assistantRow:has(.assistantMessage figure),
 .assistantMessage:has(figure),
 .outputList:has(figure) {
-	width: fit-content;
+	width: 100%;
 	max-width: 100%;
+}
+
+.assistantRow:has(.assistantMessage figure) {
+	max-width: min(100%, rem(850));
 }
 
 .messageFooter {
@@ -1198,7 +1231,7 @@
 .videoOutput {
 	display: block;
 	width: 100%;
-	max-height: rem(620);
+	max-height: rem(460);
 	object-fit: contain;
 	background: var(--ai-surface-soft);
 	border-radius: rem(14);
@@ -1221,7 +1254,8 @@
 
 .videoOutputMeta {
 	min-width: 0;
-	justify-content: flex-end;
+	flex-wrap: wrap;
+	justify-content: flex-start;
 	color: var(--ai-muted);
 	font-size: rem(12);
 	font-weight: 650;
@@ -2161,6 +2195,10 @@
 		max-width: 88%;
 	}
 
+	.videoOutput {
+		max-height: rem(380);
+	}
+
 	.assistantRow {
 		max-width: 100%;
 		grid-template-columns: minmax(0, 1fr);
@@ -2249,6 +2287,11 @@
 
 	.userMessageToggle svg {
 		transition: none;
+	}
+
+	.historyTitleOverflowing > span {
+		animation: none !important;
+		transform: none !important;
 	}
 }
 .freeAllowanceBadge {

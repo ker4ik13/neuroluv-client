@@ -38,6 +38,7 @@ export function formatDate(
 
 	return new Intl.DateTimeFormat(locale, {
 		dateStyle: 'medium',
+		timeZone: 'Europe/Moscow',
 		...(includeTime ? { timeStyle: 'short' as const } : {}),
 	}).format(date);
 }

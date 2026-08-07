@@ -18,6 +18,7 @@ import type {
   PromptTaxonomy,
 } from "@/entities/prompt";
 import type { PageBlock } from "@/entities/page";
+import type { NavigationIcon } from "@/entities/navigation";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
   getDirectusPageBlocksBySlug,
@@ -63,6 +64,7 @@ type DirectusNeuralNetwork = {
   name: string | null;
   slug: string | null;
   description: string | null;
+  logo: DirectusFile | string | null;
   is_active: boolean | null;
   seo_noindex: boolean | null;
 };
@@ -121,6 +123,8 @@ type DirectusContentStep = {
   is_active: boolean | null;
   title: string | null;
   description: string | null;
+  is_warning?: boolean | null;
+  buttons?: DirectusContentButtonJunction[];
 };
 
 type DirectusContentButton = {
@@ -129,6 +133,12 @@ type DirectusContentButton = {
   url: string | null;
   target: "_self" | "_blank" | null;
   variant: "primary" | "secondary" | "outline" | null;
+  icon?: {
+    title: string | null;
+    code: string | null;
+    library: string | null;
+    is_active: boolean | null;
+  } | null;
   is_active: boolean | null;
 };
 
@@ -244,6 +254,7 @@ type DirectusPromptItem = {
   tags?: DirectusPromptTagJunction[];
   types?: DirectusPromptTypeJunction[];
   images?: DirectusPromptImageJunction[];
+  buttons?: DirectusContentButtonJunction[];
   content_blocks?: DirectusContentBlock[];
 } & DirectusSeoFields;
 
@@ -342,6 +353,11 @@ const PROMPT_FIELDS = [
   "neural_network.name",
   "neural_network.slug",
   "neural_network.description",
+  "neural_network.logo.id",
+  "neural_network.logo.title",
+  "neural_network.logo.type",
+  "neural_network.logo.width",
+  "neural_network.logo.height",
   "neural_network.is_active",
   "goal.id",
   "goal.sort",
@@ -370,6 +386,17 @@ const PROMPT_FIELDS = [
   "images.directus_files_id.type",
   "images.directus_files_id.width",
   "images.directus_files_id.height",
+  "buttons.sort",
+  "buttons.hero_buttons_id.id",
+  "buttons.hero_buttons_id.label",
+  "buttons.hero_buttons_id.url",
+  "buttons.hero_buttons_id.target",
+  "buttons.hero_buttons_id.variant",
+  "buttons.hero_buttons_id.icon.title",
+  "buttons.hero_buttons_id.icon.code",
+  "buttons.hero_buttons_id.icon.library",
+  "buttons.hero_buttons_id.icon.is_active",
+  "buttons.hero_buttons_id.is_active",
   DIRECTUS_SEO_FIELDS,
 ].join(",");
 
@@ -450,6 +477,18 @@ const PROMPT_DETAIL_FIELDS = [
   "content_blocks.item:content_steps.steps.is_active",
   "content_blocks.item:content_steps.steps.title",
   "content_blocks.item:content_steps.steps.description",
+  "content_blocks.item:content_steps.steps.is_warning",
+  "content_blocks.item:content_steps.steps.buttons.sort",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.id",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.label",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.url",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.target",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.variant",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.title",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.code",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.library",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.is_active",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.is_active",
 ].join(",");
 
 const TAXONOMY_FIELDS = [
@@ -458,6 +497,11 @@ const TAXONOMY_FIELDS = [
   "title",
   "slug",
   "description",
+  "logo.id",
+  "logo.title",
+  "logo.type",
+  "logo.width",
+  "logo.height",
   "is_active",
   "seo_noindex",
 ].join(",");
@@ -479,6 +523,11 @@ const NETWORK_FIELDS = [
   "name",
   "slug",
   "description",
+  "logo.id",
+  "logo.title",
+  "logo.type",
+  "logo.width",
+  "logo.height",
   "is_active",
   "seo_noindex",
 ].join(",");
@@ -1444,6 +1493,7 @@ function normalizePromptItem(
     description: item.description || "",
     image: images[0] || null,
     images,
+    buttons: normalizeContentButtons(item.buttons || []),
     autoplay: item.autoplay === true,
     aiEnabled: item.ai_enabled === true,
     isPaid: item.is_paid === true,
@@ -1852,6 +1902,8 @@ function normalizeContentStep(item: DirectusContentStep): PromptContentStep | nu
     id: item.id,
     title: item.title || "",
     description: item.description || "",
+    isWarning: item.is_warning === true,
+    buttons: normalizeContentButtons(item.buttons || []),
   };
 }
 
@@ -1872,7 +1924,19 @@ function normalizeContentButtons(
       href: button.url || "#",
       target: button.target || "_self",
       variant: button.variant || "primary",
+      icon: normalizeButtonIcon(button.icon),
     }));
+}
+
+function normalizeButtonIcon(
+  icon: DirectusContentButton["icon"],
+): NavigationIcon | null {
+  if (!icon?.code || icon.is_active === false) return null;
+  return {
+    title: icon.title || icon.code,
+    code: icon.code,
+    library: icon.library || "custom",
+  };
 }
 
 function normalizeTypes(types: DirectusPromptTypeJunction[]): PromptTaxonomy[] {
@@ -1933,6 +1997,7 @@ function normalizeNetwork(
     title: item.name,
     slug: item.slug,
     description: item.description || "",
+    logo: normalizeImage(item.logo, `${item.name} — логотип`),
     seoNoindex: Boolean(item.seo_noindex),
   };
 }

@@ -1551,6 +1551,10 @@
 	}
 }
 
+.promptCard:hover {
+	transform: none;
+}
+
 .promptMedia,
 .workMedia {
 	position: relative;
@@ -1879,6 +1883,18 @@
 	background: var(--ai-surface-soft);
 	border-radius: rem(17);
 }
+.detailMediaCarousel {
+	width: 100%;
+	max-height: min(72dvh, rem(760));
+	aspect-ratio: 1 / 1;
+	background: #000;
+	border-radius: inherit;
+}
+.detailMediaCarousel img,
+.detailMediaCarousel video {
+	object-fit: contain;
+	background: #000;
+}
 .mediaLightboxButton {
 	position: relative;
 	display: grid;
@@ -1940,7 +1956,31 @@
 	margin: rem(7) 0 rem(24);
 	color: var(--ai-muted);
 }
+.promptReferenceSection {
+	display: grid;
+	gap: rem(10);
+	margin: rem(-6) 0 rem(20);
+}
+.promptReferenceHeading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: rem(10);
+	font-size: rem(14);
 
+	span {
+		display: inline-flex;
+		min-width: rem(26);
+		height: rem(24);
+		align-items: center;
+		justify-content: center;
+		color: var(--ai-primary);
+		font-size: rem(12);
+		font-weight: 800;
+		background: var(--ai-primary-soft);
+		border-radius: rem(8);
+	}
+}
 /* Works */
 .worksToolbar {
 	display: flex;
@@ -2126,13 +2166,8 @@
 	border-radius: rem(14);
 	background: var(--ai-surface-muted);
 
-	h2,
 	p {
 		margin: 0;
-	}
-	h2 {
-		color: var(--ai-text);
-		font-size: rem(14);
 	}
 	p {
 		color: var(--ai-muted);
@@ -2140,6 +2175,42 @@
 		line-height: 1.55;
 		overflow-wrap: anywhere;
 		white-space: pre-wrap;
+	}
+}
+.workPromptHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: rem(10);
+
+	h2 {
+		margin: 0;
+		color: var(--ai-text);
+		font-size: rem(14);
+	}
+}
+.workPromptCopy {
+	display: inline-grid;
+	width: rem(34);
+	height: rem(34);
+	padding: 0;
+	place-items: center;
+	color: var(--ai-primary);
+	font-size: rem(17);
+	background: var(--ai-primary-soft);
+	border: rem(1) solid var(--ai-border);
+	border-radius: rem(10);
+	cursor: pointer;
+	transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+
+	&:hover {
+		color: #fff;
+		background: var(--ai-primary);
+		transform: translateY(rem(-1));
+	}
+
+	&:focus-visible {
+		@include focus-ring;
 	}
 }
 .outputPicker {
@@ -3340,6 +3411,11 @@ a.receiptState {
 	background: var(--ai-surface-soft);
 	border-radius: rem(16);
 }
+.shareResult > video {
+	min-height: 0;
+	max-height: min(62dvh, rem(620));
+	background: #000;
+}
 .shareAside .card {
 	display: grid;
 	gap: rem(13);
@@ -3383,7 +3459,17 @@ a.receiptState {
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: rem(8);
 }
-.publicPromptReferences img {
+.publicPromptReferenceButton {
+	display: block;
+	width: 100%;
+	padding: 0;
+	overflow: hidden;
+	background: transparent;
+	border: 0;
+	border-radius: rem(10);
+	cursor: zoom-in;
+}
+.publicPromptReferenceButton img {
 	display: block;
 	width: 100%;
 	aspect-ratio: 1;

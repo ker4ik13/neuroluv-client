@@ -67,7 +67,10 @@ import { formatCreditNumber, formatCredits } from "@/shared/lib/formatCredits";
 import { useDebouncedValue } from "@/shared/lib/react";
 
 import { getAiErrorMessage, unwrapAiData, useAiResource } from "../model/api";
-import { resolveGenerationOperation } from "../model/generationOperation";
+import {
+  resolveGenerationOperation,
+  resolvePromptVideoModeCode,
+} from "../model/generationOperation";
 import {
   formatMediaCharacteristics,
   type MediaSize,
@@ -77,6 +80,7 @@ import { readLocalJson, removeLocalValue, writeLocalJson } from "../model/storag
 import { useAdaptivePolling } from "../model/useAdaptivePolling";
 import { useAiLiveSync } from "../model/useAiLiveSync";
 import { AiMarkdown } from "./AiMarkdown";
+import { ChatImageCarousel } from "./ChatImageCarousel";
 import { AiModelLogo } from "./AiModelLogo";
 import { AiSelect, type AiSelectOption } from "./AiSelect";
 import {
@@ -115,6 +119,7 @@ type Draft = {
   duration: string;
   resolution: string;
   quality: string;
+  background: string;
   sound: boolean;
   reasoningMode: string;
   videoMode: string;
@@ -184,6 +189,7 @@ const EMPTY_DRAFT: Draft = {
   duration: "",
   resolution: "",
   quality: "",
+  background: "",
   sound: false,
   reasoningMode: "",
   videoMode: "",
@@ -231,7 +237,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   const { session, isLoading: isSessionLoading } = useAiSession();
   const modality = getModality(kind);
   const isTool = kind === "photo-to-prompt";
-  const canUseContext = kind === "text" || kind === "image";
+  const canUseContext = kind === "text";
   const models = useAiResource<AiPublicModel[]>(
     `/catalog/models?modality=${encodeURIComponent(modality)}`,
     null,
@@ -275,10 +281,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     [availableModels, draft.modelId],
   );
   const capabilities = selectedModel?.capabilities;
-  const supportsContext =
-    session.authenticated &&
-    (kind === "text" ||
-      (kind === "image" && (!selectedModel || capabilities?.supportsContext === true)));
+  const supportsContext = session.authenticated && kind === "text";
   const [draftReady, setDraftReady] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [references, setReferences] = useState<PendingReference[]>([]);
@@ -326,6 +329,8 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   const broadcastedTerminalRuns = useRef(new Set<string>());
   const activeConversationId = useRef("");
   const loadedStorageKey = useRef("");
+  const outputCountManuallySelected = useRef(false);
+  const outputCountModelId = useRef("");
   const storageOwner = session.user?.id || "guest";
   const storageKey = `neuroluv-ai:create-draft:${storageOwner}:${kind}`;
 
@@ -432,6 +437,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           modelId?: string;
           aspectRatio?: string;
           operation?: string;
+          videoMode?: string;
           toolValues?: Record<string, string | number | boolean>;
         } | null>("neuroluv-ai:create-preset", null);
         const nextDraft = {
@@ -485,6 +491,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           nextDraft.replaceReference = Boolean(preset.replaceReference);
           nextDraft.modelId = preset.modelId || nextDraft.modelId;
           nextDraft.aspectRatio = preset.aspectRatio || nextDraft.aspectRatio;
+          nextDraft.videoMode = preset.videoMode || nextDraft.videoMode;
           nextDraft.toolValues = {
             ...nextDraft.toolValues,
             ...preset.toolValues,
@@ -603,22 +610,54 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
           capability.qualities?.includes(value.quality) && value.quality
             ? value.quality
             : String(capability.qualities?.[0] || ""),
+        background:
+          capability.backgrounds?.includes(value.background) && value.background
+            ? value.background
+            : String(capability.backgrounds?.[0] || ""),
         reasoningMode:
           capability.reasoning?.modes.includes(value.reasoningMode) && value.reasoningMode
             ? value.reasoningMode
             : String(capability.reasoning?.defaultMode || ""),
         videoMode:
-          capability.videoModes?.some((mode) => mode.code === value.videoMode) && value.videoMode
+          ((value.promptId || value.publicPromptUseToken)
+            ? resolvePromptVideoModeCode({
+                maximumReferenceFiles: value.promptMaximumReferenceFiles,
+                minimumReferenceFiles: value.promptMinimumReferenceFiles,
+                modes: capability.videoModes,
+              })
+            : null) ||
+          (capability.videoModes?.some((mode) => mode.code === value.videoMode) && value.videoMode
             ? value.videoMode
-            : String(capability.videoModes?.[0]?.code || ""),
+            : String(capability.videoModes?.[0]?.code || "")),
         contextEnabled:
-          kind === "image" && capability.supportsContext !== true
-            ? false
-            : value.contextEnabled,
+          kind === "text" ? value.contextEnabled : false,
       }));
     }, 0);
     return () => window.clearTimeout(timer);
   }, [availableModels, draft.modelId, draftReady, kind]);
+
+  useEffect(() => {
+    if (!draftReady || kind !== "image" || !selectedModel) return;
+    if (outputCountModelId.current !== selectedModel.id) {
+      outputCountModelId.current = selectedModel.id;
+      outputCountManuallySelected.current = false;
+    }
+    if (!draft.prompt.trim()) {
+      outputCountManuallySelected.current = false;
+      return;
+    }
+    if (outputCountManuallySelected.current) return;
+
+    const inferredCount = inferCarouselOutputCount(
+      draft.prompt,
+      selectedModel.capabilities.outputCounts || [],
+    );
+    if (!inferredCount || String(inferredCount) === draft.outputCount) return;
+    const timer = window.setTimeout(() => {
+      setDraft((current) => ({ ...current, outputCount: String(inferredCount) }));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [draft.outputCount, draft.prompt, draftReady, kind, selectedModel]);
 
   useEffect(() => {
     if (
@@ -2278,7 +2317,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                                   <FiMessageCircle aria-hidden="true" />
                                 </span>
                             <span>
-                              <strong>{conversation.title || t("Чат без названия", "Untitled chat")}</strong>
+                              <ConversationHistoryTitle
+                                title={conversation.title || t("Чат без названия", "Untitled chat")}
+                              />
                               <time dateTime={conversation.updatedAt}>
                                 {formatConversationDate(conversation.updatedAt, locale)}
                               </time>
@@ -2827,9 +2868,10 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                   <span>
                     <strong>{t("Сохранять контекст", "Save context")}</strong>
                     <small>
-                      {kind === "image"
-                        ? t("Следующий запрос учтёт историю и последний успешный результат.", "The next request will use the history and latest successful result.")
-                        : t("Следующий ответ учтёт предыдущие сообщения этого чата.", "The next answer will use previous messages in this chat.")}
+                      {t(
+                        "Следующий ответ учтёт предыдущие сообщения этого чата.",
+                        "The next answer will use previous messages in this chat.",
+                      )}
                     </small>
                   </span>
                   <input
@@ -2888,7 +2930,12 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                 <CapabilityFields
                   draft={draft}
                   model={selectedModel}
-                      onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+                  onChange={(patch) => {
+                    if (patch.outputCount !== undefined) {
+                      outputCountManuallySelected.current = true;
+                    }
+                    setDraft((current) => ({ ...current, ...patch }));
+                  }}
                 />
               ) : null}
             </AiCard>
@@ -3127,6 +3174,10 @@ function ChatTurnMessage({
           {hasSuccessfulResult ? (
             <ChatOutputs
               chargedCredits={work?.chargedCredits ?? run?.chargedCredits}
+              createdAt={{
+                dateTime: messageCreatedAt,
+                label: formatMessageDate(messageCreatedAt, locale),
+              }}
               galleryScope={galleryScope}
               modelName={effectiveModelName}
               outputs={outputs}
@@ -3136,9 +3187,12 @@ function ChatTurnMessage({
           {submitError ? <FieldMessage>{submitError}</FieldMessage> : null}
           {run?.errorMessage ? <FieldMessage>{run.errorMessage}</FieldMessage> : null}
           {retryError ? <FieldMessage>{retryError}</FieldMessage> : null}
-          {isFinished || submissionState === "failed" ? (
+          {(isFinished || submissionState === "failed") &&
+          (!hasMediaOutput || run?.status === "failed" || Boolean(copyableResult)) ? (
             <div className={styles.messageFooter}>
-              <time dateTime={messageCreatedAt}>{formatMessageDate(messageCreatedAt, locale)}</time>
+              {!hasMediaOutput ? (
+                <time dateTime={messageCreatedAt}>{formatMessageDate(messageCreatedAt, locale)}</time>
+              ) : null}
               {hasChargedCredits && !hasMediaOutput ? (
                 <span
                   aria-label={`${t("Списано", "Charged")} ${formatCredits(chargedCredits, locale)}`}
@@ -3175,6 +3229,53 @@ function ChatTurnMessage({
         </div>
       </div> : null}
     </article>
+  );
+}
+
+function ConversationHistoryTitle({ title }: { title: string }) {
+  const viewportRef = useRef<HTMLElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [marquee, setMarquee] = useState({ distance: 0, duration: 3 });
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const text = textRef.current;
+    if (!viewport || !text) return;
+
+    const measure = () => {
+      const distance = Math.max(0, Math.ceil(text.scrollWidth - viewport.clientWidth));
+      setMarquee((current) => {
+        const duration = Math.max(3, Math.min(10, distance / 22));
+        return current.distance === distance && current.duration === duration
+          ? current
+          : { distance, duration };
+      });
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    observer.observe(text);
+    return () => observer.disconnect();
+  }, [title]);
+
+  const style = {
+    "--history-title-shift": `${marquee.distance}px`,
+    "--history-title-duration": `${marquee.duration}s`,
+  } as CSSProperties;
+
+  return (
+    <strong
+      className={`${styles.historyTitle} ${
+        marquee.distance > 0 ? styles.historyTitleOverflowing : ""
+      }`}
+      ref={viewportRef}
+      style={style}
+      title={marquee.distance > 0 ? title : undefined}
+    >
+      <span ref={textRef}>{title}</span>
+    </strong>
   );
 }
 
@@ -3404,26 +3505,72 @@ function ChatOutputs({
   galleryScope,
   modelName,
   chargedCredits,
+  createdAt,
 }: {
   outputs: AiRunOutput[];
   work: AiWorkDetail | null;
   galleryScope: string;
   modelName: string;
   chargedCredits?: number | null;
+  createdAt?: {
+    dateTime: string;
+    label: string;
+  } | null;
 }) {
   const workOutputs = work?.outputs || [];
   if (!outputs.length && !workOutputs.length) {
     return null;
   }
+  const source: Array<AiRunOutput | AiWorkOutput> = workOutputs.length
+    ? workOutputs
+    : outputs;
+  const imageOutputs = source.filter(
+    (output) => output.type === "image" && Boolean(getOutputMediaUrl(output)),
+  );
+  const otherOutputs = source.filter(
+    (output) => output.type !== "image" || !getOutputMediaUrl(output),
+  );
+
   return (
     <div className={styles.outputList}>
-      {(workOutputs.length ? workOutputs : outputs).map((output, index) => (
+      {imageOutputs.length > 1 ? (
+        <ChatImageCarousel
+          chargedCredits={chargedCredits}
+          createdAt={createdAt}
+          galleryScope={galleryScope}
+          items={imageOutputs.map((output, index) => {
+            const media = getOutputMediaUrl(output)!;
+            return {
+              id: "id" in output ? String(output.id) : String(index),
+              url: output.outputUrl || ("url" in output ? output.url : null) || media,
+              previewUrl: output.previewUrl,
+              downloadUrl: output.downloadUrl,
+              copyUrl: output.copyUrl,
+              width: output.width,
+              height: output.height,
+              aspectRatio: output.aspectRatio,
+              fileName: getImageFileName(output),
+            };
+          })}
+          modelName={modelName}
+        />
+      ) : imageOutputs[0] ? (
         <ChatOutput
-          galleryId={`${galleryScope}:output:${index}`}
-          key={`${galleryScope}:output:${index}`}
+          chargedCredits={chargedCredits}
+          createdAt={createdAt}
+          galleryId={`${galleryScope}:output:0`}
+          modelName={modelName}
+          output={imageOutputs[0]}
+        />
+      ) : null}
+      {otherOutputs.map((output, index) => (
+        <ChatOutput
+          chargedCredits={chargedCredits}
+          createdAt={createdAt}
+          galleryId={`${galleryScope}:output:${imageOutputs.length + index}`}
+          key={`${galleryScope}:output:${imageOutputs.length + index}`}
           modelName={modelName}
           output={output}
-          chargedCredits={chargedCredits}
         />
       ))}
     </div>
@@ -3435,11 +3582,16 @@ function ChatOutput({
   galleryId,
   modelName,
   chargedCredits,
+  createdAt,
 }: {
   output: AiRunOutput | AiWorkOutput;
   galleryId: string;
   modelName: string;
   chargedCredits?: number | null;
+  createdAt?: {
+    dateTime: string;
+    label: string;
+  } | null;
 }) {
   const { t } = useAiLocale();
   if (output.heldForReview) {
@@ -3477,6 +3629,7 @@ function ChatOutput({
         aspectRatio={output.aspectRatio}
         chargedCredits={chargedCredits}
         copyUrl={output.copyUrl}
+        createdAt={createdAt}
         downloadUrl={output.downloadUrl}
         fileName={getImageFileName(output)}
         galleryId={galleryId}
@@ -3493,6 +3646,7 @@ function ChatOutput({
       <ChatVideoOutput
         aspectRatio={output.aspectRatio}
         chargedCredits={chargedCredits}
+        createdAt={createdAt}
         height={output.height}
         url={media}
         width={output.width}
@@ -3508,12 +3662,17 @@ function ChatOutput({
 function ChatVideoOutput({
   aspectRatio,
   chargedCredits,
+  createdAt,
   height,
   url,
   width,
 }: {
   aspectRatio?: string | null;
   chargedCredits?: number | null;
+  createdAt?: {
+    dateTime: string;
+    label: string;
+  } | null;
   height?: number | null;
   url: string;
   width?: number | null;
@@ -3555,8 +3714,11 @@ function ChatVideoOutput({
           }
         }}
       />
-      {characteristics || showCredits ? (
+      {createdAt || characteristics || showCredits ? (
         <figcaption className={styles.videoOutputMeta}>
+          {createdAt ? (
+            <time dateTime={createdAt.dateTime}>{createdAt.label}</time>
+          ) : null}
           {characteristics ? <span>{characteristics}</span> : null}
           {showCredits ? (
             <span className={styles.videoCreditUsage}>
@@ -3995,6 +4157,19 @@ function CapabilityFields({
       />,
     );
   }
+  if (capabilities.backgrounds?.length) {
+    fields.push(
+      <OptionField
+        id="background"
+        key="background"
+        label={t("Фон", "Background")}
+        optionLabel={(value) => getBackgroundLabel(value, t)}
+        value={draft.background}
+        values={capabilities.backgrounds}
+        onChange={(background) => onChange({ background })}
+      />,
+    );
+  }
   if (capabilities.acceptsSound) {
     fields.push(
       <label className={styles.contextToggle} key="sound">
@@ -4248,6 +4423,19 @@ function getDetailLabel(
   return label ? t(label[0], label[1]) : normalized;
 }
 
+function getBackgroundLabel(
+  value: string | number,
+  t: (russian: string, english: string) => string,
+): string {
+  const labels: Record<string, [string, string]> = {
+    auto: ["Автоматически", "Automatic"],
+    opaque: ["Непрозрачный", "Opaque"],
+    transparent: ["Прозрачный", "Transparent"],
+  };
+  const label = labels[String(value).toLowerCase()];
+  return label ? t(label[0], label[1]) : String(value);
+}
+
 function CountStepper({
   value,
   values,
@@ -4486,6 +4674,7 @@ function buildParameters(
     ...(draft.duration ? { duration: Number(draft.duration) } : {}),
     ...(draft.resolution ? { resolution: draft.resolution } : {}),
     ...(draft.quality ? { quality: draft.quality } : {}),
+    ...(draft.background ? { background: draft.background } : {}),
     ...(draft.sound ? { sound: true } : {}),
     ...(draft.reasoningMode ? { reasoningMode: draft.reasoningMode } : {}),
     ...(draft.videoMode ? { videoMode: draft.videoMode } : {}),
@@ -4556,6 +4745,36 @@ function extractPromptVariables(value: string): string[] {
   ];
 }
 
+export function inferCarouselOutputCount(
+  prompt: string,
+  supportedCounts: readonly number[],
+): number | null {
+  const allowed = [...new Set(supportedCounts)]
+    .filter((value) => Number.isInteger(value) && value > 1)
+    .sort((left, right) => left - right);
+  if (!allowed.length) return null;
+
+  const requestedCounts: number[] = [];
+  for (const match of prompt.matchAll(
+    /(?:созда(?:й|ть)|сгенериру(?:й|йте|овать)|подготов(?:ь|ить)|generate|create|make)\s+(?:именно\s+|ровно\s+)?(\d{1,2})\s+(?:отдельн(?:ых|ые)\s+)?(?:кадр(?:а|ов)?|изображени(?:я|й)?|фото(?:графи(?:и|й))?|images?|photos?|frames?)/giu,
+  )) {
+    requestedCounts.push(Number(match[1]));
+  }
+
+  const frameNumbers = [...prompt.matchAll(/(?:^|\n)\s*(?:кадр|frame)\s*(\d{1,2})\b/giu)]
+    .map((match) => Number(match[1]))
+    .filter(Number.isFinite);
+  if (frameNumbers.length > 1) requestedCounts.push(Math.max(...frameNumbers));
+  if (!requestedCounts.length && /\b(?:карусел(?:ь|и|ью)|carousel)\b/iu.test(prompt)) {
+    requestedCounts.push(3);
+  }
+
+  const requested = requestedCounts.find((value) => value > 1 && value <= 10);
+  if (!requested) return null;
+  if (allowed.includes(requested)) return requested;
+  return [...allowed].reverse().find((value) => value <= requested) || allowed[0] || null;
+}
+
 function retryParametersToDraft(parameters: Record<string, unknown>): Partial<Draft> {
   const standardKeys = new Set([
     "prompt",
@@ -4565,6 +4784,7 @@ function retryParametersToDraft(parameters: Record<string, unknown>): Partial<Dr
     "duration",
     "resolution",
     "quality",
+    "background",
     "sound",
     "reasoningMode",
     "videoMode",
@@ -4594,6 +4814,7 @@ function retryParametersToDraft(parameters: Record<string, unknown>): Partial<Dr
         : "",
     resolution: typeof parameters.resolution === "string" ? parameters.resolution : "",
     quality: typeof parameters.quality === "string" ? parameters.quality : "",
+    background: typeof parameters.background === "string" ? parameters.background : "",
     sound: parameters.sound === true,
     reasoningMode:
       typeof parameters.reasoningMode === "string" ? parameters.reasoningMode : "",

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { FiArrowRight, FiBookmark, FiImage, FiMaximize2 } from "react-icons/fi";
+import { FiArrowRight, FiBookmark, FiImage } from "react-icons/fi";
 
 import { useAiSession } from "@/features/ai-session";
 import { useAiLocale } from "@/features/ai-locale";
@@ -14,6 +14,7 @@ import {
 } from "@/shared/api/ai";
 
 import { getAiErrorMessage, useAiResource } from "../model/api";
+import { resolvePromptVideoModeCode } from "../model/generationOperation";
 import { readLocalJson, writeLocalJson } from "../model/storage";
 import {
   AiButton,
@@ -24,8 +25,9 @@ import {
   FieldMessage,
 } from "./AiUi";
 import { AiSelect } from "./AiSelect";
+import { ImageGalleryProvider, ImageLightbox } from "./ChatImageOutput";
 import { AiModelLogo } from "./AiModelLogo";
-import { ImageLightbox } from "./ChatImageOutput";
+import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import styles from "./AiPages.module.scss";
 
 type PromptVariableValue = string | number | boolean;
@@ -52,6 +54,12 @@ export function PromptDetailPage({
   const [isFavoritePending, setIsFavoritePending] = useState(false);
   const draftKey = `neuroluv-ai:prompt-draft:${slug}`;
   const isLocked = prompt.data?.access === "subscription";
+  const promptMedia = prompt.data?.media || [];
+  const hasPrimaryVideo = Boolean(promptMedia[0]?.type?.startsWith("video/"));
+  const previewMedia = hasPrimaryVideo ? promptMedia.slice(0, 1) : promptMedia;
+  const referenceMedia = hasPrimaryVideo
+    ? promptMedia.slice(1).filter((item) => item.type?.startsWith("image/"))
+    : [];
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -74,7 +82,6 @@ export function PromptDetailPage({
     if (!prompt.data || !models.data) return [];
     return models.data.filter(
       (model) =>
-        model.available &&
         (prompt.data?.compatibleModelIds.length === 0 ||
           prompt.data?.compatibleModelIds.includes(model.id)),
     );
@@ -87,6 +94,10 @@ export function PromptDetailPage({
 
   function handleUse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!session.authenticated) {
+      router.push(`/ai/auth?returnTo=${encodeURIComponent(`/ai/prompts/${slug}`)}`);
+      return;
+    }
     if (isLocked) {
       setError(t("Этот промпт пока закрыт", "This prompt is currently locked"));
       return;
@@ -103,6 +114,14 @@ export function PromptDetailPage({
       ]),
     );
     const model = compatibleModels.find((item) => item.id === selectedModelId);
+    const videoMode =
+      model?.modality === "video"
+        ? resolvePromptVideoModeCode({
+            maximumReferenceFiles: prompt.data.maximumReferenceFiles,
+            minimumReferenceFiles: prompt.data.minimumReferenceFiles,
+            modes: model.capabilities.videoModes,
+          })
+        : null;
     const preparedPrompt = renderPromptTemplate(
       prompt.data.promptTemplate,
       prompt.data.variablesSchema?.fields || [],
@@ -124,6 +143,7 @@ export function PromptDetailPage({
         modelId: selectedModelId,
         prompt: preparedPrompt,
         aspectRatio: prompt.data.defaultAspectRatio || "",
+        ...(videoMode ? { videoMode } : {}),
         promptMinimumReferenceFiles: prompt.data.minimumReferenceFiles,
         promptMaximumReferenceFiles: prompt.data.maximumReferenceFiles,
         catalogPromptOverride: prompt.data.allowUserPromptEdit,
@@ -196,19 +216,33 @@ export function PromptDetailPage({
             <div className={styles.promptDetailGrid}>
               <AiCard className={styles.promptPreviewCard}>
                 <div className={styles.detailMedia}>
-                  {prompt.data.imageUrl ? (
-                    <ImageLightbox
+                  {prompt.data.imageUrl || prompt.data.media?.length ? (
+                    <PromptCardMedia
                       alt={t("Пример результата", "Result example")}
-                      fullUrl={prompt.data.imageUrl}
-                      previewUrl={prompt.data.imageUrl}
-                      triggerClassName={styles.mediaLightboxButton}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- backend/CDN URL with unknown host */}
-                      <img alt={t("Пример результата", "Result example")} src={prompt.data.imageUrl} />
-                      <span aria-hidden="true" className={styles.mediaFullscreenHint}>
-                        <FiMaximize2 />
-                      </span>
-                    </ImageLightbox>
+                      className={styles.detailMediaCarousel}
+                      enableFullscreen
+                      image={
+                        previewMedia.length === 0 && prompt.data.imageUrl
+                          ? { id: "legacy", url: prompt.data.imageUrl }
+                          : null
+                      }
+                      images={previewMedia}
+                      mode="detail"
+                      poster={referenceMedia[0]?.url}
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 760px"
+                      style={
+                        previewMedia[0]?.width && previewMedia[0].height
+                          ? {
+                              aspectRatio: `${previewMedia[0].width} / ${previewMedia[0].height}`,
+                              width:
+                                previewMedia[0].height > previewMedia[0].width
+                                  ? `min(100%, calc(min(72dvh, 760px) * ${previewMedia[0].width / previewMedia[0].height}))`
+                                  : "100%",
+                            }
+                          : undefined
+                      }
+                    />
                   ) : (
                     <span className={styles.mediaPlaceholder}>
                       <FiImage aria-hidden="true" />
@@ -225,6 +259,31 @@ export function PromptDetailPage({
               <AiCard className={styles.promptConfigurator}>
                 <h2>{t("Настроить промпт", "Configure prompt")}</h2>
                 <p>{t("Заполните параметры и выберите совместимую модель.", "Fill in the parameters and choose a compatible model.")}</p>
+                {referenceMedia.length ? (
+                  <section className={styles.promptReferenceSection}>
+                    <div className={styles.promptReferenceHeading}>
+                      <strong>{t("Референсы", "References")}</strong>
+                      <span>{referenceMedia.length}</span>
+                    </div>
+                    <ImageGalleryProvider>
+                      <div className={styles.publicPromptReferences}>
+                        {referenceMedia.map((item, index) => (
+                          <ImageLightbox
+                            alt={`${t("Референс", "Reference")} ${index + 1}`}
+                            fullUrl={item.url}
+                            galleryId={`prompt-${slug}-reference-${index}`}
+                            key={String(item.id ?? `${item.url}:${index}`)}
+                            previewUrl={item.url}
+                            triggerClassName={styles.publicPromptReferenceButton}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element -- Directus media URL. */}
+                            <img alt="" src={item.url} />
+                          </ImageLightbox>
+                        ))}
+                      </div>
+                    </ImageGalleryProvider>
+                  </section>
+                ) : null}
                 <form className={styles.formStack} onSubmit={handleUse}>
                   {(prompt.data.variablesSchema?.fields || []).map((field) =>
                     field.type === "select" ? (
@@ -307,11 +366,16 @@ export function PromptDetailPage({
                   {error ? <FieldMessage>{error}</FieldMessage> : null}
                   {models.error ? <FieldMessage>{models.error}</FieldMessage> : null}
 
-                  <AiButton disabled={!selectedModelId || isLocked} type="submit">
-                    {isLocked
+                  <AiButton
+                    disabled={!selectedModelId || (isLocked && session.authenticated)}
+                    type="submit"
+                  >
+                    {isLocked && session.authenticated
                       ? t("Промпт пока закрыт", "Prompt is currently locked")
                       : t("Продолжить в генераторе", "Continue in generator")}
-                    {!isLocked ? <FiArrowRight aria-hidden="true" /> : null}
+                    {!isLocked || !session.authenticated ? (
+                      <FiArrowRight aria-hidden="true" />
+                    ) : null}
                   </AiButton>
                 </form>
               </AiCard>

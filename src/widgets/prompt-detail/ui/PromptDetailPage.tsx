@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { FaArrowRight, FaTelegram } from "react-icons/fa";
@@ -15,6 +14,7 @@ import {
   type ContentHeading,
 } from "@/shared/ui/content-blocks";
 import { Noindex } from "@/shared/ui/noindex";
+import { ContentActionButton } from "@/shared/ui/content-action-button";
 import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 import { AuthorCard } from "@/shared/ui/author-card";
@@ -69,7 +69,13 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
           <h1 className={styles.heroTitle}>{item.title}</h1>
           <p className={styles.heroDescription}>{item.description}</p>
           <div className={styles.heroActions}>
-            {item.aiEnabled ? (
+            {item.buttons.length > 0 ? item.buttons.map((button) => (
+              <ContentActionButton
+                button={button}
+                className={styles.heroActionButton}
+                key={button.id}
+              />
+            )) : item.aiEnabled ? (
               <Link
                 className={styles.heroActionButton}
                 href={`/ai/prompts/${item.slug}`}
@@ -205,31 +211,22 @@ function PromptHeroVisual({ item }: { item: PromptDetail }) {
   } as CSSProperties;
 
   return (
-    <div className={styles.heroVisual} style={mediaStyle}>
-      {item.image ? (
-        item.image.type?.startsWith("video/") ? (
-          <video
-            autoPlay
-            controls
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            src={item.image.url}
-          />
-        ) : (
-          <Image
-            priority
-            alt={getImageAlt(item.image.title, item.title)}
-            fill
-            sizes="(max-width: 1024px) 100vw, 420px"
-            src={item.image.url}
-          />
-        )
-      ) : (
+    <PromptCardMedia
+      alt={item.image ? getImageAlt(item.image.title, item.title) : item.title}
+      autoPlay
+      className={styles.heroVisual}
+      enableFullscreen
+      image={item.image}
+      images={item.images}
+      mode="detail"
+      priority
+      sizes="(max-width: 1024px) 100vw, 420px"
+      style={mediaStyle}
+    >
+      {!item.image ? (
         <span>{item.contentKind?.title || item.types[0]?.title || "AI"}</span>
-      )}
-    </div>
+      ) : null}
+    </PromptCardMedia>
   );
 }
 
@@ -293,24 +290,28 @@ function PromptAuthorCard({
 
 function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
   return (
-    <Link className={styles.relatedCard} href={prompt.href}>
+    <article className={styles.relatedCard}>
       <PromptCardMedia
         alt={prompt.image ? getImageAlt(prompt.image.title, prompt.title) : prompt.title}
         autoPlay={prompt.autoplay}
         className={styles.relatedImage}
+        href={prompt.href}
         image={prompt.image}
+        images={prompt.images}
         sizes="(max-width: 768px) 100vw, 386px"
       >
         <span>{prompt.contentKind?.title || prompt.types[0]?.title || "Фото"}</span>
       </PromptCardMedia>
-      <span className={styles.relatedBadges}>
-        {(prompt.contentKind || prompt.types[0]) && (
-          <small>{(prompt.contentKind || prompt.types[0])?.title}</small>
-        )}
-        {prompt.neuralNetwork && <small>{prompt.neuralNetwork.title}</small>}
-      </span>
-      <strong>{prompt.title}</strong>
-    </Link>
+      <Link className={styles.relatedCardContent} href={prompt.href}>
+        <span className={styles.relatedBadges}>
+          {(prompt.contentKind || prompt.types[0]) && (
+            <small>{(prompt.contentKind || prompt.types[0])?.title}</small>
+          )}
+          {prompt.neuralNetwork && <small>{prompt.neuralNetwork.title}</small>}
+        </span>
+        <strong>{prompt.title}</strong>
+      </Link>
+    </article>
   );
 }
 

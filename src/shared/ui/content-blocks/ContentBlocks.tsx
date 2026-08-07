@@ -5,6 +5,8 @@ import type { CSSProperties } from "react";
 import type { NewsContentBlock } from "@/entities/news";
 import type { PromptContentBlock } from "@/entities/prompt";
 import { CopyContentBox } from "@/shared/ui/copy-content-box";
+import { ContentActionButton } from "@/shared/ui/content-action-button";
+import { FiAlertTriangle } from "react-icons/fi";
 
 import styles from "./ContentBlocks.module.scss";
 
@@ -311,15 +313,46 @@ function ContentBlockView({
       <section className={styles.stepsBlock}>
         {block.title && <h2 id={headingId}>{block.title}</h2>}
         <div className={styles.stepsList}>
-          {block.steps.map((step, index) => (
-            <div className={styles.stepItem} key={`step-${step.id}-${index}`}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <div>
-                <p>{step.title}</p>
-                <small>{step.description}</small>
+          {block.steps.map((step, index) => {
+            const isWarning = "isWarning" in step && step.isWarning === true;
+            const buttons = "buttons" in step ? step.buttons : [];
+            const numberedStep = block.steps
+              .slice(0, index + 1)
+              .filter(
+                (candidate) =>
+                  !("isWarning" in candidate && candidate.isWarning === true),
+              ).length;
+
+            return (
+              <div
+                className={`${styles.stepItem} ${isWarning ? styles.stepItemWarning : ""}`}
+                key={`step-${step.id}-${index}`}
+              >
+                <span>
+                  {isWarning ? (
+                    <FiAlertTriangle aria-label="Внимание" />
+                  ) : (
+                    String(numberedStep).padStart(2, "0")
+                  )}
+                </span>
+                <div>
+                  <p>{step.title}</p>
+                  <small>{step.description}</small>
+                  {buttons.length > 0 ? (
+                    <div className={styles.stepActions}>
+                      {buttons.map((button) => (
+                        <ContentActionButton
+                          button={button}
+                          className={styles.stepActionButton}
+                          key={button.id}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     );

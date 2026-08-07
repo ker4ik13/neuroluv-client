@@ -52,6 +52,11 @@ export type ChatImageOutputProps = {
   fileName?: string;
   modelName?: string | null;
   chargedCredits?: number | null;
+  showDetails?: boolean;
+  createdAt?: {
+    dateTime: string;
+    label: string;
+  } | null;
 };
 
 type CopyState = "idle" | "copying" | "copied" | "error";
@@ -71,7 +76,7 @@ type ImageLightboxProps = {
   triggerClassName: string;
 };
 
-type ImageGalleryItem = {
+export type ImageGalleryItem = {
   id: string;
   alt: string;
   chargedCredits?: number | null;
@@ -86,6 +91,7 @@ type ImageGalleryItem = {
 type ImageGalleryContextValue = {
   open: (id: string) => void;
   register: (item: ImageGalleryItem) => void;
+  update: (item: ImageGalleryItem) => void;
   unregister: (id: string) => void;
 };
 
@@ -104,8 +110,13 @@ function hasChargedCredits(value: number | null | undefined): value is number {
 export function ImageGalleryProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ImageGalleryItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const registrationCounts = useRef(new Map<string, number>());
 
   const register = useCallback((item: ImageGalleryItem) => {
+    registrationCounts.current.set(
+      item.id,
+      (registrationCounts.current.get(item.id) || 0) + 1,
+    );
     setItems((current) => {
       const index = current.findIndex((candidate) => candidate.id === item.id);
       if (index < 0) return [...current, item];
@@ -116,13 +127,28 @@ export function ImageGalleryProvider({ children }: { children: ReactNode }) {
     });
   }, []);
   const unregister = useCallback((id: string) => {
+    const nextCount = (registrationCounts.current.get(id) || 0) - 1;
+    if (nextCount > 0) {
+      registrationCounts.current.set(id, nextCount);
+      return;
+    }
+    registrationCounts.current.delete(id);
     setItems((current) => current.filter((candidate) => candidate.id !== id));
+  }, []);
+  const update = useCallback((item: ImageGalleryItem) => {
+    setItems((current) => {
+      const index = current.findIndex((candidate) => candidate.id === item.id);
+      if (index < 0 || isSameGalleryItem(current[index], item)) return current;
+      const next = [...current];
+      next[index] = item;
+      return next;
+    });
   }, []);
   const open = useCallback((id: string) => setActiveId(id), []);
   const close = useCallback(() => setActiveId(null), []);
   const context = useMemo(
-    () => ({ open, register, unregister }),
-    [open, register, unregister],
+    () => ({ open, register, unregister, update }),
+    [open, register, unregister, update],
   );
   const activeIndex = activeId
     ? items.findIndex((item) => item.id === activeId)
@@ -144,6 +170,38 @@ export function ImageGalleryProvider({ children }: { children: ReactNode }) {
         : null}
     </ImageGalleryContext.Provider>
   );
+}
+
+export function ImageGalleryRegistration({
+  items,
+}: {
+  items: readonly ImageGalleryItem[];
+}) {
+  const gallery = useContext(ImageGalleryContext);
+  const registeredIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!gallery) return;
+    const nextIds = new Set(items.map((item) => item.id));
+    items.forEach((item) => {
+      if (registeredIds.current.has(item.id)) gallery.update(item);
+      else gallery.register(item);
+    });
+    registeredIds.current.forEach((id) => {
+      if (!nextIds.has(id)) gallery.unregister(id);
+    });
+    registeredIds.current = nextIds;
+  }, [gallery, items]);
+
+  useEffect(() => {
+    if (!gallery) return;
+    return () => {
+      registeredIds.current.forEach((id) => gallery.unregister(id));
+      registeredIds.current.clear();
+    };
+  }, [gallery]);
+
+  return null;
 }
 
 function ImageGalleryDialog({
@@ -644,6 +702,8 @@ export function ChatImageOutput({
   fileName = "neuroluv-image.webp",
   modelName,
   chargedCredits,
+  showDetails = true,
+  createdAt,
 }: ChatImageOutputProps) {
   const { locale, t } = useAiLocale();
   const [copyState, setCopyState] = useState<CopyState>("idle");
@@ -739,44 +799,52 @@ export function ChatImageOutput({
         />
       </ImageLightbox>
 
-      <figcaption className={styles.caption}>
-        <span className={styles.actions}>
-          <button
-            aria-label={copyState === "copied" ? t("Изображение скопировано", "Image copied") : t("Скопировать изображение", "Copy image")}
-            aria-busy={copyState === "copying"}
-            className={styles.iconButton}
-            disabled={copyState === "copying"}
-            onClick={handleCopy}
-            title={copyState === "copied" ? t("Изображение скопировано", "Image copied") : t("Скопировать изображение", "Copy image")}
-            type="button"
-          >
-            {copyState === "copied" ? <FiCheck aria-hidden="true" /> : <FiCopy aria-hidden="true" />}
-          </button>
-          <a
-            aria-label={t("Скачать изображение", "Download image")}
-            className={styles.iconButton}
-            download={fileName}
-            href={downloadSource}
-            title={t("Скачать изображение", "Download image")}
-          >
-            <FiDownload aria-hidden="true" />
-          </a>
-        </span>
-
-        {characteristics || hasChargedCredits(chargedCredits) ? (
-          <span className={styles.mediaDetails}>
-            {characteristics ? (
-              <span className={styles.characteristics}>{characteristics}</span>
-            ) : null}
-            {hasChargedCredits(chargedCredits) ? (
-              <span className={styles.creditUsage}>
-                <FiZap aria-hidden="true" />
-                {formatCredits(chargedCredits, locale)}
-              </span>
-            ) : null}
+      {showDetails ? (
+        <figcaption className={styles.caption}>
+          <span className={styles.actions}>
+            <button
+              aria-label={copyState === "copied" ? t("Изображение скопировано", "Image copied") : t("Скопировать изображение", "Copy image")}
+              aria-busy={copyState === "copying"}
+              className={styles.iconButton}
+              disabled={copyState === "copying"}
+              onClick={handleCopy}
+              title={copyState === "copied" ? t("Изображение скопировано", "Image copied") : t("Скопировать изображение", "Copy image")}
+              type="button"
+            >
+              {copyState === "copied" ? <FiCheck aria-hidden="true" /> : <FiCopy aria-hidden="true" />}
+            </button>
+            <a
+              aria-label={t("Скачать изображение", "Download image")}
+              className={styles.iconButton}
+              download={fileName}
+              href={downloadSource}
+              title={t("Скачать изображение", "Download image")}
+            >
+              <FiDownload aria-hidden="true" />
+            </a>
           </span>
-        ) : null}
-      </figcaption>
+
+          {createdAt ? (
+            <time className={styles.createdAt} dateTime={createdAt.dateTime}>
+              {createdAt.label}
+            </time>
+          ) : null}
+
+          {characteristics || hasChargedCredits(chargedCredits) ? (
+            <span className={styles.mediaDetails}>
+              {characteristics ? (
+                <span className={styles.characteristics}>{characteristics}</span>
+              ) : null}
+              {hasChargedCredits(chargedCredits) ? (
+                <span className={styles.creditUsage}>
+                  <FiZap aria-hidden="true" />
+                  {formatCredits(chargedCredits, locale)}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+        </figcaption>
+      ) : null}
 
       <span
         aria-live="polite"
