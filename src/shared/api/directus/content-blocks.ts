@@ -6,6 +6,10 @@ import type {
   NewsContentStep,
   NewsImage,
 } from "@/entities/news";
+import {
+  normalizeDirectusContentButtonIcon,
+  type DirectusContentButtonIcon,
+} from "@/shared/api/directus/content-button-icon";
 import { buildDirectusAssetUrl } from "@/shared/config/directus";
 
 type DirectusFile = {
@@ -38,6 +42,8 @@ type DirectusContentStep = {
   is_active: boolean | null;
   title: string | null;
   description: string | null;
+  is_warning?: boolean | null;
+  buttons?: DirectusContentButtonJunction[];
 };
 
 type DirectusContentButton = {
@@ -46,6 +52,7 @@ type DirectusContentButton = {
   url: string | null;
   target: "_self" | "_blank" | null;
   variant: "primary" | "secondary" | "outline" | null;
+  icon?: DirectusContentButtonIcon | null;
   is_active: boolean | null;
 };
 
@@ -190,6 +197,10 @@ export function buildDirectusContentBlockFields(prefix: string): string[] {
     `${prefix}.item:content_cta.buttons.hero_buttons_id.url`,
     `${prefix}.item:content_cta.buttons.hero_buttons_id.target`,
     `${prefix}.item:content_cta.buttons.hero_buttons_id.variant`,
+    `${prefix}.item:content_cta.buttons.hero_buttons_id.icon.title`,
+    `${prefix}.item:content_cta.buttons.hero_buttons_id.icon.code`,
+    `${prefix}.item:content_cta.buttons.hero_buttons_id.icon.library`,
+    `${prefix}.item:content_cta.buttons.hero_buttons_id.icon.is_active`,
     `${prefix}.item:content_cta.buttons.hero_buttons_id.is_active`,
     `${prefix}.item:content_cards.id`,
     `${prefix}.item:content_cards.is_active`,
@@ -212,6 +223,18 @@ export function buildDirectusContentBlockFields(prefix: string): string[] {
     `${prefix}.item:content_steps.steps.is_active`,
     `${prefix}.item:content_steps.steps.title`,
     `${prefix}.item:content_steps.steps.description`,
+    `${prefix}.item:content_steps.steps.is_warning`,
+    `${prefix}.item:content_steps.steps.buttons.sort`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.id`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.label`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.url`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.target`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.variant`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.icon.title`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.icon.code`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.icon.library`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.icon.is_active`,
+    `${prefix}.item:content_steps.steps.buttons.hero_buttons_id.is_active`,
   ];
 }
 
@@ -518,6 +541,8 @@ function normalizeContentStep(item: DirectusContentStep): NewsContentStep | null
     id: item.id,
     title: item.title || "",
     description: item.description || "",
+    isWarning: item.is_warning === true,
+    buttons: normalizeContentButtons(item.buttons || []),
   };
 }
 
@@ -538,6 +563,7 @@ function normalizeContentButtons(
       href: button.url || "#",
       target: button.target || "_self",
       variant: button.variant || "primary",
+      icon: normalizeDirectusContentButtonIcon(button.icon),
     }));
 }
 

@@ -18,8 +18,11 @@ import type {
   PromptTaxonomy,
 } from "@/entities/prompt";
 import type { PageBlock } from "@/entities/page";
-import type { NavigationIcon } from "@/entities/navigation";
 import { directusRequest } from "@/shared/api/directus/client";
+import {
+  normalizeDirectusContentButtonIcon,
+  type DirectusContentButtonIcon,
+} from "@/shared/api/directus/content-button-icon";
 import {
   getDirectusPageBlocksBySlug,
   normalizePageBlocks,
@@ -133,12 +136,7 @@ type DirectusContentButton = {
   url: string | null;
   target: "_self" | "_blank" | null;
   variant: "primary" | "secondary" | "outline" | null;
-  icon?: {
-    title: string | null;
-    code: string | null;
-    library: string | null;
-    is_active: boolean | null;
-  } | null;
+  icon?: DirectusContentButtonIcon | null;
   is_active: boolean | null;
 };
 
@@ -455,6 +453,10 @@ const PROMPT_DETAIL_FIELDS = [
   "content_blocks.item:content_cta.buttons.hero_buttons_id.url",
   "content_blocks.item:content_cta.buttons.hero_buttons_id.target",
   "content_blocks.item:content_cta.buttons.hero_buttons_id.variant",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.title",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.code",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.library",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.is_active",
   "content_blocks.item:content_cta.buttons.hero_buttons_id.is_active",
   "content_blocks.item:content_cards.id",
   "content_blocks.item:content_cards.is_active",
@@ -1926,19 +1928,8 @@ function normalizeContentButtons(
       href: button.url || "#",
       target: button.target || "_self",
       variant: button.variant || "primary",
-      icon: normalizeButtonIcon(button.icon),
+      icon: normalizeDirectusContentButtonIcon(button.icon),
     }));
-}
-
-function normalizeButtonIcon(
-  icon: DirectusContentButton["icon"],
-): NavigationIcon | null {
-  if (!icon?.code || icon.is_active === false) return null;
-  return {
-    title: icon.title || icon.code,
-    code: icon.code,
-    library: icon.library || "custom",
-  };
 }
 
 function normalizeTypes(types: DirectusPromptTypeJunction[]): PromptTaxonomy[] {

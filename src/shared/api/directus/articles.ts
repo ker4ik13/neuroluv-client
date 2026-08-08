@@ -16,6 +16,10 @@ import type {
 import type { PageBlock } from "@/entities/page";
 import { directusRequest } from "@/shared/api/directus/client";
 import {
+  normalizeDirectusContentButtonIcon,
+  type DirectusContentButtonIcon,
+} from "@/shared/api/directus/content-button-icon";
+import {
   getDirectusPageBlocksBySlug,
   hydratePageBlocks,
   normalizePageBlocks,
@@ -88,6 +92,8 @@ type DirectusContentStep = {
   is_active: boolean | null;
   title: string | null;
   description: string | null;
+  is_warning?: boolean | null;
+  buttons?: DirectusContentButtonJunction[];
 };
 
 type DirectusContentButton = {
@@ -96,6 +102,7 @@ type DirectusContentButton = {
   url: string | null;
   target: "_self" | "_blank" | null;
   variant: "primary" | "secondary" | "outline" | null;
+  icon?: DirectusContentButtonIcon | null;
   is_active: boolean | null;
 };
 
@@ -297,6 +304,10 @@ const ARTICLE_DETAIL_FIELDS = [
   "mini_cta.buttons.hero_buttons_id.url",
   "mini_cta.buttons.hero_buttons_id.target",
   "mini_cta.buttons.hero_buttons_id.variant",
+  "mini_cta.buttons.hero_buttons_id.icon.title",
+  "mini_cta.buttons.hero_buttons_id.icon.code",
+  "mini_cta.buttons.hero_buttons_id.icon.library",
+  "mini_cta.buttons.hero_buttons_id.icon.is_active",
   "mini_cta.buttons.hero_buttons_id.is_active",
   "content_blocks.id",
   "content_blocks.sort",
@@ -350,6 +361,10 @@ const ARTICLE_DETAIL_FIELDS = [
   "content_blocks.item:content_cta.buttons.hero_buttons_id.url",
   "content_blocks.item:content_cta.buttons.hero_buttons_id.target",
   "content_blocks.item:content_cta.buttons.hero_buttons_id.variant",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.title",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.code",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.library",
+  "content_blocks.item:content_cta.buttons.hero_buttons_id.icon.is_active",
   "content_blocks.item:content_cta.buttons.hero_buttons_id.is_active",
   "content_blocks.item:content_cards.id",
   "content_blocks.item:content_cards.is_active",
@@ -372,6 +387,18 @@ const ARTICLE_DETAIL_FIELDS = [
   "content_blocks.item:content_steps.steps.is_active",
   "content_blocks.item:content_steps.steps.title",
   "content_blocks.item:content_steps.steps.description",
+  "content_blocks.item:content_steps.steps.is_warning",
+  "content_blocks.item:content_steps.steps.buttons.sort",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.id",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.label",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.url",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.target",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.variant",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.title",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.code",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.library",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.is_active",
+  "content_blocks.item:content_steps.steps.buttons.hero_buttons_id.is_active",
 ].join(",");
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
@@ -954,6 +981,8 @@ function normalizeContentStep(item: DirectusContentStep): NewsContentStep | null
     id: item.id,
     title: item.title || "",
     description: item.description || "",
+    isWarning: item.is_warning === true,
+    buttons: normalizeContentButtons(item.buttons || []),
   };
 }
 
@@ -974,6 +1003,7 @@ function normalizeContentButtons(
       href: button.url || "#",
       target: button.target || "_self",
       variant: button.variant || "primary",
+      icon: normalizeDirectusContentButtonIcon(button.icon),
     }));
 }
 

@@ -1,3 +1,4 @@
+import type { NavigationIcon } from "@/entities/navigation";
 import type { PageSeo } from "@/entities/seo";
 
 export type NewsImage = {
@@ -50,6 +51,7 @@ export type NewsContentButton = {
   href: string;
   target: "_self" | "_blank";
   variant: "primary" | "secondary" | "outline";
+  icon: NavigationIcon | null;
 };
 
 export type NewsContentListItem = {
@@ -70,6 +72,8 @@ export type NewsContentStep = {
   id: number;
   title: string;
   description: string;
+  isWarning: boolean;
+  buttons: NewsContentButton[];
 };
 
 export type NewsContentBlock =
