@@ -560,6 +560,7 @@ const PROMPT_COLLECTIONS_PAGE_SIZE = 60;
 export type GetPromptsPageDataParams = {
   collection?: string | null;
   goal?: string | null;
+  includeFacets?: boolean;
   kind?: string | null;
   network?: string | null;
   page?: number;
@@ -585,6 +586,7 @@ export type PromptMenuFilterSeo = {
 export async function getPromptsPageData({
   collection,
   goal,
+  includeFacets,
   kind,
   network,
   page = 1,
@@ -641,7 +643,7 @@ export async function getPromptsPageData({
     type,
   });
 
-  const shouldLoadFacets = normalizedPage === 1;
+  const shouldLoadFacets = includeFacets ?? normalizedPage === 1;
   const [
     prompts,
     totalRows,

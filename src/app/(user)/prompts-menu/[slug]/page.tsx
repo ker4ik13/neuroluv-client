@@ -14,6 +14,11 @@ import {
   buildWebPageJsonLd,
 } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import {
+  buildPaginationHref,
+  normalizePaginationPage,
+} from "@/shared/lib/url/pagination";
+import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
 import { JsonLd } from "@/shared/ui/json-ld";
 import { PageBlocks } from "@/widgets/page-blocks";
 import { PromptsPage } from "@/widgets/prompts-page";
@@ -41,6 +46,7 @@ type PromptsMenuFilterRouteProps = {
     slug: string;
   }>;
   searchParams?: Promise<{
+    page?: string;
     q?: string;
     sort?: string;
   }>;
@@ -56,8 +62,12 @@ export async function generateMetadata({
     return {};
   }
 
-  const query = await searchParams;
+  const routeParams = await searchParams;
+  const page = normalizePaginationPage(routeParams?.page);
+  const query = omitSearchParams(routeParams, ["page"]);
   const hasNonIndexableQuery = Boolean(query?.q || query?.sort);
+  const currentPath = buildPathWithSearch(filter.path, query);
+  const paginatedPath = buildPaginationHref(currentPath, page);
   const [seo, filterSeo] = await Promise.all([
     getPageSeoByPath(filter.path),
     getPromptMenuFilterSeo({
@@ -71,12 +81,13 @@ export async function generateMetadata({
   }
 
   return buildPageMetadata(seo, {
-    canonicalPath: filter.path,
+    canonicalPath: page > 1 ? paginatedPath : filter.path,
     fallbackTitle: "{TITLE} | {SITE_NAME}",
-    noindex: hasNonIndexableQuery || Boolean(filterSeo?.seoNoindex),
+    noindex:
+      page > 1 || hasNonIndexableQuery || Boolean(filterSeo?.seoNoindex),
     variables: {
       TITLE: filterSeo.title,
-      URL: filter.path,
+      URL: paginatedPath,
     },
   });
 }
@@ -100,18 +111,25 @@ export default async function PromptsMenuFilterRoute({
     notFound();
   }
 
-  const query = await searchParams;
+  const routeParams = await searchParams;
+  const page = normalizePaginationPage(routeParams?.page);
+  const query = omitSearchParams(routeParams, ["page"]);
   const sort = normalizeSort(query?.sort);
   const q = normalizeQueryParam(query?.q);
   let data = EMPTY_PROMPTS_DATA;
   let blocks: PageBlock[] = [];
   let heroTitle = filterSeo.title;
   let heroDescription = filterSeo.description || "Подборка промптов по выбранному фильтру.";
+  let dataLoaded = false;
+  const currentPath = buildPathWithSearch(filter.path, query);
+  const paginatedPath = buildPaginationHref(currentPath, page);
 
   try {
-    const [promptsData, page] = await Promise.all([
+    const [promptsData, cmsPage] = await Promise.all([
       getPromptsPageData({
         ...getFilterParams(filter),
+        includeFacets: true,
+        page,
         q,
         sort,
       }),
@@ -119,9 +137,14 @@ export default async function PromptsMenuFilterRoute({
     ]);
 
     data = promptsData;
-    blocks = page?.blocks || [];
+    dataLoaded = true;
+    blocks = cmsPage?.blocks || [];
   } catch {
     data = EMPTY_PROMPTS_DATA;
+  }
+
+  if (page > 1 && dataLoaded && data.prompts.length === 0) {
+    notFound();
   }
 
   const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(blocks);
@@ -136,7 +159,7 @@ export default async function PromptsMenuFilterRoute({
             description: heroDescription,
             title: heroTitle,
             type: "CollectionPage",
-            url: filter.path,
+            url: paginatedPath,
           }),
           buildBreadcrumbJsonLd([
             { name: "Главная", url: "/" },
@@ -158,6 +181,9 @@ export default async function PromptsMenuFilterRoute({
         data={data}
         heroDescription={heroDescription}
         heroTitle={heroTitle}
+        initialPage={page}
+        key={paginatedPath}
+        paginationBasePath={currentPath}
         resetHref="/prompts"
         showDefaultHero={!heroBlock}
         sort={sort}

@@ -18,7 +18,10 @@ import {
   type ContentListFilter,
   type ContentListSortOption,
 } from "@/shared/ui/content-list-controls";
-import { removePaginationParamFromAddressBar } from "@/shared/lib/url/remove-pagination-param";
+import {
+  buildPaginationHref,
+  replacePaginationPageInAddressBar,
+} from "@/shared/lib/url/pagination";
 import { Noindex } from "@/shared/ui/noindex";
 import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
@@ -38,6 +41,8 @@ type PromptsPageProps = {
   data: PromptsPageData;
   heroDescription?: string;
   heroTitle?: string;
+  initialPage?: number;
+  paginationBasePath?: string;
   resetHref?: string;
   showDefaultHero?: boolean;
   sort: PromptSortOrder;
@@ -66,12 +71,14 @@ export function PromptsPage({
   data,
   heroDescription = "800+ бесплатных промптов. Копируйте, адаптируйте, запускайте.",
   heroTitle = "Идеи, промпты и референсы для AI-контента",
+  initialPage = 1,
+  paginationBasePath = basePath,
   resetHref = "/prompts",
   showDefaultHero = true,
   sort,
 }: PromptsPageProps) {
   const [localData, setLocalData] = useState(data);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [isPaginationPending, setIsPaginationPending] = useState(false);
   const isPaginationLoadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -98,8 +105,6 @@ export function PromptsPage({
     ],
   );
 
-  useEffect(removePaginationParamFromAddressBar, []);
-
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
@@ -113,11 +118,12 @@ export function PromptsPage({
           void loadNextPromptsPage({
             activeParams,
             currentPage,
-            onComplete: (nextData) => {
+            onComplete: (nextData, nextPage) => {
               setLocalData((currentData) =>
                 appendPromptsPageData(currentData, nextData),
               );
-              setCurrentPage((page) => page + 1);
+              setCurrentPage(nextPage);
+              replacePaginationPageInAddressBar(nextPage);
             },
             setIsPending: setIsPaginationPending,
             statusRef: isPaginationLoadingRef,
@@ -202,6 +208,38 @@ export function PromptsPage({
                 </span>
               </>
             )}
+            {!isPaginationPending &&
+              (currentPage > 1 || localData.hasMore) && (
+                <nav
+                  aria-label="Пагинация промптов"
+                  className={styles.paginationFallback}
+                >
+                  {currentPage > 1 && (
+                    <a
+                      className={styles.paginationLink}
+                      href={buildPaginationHref(
+                        paginationBasePath,
+                        currentPage - 1,
+                      )}
+                      rel="prev"
+                    >
+                      Предыдущая страница
+                    </a>
+                  )}
+                  {localData.hasMore && (
+                    <a
+                      className={styles.paginationLink}
+                      href={buildPaginationHref(
+                        paginationBasePath,
+                        currentPage + 1,
+                      )}
+                      rel="next"
+                    >
+                      Следующая страница
+                    </a>
+                  )}
+                </nav>
+              )}
           </div>
         </div>
 
@@ -646,7 +684,7 @@ async function loadNextPromptsPage({
 }: {
   activeParams: PromptFilterParams;
   currentPage: number;
-  onComplete: (data: PromptsPageData) => void;
+  onComplete: (data: PromptsPageData, page: number) => void;
   setIsPending: (value: boolean) => void;
   statusRef: { current: boolean };
 }) {
@@ -654,13 +692,14 @@ async function loadNextPromptsPage({
   setIsPending(true);
 
   try {
-    const response = await fetch(buildPromptsApiHref(activeParams, currentPage + 1));
+    const nextPage = currentPage + 1;
+    const response = await fetch(buildPromptsApiHref(activeParams, nextPage));
 
     if (!response.ok) {
       return;
     }
 
-    onComplete((await response.json()) as PromptsPageData);
+    onComplete((await response.json()) as PromptsPageData, nextPage);
   } finally {
     statusRef.current = false;
     setIsPending(false);

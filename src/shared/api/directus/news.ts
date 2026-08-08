@@ -371,6 +371,7 @@ type NewsDetailPageDataWithBlocks = NewsDetailPageData & {
 };
 
 export type GetNewsPageDataParams = {
+  includeFacets?: boolean;
   page?: number;
   q?: string | null;
   sort?: NewsSortOrder;
@@ -379,6 +380,7 @@ export type GetNewsPageDataParams = {
 };
 
 export async function getNewsPageData({
+  includeFacets,
   page = 1,
   q,
   sort = "fresh",
@@ -418,7 +420,7 @@ export async function getNewsPageData({
 
   sidebarNewsParams.set("filter[status][_eq]", "published");
 
-  const shouldLoadFacets = normalizedPage === 1;
+  const shouldLoadFacets = includeFacets ?? normalizedPage === 1;
   const [news, sidebarNews, topics, tags] = await Promise.all([
     directusRequest<DirectusNewsItem[]>(
       `/items/news?${newsParams.toString()}`,

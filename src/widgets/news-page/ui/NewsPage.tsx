@@ -16,7 +16,10 @@ import {
   ContentListControls,
   type ContentListSortOption,
 } from "@/shared/ui/content-list-controls";
-import { removePaginationParamFromAddressBar } from "@/shared/lib/url/remove-pagination-param";
+import {
+  buildPaginationHref,
+  replacePaginationPageInAddressBar,
+} from "@/shared/lib/url/pagination";
 import { Noindex } from "@/shared/ui/noindex";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
@@ -29,6 +32,8 @@ type NewsPageProps = {
   activeTopic: string | null;
   config?: ContentListPageConfig;
   data: NewsPageData;
+  initialPage?: number;
+  paginationBasePath?: string;
   showDefaultHero?: boolean;
   sort: NewsSortOrder;
 };
@@ -60,18 +65,18 @@ export function NewsPage({
   activeTopic,
   config = DEFAULT_CONFIG,
   data,
+  initialPage = 1,
+  paginationBasePath = config.basePath,
   showDefaultHero = true,
   sort,
 }: NewsPageProps) {
   const [localData, setLocalData] = useState(data);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [isPaginationPending, setIsPaginationPending] = useState(false);
   const isPaginationLoadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const featuredNews = localData.news[0] || null;
   const gridNews = localData.news.slice(1);
-
-  useEffect(removePaginationParamFromAddressBar, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -89,11 +94,12 @@ export function NewsPage({
             activeTopic,
             basePath: config.basePath,
             currentPage,
-            onComplete: (nextData) => {
+            onComplete: (nextData, nextPage) => {
               setLocalData((currentData) =>
                 appendNewsPageData(currentData, nextData),
               );
-              setCurrentPage((page) => page + 1);
+              setCurrentPage(nextPage);
+              replacePaginationPageInAddressBar(nextPage);
             },
             setIsPending: setIsPaginationPending,
             sort,
@@ -190,6 +196,38 @@ export function NewsPage({
                 </span>
               </>
             )}
+            {!isPaginationPending &&
+              (currentPage > 1 || localData.hasMore) && (
+                <nav
+                  aria-label="Пагинация материалов"
+                  className={styles.paginationFallback}
+                >
+                  {currentPage > 1 && (
+                    <a
+                      className={styles.paginationLink}
+                      href={buildPaginationHref(
+                        paginationBasePath,
+                        currentPage - 1,
+                      )}
+                      rel="prev"
+                    >
+                      Предыдущая страница
+                    </a>
+                  )}
+                  {localData.hasMore && (
+                    <a
+                      className={styles.paginationLink}
+                      href={buildPaginationHref(
+                        paginationBasePath,
+                        currentPage + 1,
+                      )}
+                      rel="next"
+                    >
+                      Следующая страница
+                    </a>
+                  )}
+                </nav>
+              )}
           </div>
         </div>
 
@@ -600,7 +638,7 @@ async function loadNextNewsPage({
   activeTopic: string | null;
   basePath: string;
   currentPage: number;
-  onComplete: (data: NewsPageData) => void;
+  onComplete: (data: NewsPageData, page: number) => void;
   setIsPending: (value: boolean) => void;
   sort: NewsSortOrder;
   statusRef: { current: boolean };
@@ -609,10 +647,11 @@ async function loadNextNewsPage({
   setIsPending(true);
 
   try {
+    const nextPage = currentPage + 1;
     const response = await fetch(
       buildNewsApiHref({
         basePath,
-        page: currentPage + 1,
+        page: nextPage,
         q: activeQuery,
         sort,
         tag: activeTag,
@@ -624,7 +663,7 @@ async function loadNextNewsPage({
       return;
     }
 
-    onComplete((await response.json()) as NewsPageData);
+    onComplete((await response.json()) as NewsPageData, nextPage);
   } finally {
     statusRef.current = false;
     setIsPending(false);

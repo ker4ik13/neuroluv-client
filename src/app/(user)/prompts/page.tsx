@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import type { PromptsPageData, PromptSortOrder } from "@/entities/prompt";
 import { splitFirstHeroBlock, type PageBlock } from "@/entities/page";
@@ -10,6 +11,10 @@ import {
   buildWebPageJsonLd,
 } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import {
+  buildPaginationHref,
+  normalizePaginationPage,
+} from "@/shared/lib/url/pagination";
 import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
 import { JsonLd } from "@/shared/ui/json-ld";
 import { PageBlocks } from "@/widgets/page-blocks";
@@ -48,9 +53,12 @@ type PromptsRouteProps = {
 export async function generateMetadata({
   searchParams,
 }: PromptsRouteProps): Promise<Metadata> {
-  const params = omitSearchParams(await searchParams, ["page"]);
+  const routeParams = await searchParams;
+  const page = normalizePaginationPage(routeParams?.page);
+  const params = omitSearchParams(routeParams, ["page"]);
   const hasNonIndexableQuery = Boolean(params?.q || params?.sort);
   const currentPath = buildPathWithSearch("/prompts", params);
+  const paginatedPath = buildPaginationHref(currentPath, page);
   const exactSeo =
     currentPath === "/prompts" || hasNonIndexableQuery
       ? null
@@ -58,18 +66,21 @@ export async function generateMetadata({
   const seo = exactSeo || (await getPageSeoByPath("/prompts"));
 
   return buildPageMetadata(seo, {
-    canonicalPath: exactSeo ? currentPath : "/prompts",
+    canonicalPath:
+      page > 1 ? paginatedPath : exactSeo ? currentPath : "/prompts",
     fallbackTitle: "Промпты | {SITE_NAME}",
-    noindex: hasNonIndexableQuery,
+    noindex: page > 1 || hasNonIndexableQuery,
     variables: {
       TITLE: "Промпты",
-      URL: currentPath,
+      URL: paginatedPath,
     },
   });
 }
 
 export default async function PromptsRoute({ searchParams }: PromptsRouteProps) {
-  const params = omitSearchParams(await searchParams, ["page"]);
+  const routeParams = await searchParams;
+  const page = normalizePaginationPage(routeParams?.page);
+  const params = omitSearchParams(routeParams, ["page"]);
   const sort = normalizeSort(params?.sort);
   const type = normalizeQueryParam(params?.type);
   const kind = normalizeQueryParam(params?.kind);
@@ -81,23 +92,40 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
   let blocks: PageBlock[] = [];
   let heroTitle = DEFAULT_HERO_TITLE;
   let heroDescription = DEFAULT_HERO_DESCRIPTION;
+  let dataLoaded = false;
   const currentPath = buildPathWithSearch("/prompts", params);
+  const paginatedPath = buildPaginationHref(currentPath, page);
 
   try {
     const [promptsData, exactPage, basePage] = await Promise.all([
-      getPromptsPageData({ goal, kind, network, q, sort, tag, type }),
+      getPromptsPageData({
+        goal,
+        includeFacets: true,
+        kind,
+        network,
+        page,
+        q,
+        sort,
+        tag,
+        type,
+      }),
       currentPath === "/prompts"
         ? Promise.resolve(null)
         : getPageBySlug(currentPath),
       getPageBySlug("/prompts"),
     ]);
-    const page = exactPage || basePage;
+    const cmsPage = exactPage || basePage;
 
     data = promptsData;
-    blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
+    dataLoaded = true;
+    blocks = cmsPage?.blocks.length ? cmsPage.blocks : basePage?.blocks || [];
   } catch {
     data = EMPTY_PROMPTS_DATA;
     blocks = [];
+  }
+
+  if (page > 1 && dataLoaded && data.prompts.length === 0) {
+    notFound();
   }
 
   const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(blocks);
@@ -112,7 +140,7 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
             description: heroDescription,
             title: heroTitle,
             type: "CollectionPage",
-            url: currentPath,
+            url: paginatedPath,
           }),
           buildBreadcrumbJsonLd([
             { name: "Главная", url: "/" },
@@ -131,7 +159,9 @@ export default async function PromptsRoute({ searchParams }: PromptsRouteProps) 
         data={data}
         heroDescription={heroDescription}
         heroTitle={heroTitle}
-        key={currentPath}
+        initialPage={page}
+        key={paginatedPath}
+        paginationBasePath={currentPath}
         showDefaultHero={!heroBlock}
         sort={sort}
       />

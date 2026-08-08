@@ -558,11 +558,10 @@ $sticky-sidebar-top: 112;
 
 .loader {
 	display: flex;
-	height: rem(1);
+	min-height: rem(1);
 	flex-direction: column;
 	align-items: center;
 	gap: 0;
-	overflow: hidden;
 	padding: 0;
 }
 
@@ -608,6 +607,45 @@ $sticky-sidebar-top: 112;
 
 	span:nth-child(3) {
 		animation-delay: 240ms;
+	}
+}
+
+.paginationFallback {
+	display: flex;
+	width: 100%;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: rem(12);
+	padding: rem(20) 0;
+}
+
+.paginationLink {
+	@include body-font(600);
+
+	display: inline-flex;
+	min-height: rem(44);
+	align-items: center;
+	justify-content: center;
+	padding: rem(10) rem(18);
+	border: rem(1) solid $color-border;
+	border-radius: rem(14);
+	background: $color-white;
+	color: $color-ink;
+	font-size: rem(14);
+	transition:
+		border-color 160ms ease,
+		color 160ms ease,
+		transform 160ms ease;
+
+	&:hover {
+		border-color: $color-cyan;
+		color: $color-cyan;
+		transform: translateY(rem(-1));
+	}
+
+	&:focus-visible {
+		outline: rem(2) solid $color-cyan;
+		outline-offset: rem(3);
 	}
 }
 

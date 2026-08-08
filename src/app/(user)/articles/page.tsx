@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import type { NewsPageData } from "@/entities/news";
 import { splitFirstHeroBlock, type PageBlock } from "@/entities/page";
@@ -10,6 +11,10 @@ import {
   buildWebPageJsonLd,
 } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
+import {
+  buildPaginationHref,
+  normalizePaginationPage,
+} from "@/shared/lib/url/pagination";
 import { buildPathWithSearch, omitSearchParams } from "@/shared/lib/url/search-path";
 import { JsonLd } from "@/shared/ui/json-ld";
 import { NewsPage } from "@/widgets/news-page";
@@ -47,27 +52,35 @@ type ArticlesRouteProps = {
 export async function generateMetadata({
   searchParams,
 }: ArticlesRouteProps): Promise<Metadata> {
+  const routeParams = await searchParams;
+  const page = normalizePaginationPage(routeParams?.page);
   const params = normalizeExclusiveFilters(
-    omitSearchParams(await searchParams, ["page"]),
+    omitSearchParams(routeParams, ["page"]),
   );
+  const hasNonIndexableQuery = Boolean(params?.q || params?.sort);
   const currentPath = buildPathWithSearch("/articles", params);
+  const paginatedPath = buildPaginationHref(currentPath, page);
   const exactSeo =
     currentPath === "/articles" ? null : await getPageSeoByPath(currentPath);
   const seo = exactSeo || (await getPageSeoByPath("/articles"));
 
   return buildPageMetadata(seo, {
-    canonicalPath: exactSeo ? currentPath : "/articles",
+    canonicalPath:
+      page > 1 ? paginatedPath : exactSeo ? currentPath : "/articles",
     fallbackTitle: "Статьи | {SITE_NAME}",
+    noindex: page > 1 || hasNonIndexableQuery,
     variables: {
       TITLE: "Статьи",
-      URL: currentPath,
+      URL: paginatedPath,
     },
   });
 }
 
 export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps) {
+  const routeParams = await searchParams;
+  const page = normalizePaginationPage(routeParams?.page);
   const params = normalizeExclusiveFilters(
-    omitSearchParams(await searchParams, ["page"]),
+    omitSearchParams(routeParams, ["page"]),
   );
   const sort = params?.sort === "old" ? "old" : "fresh";
   const q = normalizeQueryParam(params?.q);
@@ -77,23 +90,30 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
   let blocks: PageBlock[] = [];
   let heroTitle = ARTICLES_PAGE_CONFIG.heroTitle;
   let heroDescription = ARTICLES_PAGE_CONFIG.heroDescription;
+  let dataLoaded = false;
   const currentPath = buildPathWithSearch("/articles", params);
+  const paginatedPath = buildPaginationHref(currentPath, page);
 
   try {
     const [articlesData, exactPage, basePage] = await Promise.all([
-      getArticlesPageData({ q, sort, tag, topic }),
+      getArticlesPageData({ includeFacets: true, page, q, sort, tag, topic }),
       currentPath === "/articles"
         ? Promise.resolve(null)
         : getPageBySlug(currentPath),
       getPageBySlug("/articles"),
     ]);
-    const page = exactPage || basePage;
+    const cmsPage = exactPage || basePage;
 
     data = articlesData;
-    blocks = page?.blocks.length ? page.blocks : basePage?.blocks || [];
+    dataLoaded = true;
+    blocks = cmsPage?.blocks.length ? cmsPage.blocks : basePage?.blocks || [];
   } catch {
     data = EMPTY_ARTICLES_DATA;
     blocks = [];
+  }
+
+  if (page > 1 && dataLoaded && data.news.length === 0) {
+    notFound();
   }
 
   const { hero: heroBlock, remainingBlocks } = splitFirstHeroBlock(blocks);
@@ -108,7 +128,7 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
             description: heroDescription,
             title: heroTitle,
             type: "CollectionPage",
-            url: currentPath,
+            url: paginatedPath,
           }),
           buildBreadcrumbJsonLd([
             { name: "Главная", url: "/" },
@@ -123,7 +143,9 @@ export default async function ArticlesRoute({ searchParams }: ArticlesRouteProps
         activeTopic={topic}
         config={ARTICLES_PAGE_CONFIG}
         data={data}
-        key={currentPath}
+        initialPage={page}
+        key={paginatedPath}
+        paginationBasePath={currentPath}
         showDefaultHero={!heroBlock}
         sort={sort}
       />
