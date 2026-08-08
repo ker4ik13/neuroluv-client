@@ -765,7 +765,6 @@ $sticky-sidebar-top: 112;
 
 	@media (max-width: em($breakpoint-laptop)) {
 		position: static;
-		order: -1;
 		width: 100%;
 		flex-basis: auto;
 		flex-flow: row wrap;

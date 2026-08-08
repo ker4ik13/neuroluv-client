@@ -258,7 +258,7 @@ $sticky-sidebar-top: 112;
 	margin-top: rem(20);
 
 	@media (max-width: em($breakpoint-laptop)) {
-		flex-direction: column-reverse;
+		flex-direction: column;
 	}
 }
 
