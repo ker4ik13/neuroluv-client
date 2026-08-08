@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
+import { BsStars } from "react-icons/bs";
 import { FaArrowRight, FaTelegram } from "react-icons/fa";
 import { FaVk } from "react-icons/fa6";
 
@@ -69,19 +70,13 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
           <h1 className={styles.heroTitle}>{item.title}</h1>
           <p className={styles.heroDescription}>{item.description}</p>
           <div className={styles.heroActions}>
-            {item.buttons.length > 0 ? item.buttons.map((button) => (
-              <ContentActionButton
-                button={button}
-                className={styles.heroActionButton}
-                key={button.id}
-              />
-            )) : item.aiEnabled ? (
+            {item.aiEnabled ? (
               <Link
                 className={styles.heroActionButton}
                 href={`/ai/prompts/${item.slug}`}
               >
                 Сгенерировать
-                <FaArrowRight aria-hidden="true" />
+                <BsStars aria-hidden="true" />
               </Link>
             ) : item.isPaid ? (
               <a
@@ -93,7 +88,13 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
                 Заказать
                 <FaArrowRight aria-hidden="true" />
               </a>
-            ) : (
+            ) : item.buttons.length > 0 ? item.buttons.map((button) => (
+              <ContentActionButton
+                button={button}
+                className={styles.heroActionButton}
+                key={button.id}
+              />
+            )) : (
               <CopyPromptButton label="Скопировать" text={item.promptText} />
             )}
           </div>
