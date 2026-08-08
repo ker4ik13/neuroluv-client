@@ -232,7 +232,13 @@ function toPersistedDraft(draft: Draft): Draft {
   };
 }
 
-export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
+export function GenerationChatPage({
+  kind,
+  initialModelSlug,
+}: {
+  kind: GenerationChatKind;
+  initialModelSlug?: string;
+}) {
   const { locale, isEnglish, t } = useAiLocale();
   const { session, isLoading: isSessionLoading } = useAiSession();
   const modality = getModality(kind);
@@ -283,6 +289,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   const capabilities = selectedModel?.capabilities;
   const supportsContext = session.authenticated && kind === "text";
   const [draftReady, setDraftReady] = useState(false);
+  const [initialModelResolved, setInitialModelResolved] = useState(
+    !initialModelSlug,
+  );
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [references, setReferences] = useState<PendingReference[]>([]);
   const [quote, setQuote] = useState<AiQuote | null>(null);
@@ -420,26 +429,31 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     loadedStorageKey.current = "";
     const timer = window.setTimeout(() => {
       try {
-        const saved = readLocalJson<Partial<Draft>>(storageKey, {});
-        const preset = readLocalJson<{
-          promptId?: number;
-          promptTitle?: string;
-          promptCompatibleModelIds?: string[];
-          promptMinimumReferenceFiles?: number;
-          promptMaximumReferenceFiles?: number;
-          catalogPromptOverride?: boolean;
-          publicShareDraftToken?: string;
-          publicPromptUseToken?: string;
-          repeatRunId?: string;
-          replaceReference?: boolean;
-          prompt?: string;
-          negativePrompt?: string;
-          modelId?: string;
-          aspectRatio?: string;
-          operation?: string;
-          videoMode?: string;
-          toolValues?: Record<string, string | number | boolean>;
-        } | null>("neuroluv-ai:create-preset", null);
+        const hasInitialModel = Boolean(initialModelSlug);
+        const saved = hasInitialModel
+          ? {}
+          : readLocalJson<Partial<Draft>>(storageKey, {});
+        const preset = hasInitialModel
+          ? null
+          : readLocalJson<{
+              promptId?: number;
+              promptTitle?: string;
+              promptCompatibleModelIds?: string[];
+              promptMinimumReferenceFiles?: number;
+              promptMaximumReferenceFiles?: number;
+              catalogPromptOverride?: boolean;
+              publicShareDraftToken?: string;
+              publicPromptUseToken?: string;
+              repeatRunId?: string;
+              replaceReference?: boolean;
+              prompt?: string;
+              negativePrompt?: string;
+              modelId?: string;
+              aspectRatio?: string;
+              operation?: string;
+              videoMode?: string;
+              toolValues?: Record<string, string | number | boolean>;
+            } | null>("neuroluv-ai:create-preset", null);
         const nextDraft = {
           ...EMPTY_DRAFT,
           contextEnabled: false,
@@ -460,7 +474,9 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
 
         if (!canUseContext) nextDraft.contextEnabled = false;
         if (!nextDraft.conversationId) nextDraft.contextEnabled = false;
-        if (preset) {
+        if (hasInitialModel) {
+          removeLocalValue("neuroluv-ai:create-preset");
+        } else if (preset) {
           // Every external preset starts a clean conversation. Otherwise a saved
           // draft can overwrite the preset model or mix a catalog prompt with an
           // unrelated existing chat.
@@ -508,7 +524,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [canUseContext, isSessionLoading, storageKey]);
+  }, [canUseContext, initialModelSlug, isSessionLoading, storageKey]);
 
   useEffect(() => {
     if (
@@ -578,7 +594,72 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
   }, [draft.repeatRunId, draft.replaceReference, draftReady]);
 
   useEffect(() => {
+    if (
+      initialModelResolved ||
+      !initialModelSlug ||
+      !draftReady ||
+      models.isLoading ||
+      !models.data
+    ) {
+      return;
+    }
+
+    const normalizedSlug = initialModelSlug.toLocaleLowerCase("en-US");
+    const requestedModel = models.data.find(
+      (model) =>
+        model.id === initialModelSlug ||
+        model.slug.toLocaleLowerCase("en-US") === normalizedSlug,
+    );
+    const timer = window.setTimeout(() => {
+      if (!requestedModel) {
+        setConversationError(
+          t(
+            `Модель «${initialModelSlug}» не найдена для этого типа генерации. Выберите доступную модель.`,
+            `Model “${initialModelSlug}” is not available for this generation type. Choose an available model.`,
+          ),
+        );
+        setInitialModelResolved(true);
+        return;
+      }
+
+      if (!requestedModel.available) {
+        setConversationError(
+          t(
+            `Модель «${requestedModel.name}» временно недоступна. Выберите другую модель.`,
+            `Model “${requestedModel.name}” is temporarily unavailable. Choose another model.`,
+          ),
+        );
+        setInitialModelResolved(true);
+        return;
+      }
+
+      setConversationError(null);
+      setDraft((current) =>
+        selectDraftModel(
+          {
+            ...current,
+            conversationId: "",
+            contextEnabled: false,
+          },
+          requestedModel.id,
+        ),
+      );
+      setInitialModelResolved(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    draftReady,
+    initialModelResolved,
+    initialModelSlug,
+    models.data,
+    models.isLoading,
+    t,
+  ]);
+
+  useEffect(() => {
     if (!draftReady || !availableModels.length) return;
+    if (!initialModelResolved) return;
     const current = availableModels.find((model) => model.id === draft.modelId);
     const selected =
       (current?.available ? current : null) ||
@@ -634,7 +715,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
       }));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [availableModels, draft.modelId, draftReady, kind]);
+  }, [availableModels, draft.modelId, draftReady, initialModelResolved, kind]);
 
   useEffect(() => {
     if (!draftReady || kind !== "image" || !selectedModel) return;
@@ -2284,7 +2365,7 @@ export function GenerationChatPage({ kind }: { kind: GenerationChatKind }) {
                     <FiMessageCircle aria-hidden="true" />
                     <p>{t("Войдите, чтобы сохранять и открывать историю чатов.", "Sign in to save and open chat history.")}</p>
                         <Link
-                          href={`/ai/auth?returnTo=${encodeURIComponent(`/ai/create/${kind}`)}`}
+                          href={`/ai/auth?returnTo=${encodeURIComponent(getGenerationPath(kind, initialModelSlug))}`}
                         >
                       {t("Войти", "Sign in")}
                     </Link>
@@ -4831,6 +4912,22 @@ function getModality(kind: GenerationChatKind): AiModelModality {
 function getConversationKind(kind: GenerationChatKind): AiConversationKind {
   if (kind === "photo-to-prompt") return "text";
   return kind;
+}
+
+function getGenerationPath(
+  kind: GenerationChatKind,
+  initialModelSlug?: string,
+): string {
+  const pathname =
+    kind === "image"
+      ? "/ai/create/photo"
+      : kind === "photo-to-prompt"
+        ? "/ai/tools/photo-to-prompt"
+        : `/ai/create/${kind}`;
+
+  return initialModelSlug
+    ? `${pathname}?model=${encodeURIComponent(initialModelSlug)}`
+    : pathname;
 }
 
 function getCreateTitle(kind: GenerationChatKind, isEnglish = false): string {

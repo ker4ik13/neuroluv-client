@@ -61,8 +61,13 @@ export function ContentDetailPage({
               shareHref={shareHref}
               vkShareHref={vkShareHref}
             />
-            {sidebarCta && <SidebarCta block={sidebarCta} />}
+            {sidebarCta && (
+              <SidebarCta block={sidebarCta} className={styles.sideCtaDesktop} />
+            )}
           </SmartStickySidebar>
+          {sidebarCta && (
+            <SidebarCta block={sidebarCta} className={styles.sideCtaMobile} />
+          )}
         </Noindex>
       </div>
 
@@ -86,9 +91,15 @@ export function ContentDetailPage({
 
 type NewsCtaBlock = Extract<NewsContentBlock, { type: "cta" }>;
 
-function SidebarCta({ block }: { block: NewsCtaBlock }) {
+function SidebarCta({
+  block,
+  className = "",
+}: {
+  block: NewsCtaBlock;
+  className?: string;
+}) {
   return (
-    <div className={styles.sideCta}>
+    <div className={`${styles.sideCta} ${className}`}>
       <p className={styles.sideCtaTitle}>{block.title}</p>
       <p className={styles.sideCtaText}>{block.description}</p>
       {block.buttons.map((button, index) => (

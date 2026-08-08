@@ -15,6 +15,7 @@ export type ContentHeading = {
   title: string;
   blockId: number;
   localIndex: number;
+  level?: 2 | 3;
   source: "block-title" | "html";
 };
 
@@ -50,7 +51,9 @@ export function ContentToc({
   headings,
   title = "Содержание",
 }: ContentTocProps) {
-  if (headings.length === 0 && !fallbackLabel) {
+  const tocHeadings = headings.filter((heading) => heading.level !== 3);
+
+  if (tocHeadings.length === 0 && !fallbackLabel) {
     return null;
   }
 
@@ -58,8 +61,8 @@ export function ContentToc({
     <section className={styles.toc}>
       <h2>{title}</h2>
       <div className={styles.tocList}>
-        {headings.length > 0 ? (
-          headings.map((heading) => (
+        {tocHeadings.length > 0 ? (
+          tocHeadings.map((heading) => (
             <a className={styles.tocItem} href={`#${heading.id}`} key={heading.id}>
               {heading.title}
             </a>
@@ -85,6 +88,7 @@ export function buildContentHeadings(blocks: ContentBlock[]): ContentHeading[] {
         title: blockTitle,
         blockId: block.id,
         localIndex: 0,
+        level: 2,
         source: "block-title",
       });
     }
@@ -92,12 +96,13 @@ export function buildContentHeadings(blocks: ContentBlock[]): ContentHeading[] {
     const htmlContent = getHtmlContent(block);
 
     if (htmlContent) {
-      extractHtmlHeadings(htmlContent).forEach((title, localIndex) => {
+      extractHtmlHeadings(htmlContent).forEach(({ level, title }, localIndex) => {
         headings.push({
           id: createUniqueHeadingId(title, usedIds),
           title,
           blockId: block.id,
           localIndex,
+          level,
           source: "html",
         });
       });
@@ -365,10 +370,15 @@ function hasPreformattedCode(html: string): boolean {
   return /<pre\b/i.test(html);
 }
 
-function extractHtmlHeadings(html: string): string[] {
-  return [...html.matchAll(/<h[2-3]\b[^>]*>([\s\S]*?)<\/h[2-3]>/gi)]
-    .map((match) => stripHtml(match[1] || "").trim())
-    .filter(Boolean);
+function extractHtmlHeadings(
+  html: string,
+): Array<{ level: 2 | 3; title: string }> {
+  return [...html.matchAll(/<(h[2-3])\b[^>]*>([\s\S]*?)<\/\1>/gi)]
+    .map((match) => ({
+      level: match[1]?.toLowerCase() === "h3" ? (3 as const) : (2 as const),
+      title: stripHtml(match[2] || "").trim(),
+    }))
+    .filter((heading) => Boolean(heading.title));
 }
 
 function addHeadingIdsToHtml(html: string, headings: ContentHeading[]): string {

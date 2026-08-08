@@ -10,6 +10,21 @@ export function generateMetadata(): Promise<Metadata> {
   });
 }
 
-export default function Page() {
-  return <CreateStudioPage kind="video" />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ model?: string | string[] }>;
+}) {
+  const query = await searchParams;
+  return (
+    <CreateStudioPage
+      initialModelSlug={normalizeModelParam(query.model)}
+      kind="video"
+    />
+  );
+}
+
+function normalizeModelParam(value: string | string[] | undefined) {
+  const model = (Array.isArray(value) ? value[0] : value)?.trim();
+  return model ? model.slice(0, 120) : undefined;
 }

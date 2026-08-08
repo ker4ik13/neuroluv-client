@@ -74,10 +74,22 @@ const CREATE_TYPES = [
   },
 ] as const;
 
-export function CreateStudioPage({ kind }: { kind: CreateKind }) {
+export function CreateStudioPage({
+  kind,
+  initialModelSlug,
+}: {
+  kind: CreateKind;
+  initialModelSlug?: string;
+}) {
   const { t } = useAiLocale();
   if (kind !== "entry") {
-    return <GenerationChatPage key={kind} kind={kind} />;
+    return (
+      <GenerationChatPage
+        key={`${kind}:${initialModelSlug || "default"}`}
+        initialModelSlug={initialModelSlug}
+        kind={kind}
+      />
+    );
   }
 
   return (

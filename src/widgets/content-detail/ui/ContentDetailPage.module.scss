@@ -274,9 +274,14 @@ $sticky-sidebar-top: 112;
 	display: flex;
 	align-items: flex-start;
 	gap: rem(20);
+	margin-top: rem(-60);
 
 	@media (max-width: em($breakpoint-laptop)) {
 		flex-direction: column;
+	}
+
+	@media (max-width: em($breakpoint-tablet)) {
+		margin-top: rem(-28);
 	}
 }
 
@@ -865,6 +870,23 @@ $sticky-sidebar-top: 112;
 .sideCta {
 	color: $color-white;
 	background: #132838;
+}
+
+.sideCtaMobile {
+	display: none;
+
+	@media (max-width: em($breakpoint-laptop)) {
+		display: flex;
+		width: 100%;
+		flex: none;
+		order: 1;
+	}
+}
+
+.sideCtaDesktop {
+	@media (max-width: em($breakpoint-laptop)) {
+		display: none;
+	}
 }
 
 .sideCtaTitle {
