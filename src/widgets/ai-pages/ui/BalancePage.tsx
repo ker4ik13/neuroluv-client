@@ -69,7 +69,7 @@ export function BalancePage() {
 		session.authenticated ? '/wallet/balance' : null,
 	);
 	const products = useAiResource<AiBillingProducts>(
-		session.authenticated ? '/billing/products' : null,
+		isSessionLoading ? null : '/billing/products',
 	);
 	const payments = useAiResource<AiPageData<AiPaymentSummary>>(
 		session.authenticated ? '/billing/payments?page=1&pageSize=10' : null,
@@ -191,6 +191,7 @@ export function BalancePage() {
 		),
 	);
 	const activePlanId = products.data?.subscription.planId ?? null;
+	const authReturnHref = `/ai/auth?returnTo=${encodeURIComponent('/ai/balance')}`;
 	const activePlan = useMemo(
 		() => products.data?.plans.find((plan) => plan.id === activePlanId) ?? null,
 		[activePlanId, products.data?.plans],
@@ -233,15 +234,6 @@ export function BalancePage() {
 		setPromoError(null);
 		setError(null);
 		setCheckoutProduct(product);
-	}
-
-	if (!isSessionLoading && !session.authenticated) {
-		return (
-			<AiPage>
-				<AiPageHeader title={t('Баланс', 'Balance')} />
-				<AccountGate returnTo='/ai/balance' />
-			</AiPage>
-		);
 	}
 
 	async function startCheckout() {
@@ -406,128 +398,155 @@ export function BalancePage() {
 		}
 	}
 
-	const loadError = wallet.error || products.error;
+	const loadError =
+		products.error || (session.authenticated ? wallet.error : null);
+	const isPricingEmpty =
+		!products.data || (session.authenticated && !wallet.data);
+	const isPricingLoading =
+		isSessionLoading ||
+		products.isLoading ||
+		(session.authenticated && wallet.isLoading);
 
 	return (
 		<AiPage>
 			<AiPageHeader title={t('Баланс', 'Balance')} />
+			{!isSessionLoading && !session.authenticated ? (
+				<AccountGate
+					description={t(
+						'Посмотрите тарифы ниже. Для оформления подписки или покупки кредитов войдите в аккаунт.',
+						'Review the plans below. Sign in to subscribe or purchase credits.',
+					)}
+					returnTo='/ai/balance'
+					title={t(
+						'Тарифы доступны без регистрации',
+						'Pricing is available without signing in',
+					)}
+				/>
+			) : null}
 			{notice ? <FieldMessage tone='success'>{notice}</FieldMessage> : null}
 			{error && !checkoutProduct ? <FieldMessage>{error}</FieldMessage> : null}
 
 			<AsyncState
 				error={loadError}
-				isEmpty={!wallet.data || !products.data}
-				isLoading={isSessionLoading || wallet.isLoading || products.isLoading}
+				isEmpty={isPricingEmpty}
+				isLoading={isPricingLoading}
 				onRetry={() => {
-					wallet.reload();
+					if (session.authenticated) wallet.reload();
 					products.reload();
 				}}
 			>
-				{wallet.data && products.data ? (
+				{products.data && (!session.authenticated || wallet.data) ? (
 					<>
-						<div className={styles.balanceHeroGrid}>
-							<AiCard className={styles.balanceMainCard}>
-								<span className={styles.balanceIcon}>
-									<FiZap aria-hidden='true' />
-								</span>
-								<p>{t('Доступно сейчас', 'Available now')}</p>
-								<strong>
-									{formatCredits(wallet.data.availableCredits, locale)}
-								</strong>
-								{wallet.data.reservedCredits > 0 ||
-								wallet.data.lockedCredits > 0 ? (
-									<div className={styles.balanceBreakdown}>
-										{wallet.data.reservedCredits > 0 ? (
-											<span>
-												<small>{t('Зарезервировано', 'Reserved')}</small>
-												{formatCredits(wallet.data.reservedCredits, locale)}
-											</span>
-										) : null}
-										{wallet.data.lockedCredits > 0 ? (
-											<span>
-												<small>
-													{t('Временно заблокировано', 'Temporarily locked')}
-												</small>
-												{formatCredits(wallet.data.lockedCredits, locale)}
-											</span>
-										) : null}
-									</div>
-								) : null}
-							</AiCard>
-
-							<AiCard className={styles.subscriptionCard}>
-								<div className={styles.subscriptionHeading}>
+						{session.authenticated && wallet.data ? (
+							<div className={styles.balanceHeroGrid}>
+								<AiCard className={styles.balanceMainCard}>
 									<span className={styles.balanceIcon}>
-										<FiShield aria-hidden='true' />
+										<FiZap aria-hidden='true' />
 									</span>
-									<StatusBadge
-										status={
-											products.data.subscription.active ? 'active' : 'inactive'
-										}
-									/>
-								</div>
-								<h2>
-									{products.data.subscription.planName ||
-										t('Нет активной подписки', 'No active subscription')}
-								</h2>
-								{products.data.subscription.active ? (
-									<>
-										<p>
-											{t('Активна до', 'Active until')}{' '}
-											{products.data.subscription.periodEndsAt
-												? formatDate(
-														products.data.subscription.periodEndsAt,
-														false,
-														locale,
-													)
-												: t(
-														'конца оплаченного периода',
-														'the end of the paid period',
-													)}
-										</p>
-										<div className={styles.subscriptionFooter}>
-											<span>
-												{products.data.subscription.autoRenew
-													? t('Автопродление включено', 'Auto-renewal enabled')
-													: t('Продление вручную', 'Manual renewal')}
-											</span>
-											{products.data.subscription.autoRenew ? (
-												<AiButton
-													disabled={isPending}
-													variant='ghost'
-													onClick={() => void cancelRenewal()}
-												>
-													{t('Отключить', 'Disable')}
-												</AiButton>
-											) : (
-												<AiButton
-													disabled={isPending || !canEnableExistingAutoRenew}
-													title={
-														canEnableExistingAutoRenew
-															? undefined
-															: t(
-																	'Станет доступно после включения рекуррентных платежей у платёжного провайдера',
-																	'Available after recurring payments are enabled for the payment provider',
-																)
-													}
-													variant='ghost'
-													onClick={() => void enableRenewal()}
-												>
-													{t('Включить', 'Enable')}
-												</AiButton>
-											)}
+									<p>{t('Доступно сейчас', 'Available now')}</p>
+									<strong>
+										{formatCredits(wallet.data.availableCredits, locale)}
+									</strong>
+									{wallet.data.reservedCredits > 0 ||
+									wallet.data.lockedCredits > 0 ? (
+										<div className={styles.balanceBreakdown}>
+											{wallet.data.reservedCredits > 0 ? (
+												<span>
+													<small>{t('Зарезервировано', 'Reserved')}</small>
+													{formatCredits(wallet.data.reservedCredits, locale)}
+												</span>
+											) : null}
+											{wallet.data.lockedCredits > 0 ? (
+												<span>
+													<small>
+														{t('Временно заблокировано', 'Temporarily locked')}
+													</small>
+													{formatCredits(wallet.data.lockedCredits, locale)}
+												</span>
+											) : null}
 										</div>
-									</>
-								) : (
-									<p>
-										{t(
-											'Запуски и использование ранее купленных разовых кредитов станут доступны после подключения подписки.',
-											'Runs and previously purchased top-up credits become available after subscribing.',
-										)}
-									</p>
-								)}
-							</AiCard>
-						</div>
+									) : null}
+								</AiCard>
+
+								<AiCard className={styles.subscriptionCard}>
+									<div className={styles.subscriptionHeading}>
+										<span className={styles.balanceIcon}>
+											<FiShield aria-hidden='true' />
+										</span>
+										<StatusBadge
+											status={
+												products.data.subscription.active
+													? 'active'
+													: 'inactive'
+											}
+										/>
+									</div>
+									<h2>
+										{products.data.subscription.planName ||
+											t('Нет активной подписки', 'No active subscription')}
+									</h2>
+									{products.data.subscription.active ? (
+										<>
+											<p>
+												{t('Активна до', 'Active until')}{' '}
+												{products.data.subscription.periodEndsAt
+													? formatDate(
+															products.data.subscription.periodEndsAt,
+															false,
+															locale,
+														)
+													: t(
+															'конца оплаченного периода',
+															'the end of the paid period',
+														)}
+											</p>
+											<div className={styles.subscriptionFooter}>
+												<span>
+													{products.data.subscription.autoRenew
+														? t(
+																'Автопродление включено',
+																'Auto-renewal enabled',
+															)
+														: t('Продление вручную', 'Manual renewal')}
+												</span>
+												{products.data.subscription.autoRenew ? (
+													<AiButton
+														disabled={isPending}
+														variant='ghost'
+														onClick={() => void cancelRenewal()}
+													>
+														{t('Отключить', 'Disable')}
+													</AiButton>
+												) : (
+													<AiButton
+														disabled={isPending || !canEnableExistingAutoRenew}
+														title={
+															canEnableExistingAutoRenew
+																? undefined
+																: t(
+																		'Станет доступно после включения рекуррентных платежей у платёжного провайдера',
+																		'Available after recurring payments are enabled for the payment provider',
+																	)
+														}
+														variant='ghost'
+														onClick={() => void enableRenewal()}
+													>
+														{t('Включить', 'Enable')}
+													</AiButton>
+												)}
+											</div>
+										</>
+									) : (
+										<p>
+											{t(
+												'Запуски и использование ранее купленных разовых кредитов станут доступны после подключения подписки.',
+												'Runs and previously purchased top-up credits become available after subscribing.',
+											)}
+										</p>
+									)}
+								</AiCard>
+							</div>
+						) : null}
 
 						<section className={styles.productSection}>
 							<div className={styles.sectionTitleRow}>
@@ -640,25 +659,38 @@ export function BalancePage() {
 														))}
 													</ul>
 												) : null}
-												<AiButton
-													disabled={isActivePlan}
-													variant='secondary'
-													onClick={() =>
-														openCheckout({ type: 'subscription', value: plan })
-													}
-												>
-													{isActivePlan ? (
-														<>
-															<FiCheck aria-hidden='true' />
-															{t('Тариф активен', 'Plan active')}
-														</>
-													) : (
-														<>
-															{t('Выбрать', 'Choose')}{' '}
-															<FiArrowUpRight aria-hidden='true' />
-														</>
-													)}
-												</AiButton>
+												{session.authenticated ? (
+													<AiButton
+														disabled={isActivePlan}
+														variant='secondary'
+														onClick={() =>
+															openCheckout({
+																type: 'subscription',
+																value: plan,
+															})
+														}
+													>
+														{isActivePlan ? (
+															<>
+																<FiCheck aria-hidden='true' />
+																{t('Тариф активен', 'Plan active')}
+															</>
+														) : (
+															<>
+																{t('Выбрать', 'Choose')}{' '}
+																<FiArrowUpRight aria-hidden='true' />
+															</>
+														)}
+													</AiButton>
+												) : (
+													<AiLinkButton
+														href={authReturnHref}
+														variant='secondary'
+													>
+														{t('Войти и выбрать', 'Sign in to choose')}{' '}
+														<FiArrowUpRight aria-hidden='true' />
+													</AiLinkButton>
+												)}
 											</AiCard>
 										);
 									})}
@@ -700,22 +732,30 @@ export function BalancePage() {
 											<span>
 												{formatMoney(topup.amountMinor, topup.currency, locale)}
 											</span>
-											<AiButton
-												disabled={
-													!topup.eligible || !products.data?.subscription.active
-												}
-												variant='secondary'
-												onClick={() =>
-													openCheckout({ type: 'topup', value: topup })
-												}
-											>
-												{!topup.eligible ? (
+											{session.authenticated ? (
+												<AiButton
+													disabled={
+														!topup.eligible ||
+														!products.data?.subscription.active
+													}
+													variant='secondary'
+													onClick={() =>
+														openCheckout({ type: 'topup', value: topup })
+													}
+												>
+													{!topup.eligible ? (
+														<FiLock aria-hidden='true' />
+													) : (
+														<FiCreditCard aria-hidden='true' />
+													)}
+													{t('Купить', 'Buy')}
+												</AiButton>
+											) : (
+												<AiLinkButton href={authReturnHref} variant='secondary'>
 													<FiLock aria-hidden='true' />
-												) : (
-													<FiCreditCard aria-hidden='true' />
-												)}
-												{t('Купить', 'Buy')}
-											</AiButton>
+													{t('Войти для покупки', 'Sign in to purchase')}
+												</AiLinkButton>
+											)}
 											{!topup.eligible && topup.ineligibleReason ? (
 												<small>{topup.ineligibleReason}</small>
 											) : null}
@@ -732,73 +772,75 @@ export function BalancePage() {
 							)}
 						</section>
 
-						<div className={styles.balanceLowerGrid}>
-							<AiCard className={styles.referralPaymentCard}>
-								<span>
-									<FiUsers aria-hidden='true' />
-								</span>
-								<div>
-									<h2>{t('Партнёрская программа', 'Referral program')}</h2>
-									<p>
-										{referrals.data?.referrerPercent
-											? t(
-													`Получайте ${referrals.data.referrerPercent}% со всех покупок приглашённого пользователя в течение ${referrals.data.commissionMonths || 12} месяцев.`,
-													`Earn ${referrals.data.referrerPercent}% from every purchase made by an invited user for ${referrals.data.commissionMonths || 12} months.`,
-												)
-											: t(
-													'Приглашайте друзей и получайте процент с их покупок в течение первого года.',
-													'Invite friends and earn a percentage of their purchases during the first year.',
-												)}
-									</p>
-								</div>
-								<AiLinkButton href='/ai/referrals' variant='secondary'>
-									{t('Подробнее', 'Learn more')}{' '}
-									<FiArrowUpRight aria-hidden='true' />
-								</AiLinkButton>
-							</AiCard>
-
-							<AiCard className={styles.paymentHistoryCard}>
-								<div className={styles.cardTitleRow}>
-									<h2>{t('Последние платежи', 'Recent payments')}</h2>
-									<FiClock aria-hidden='true' />
-								</div>
-								{payments.isLoading ? (
-									<div className={styles.miniSkeleton} />
-								) : null}
-								{payments.error ? (
-									<FieldMessage>{payments.error}</FieldMessage>
-								) : null}
-								{!payments.isLoading && !payments.data?.data.length ? (
-									<p>{t('Платежей пока нет.', 'No payments yet.')}</p>
-								) : null}
-								<div className={styles.paymentList}>
-									{payments.data?.data.map((payment) => (
-										<div className={styles.paymentRow} key={payment.id}>
-											<div>
-												<strong>{payment.title}</strong>
-												<small>
-													{formatDate(payment.createdAt, false, locale)}
-												</small>
-											</div>
-											<div>
-												<strong>
-													{formatMoney(
-														payment.amountMinor,
-														payment.currency,
-														locale,
+						{session.authenticated ? (
+							<div className={styles.balanceLowerGrid}>
+								<AiCard className={styles.referralPaymentCard}>
+									<span>
+										<FiUsers aria-hidden='true' />
+									</span>
+									<div>
+										<h2>{t('Партнёрская программа', 'Referral program')}</h2>
+										<p>
+											{referrals.data?.referrerPercent
+												? t(
+														`Получайте ${referrals.data.referrerPercent}% со всех покупок приглашённого пользователя в течение ${referrals.data.commissionMonths || 12} месяцев.`,
+														`Earn ${referrals.data.referrerPercent}% from every purchase made by an invited user for ${referrals.data.commissionMonths || 12} months.`,
+													)
+												: t(
+														'Приглашайте друзей и получайте процент с их покупок в течение первого года.',
+														'Invite friends and earn a percentage of their purchases during the first year.',
 													)}
-												</strong>
-												<StatusBadge status={payment.status} />
-												<ReceiptState
-													status={payment.receiptStatus}
-													url={payment.receiptUrl}
-												/>
+										</p>
+									</div>
+									<AiLinkButton href='/ai/referrals' variant='secondary'>
+										{t('Подробнее', 'Learn more')}{' '}
+										<FiArrowUpRight aria-hidden='true' />
+									</AiLinkButton>
+								</AiCard>
+
+								<AiCard className={styles.paymentHistoryCard}>
+									<div className={styles.cardTitleRow}>
+										<h2>{t('Последние платежи', 'Recent payments')}</h2>
+										<FiClock aria-hidden='true' />
+									</div>
+									{payments.isLoading ? (
+										<div className={styles.miniSkeleton} />
+									) : null}
+									{payments.error ? (
+										<FieldMessage>{payments.error}</FieldMessage>
+									) : null}
+									{!payments.isLoading && !payments.data?.data.length ? (
+										<p>{t('Платежей пока нет.', 'No payments yet.')}</p>
+									) : null}
+									<div className={styles.paymentList}>
+										{payments.data?.data.map((payment) => (
+											<div className={styles.paymentRow} key={payment.id}>
+												<div>
+													<strong>{payment.title}</strong>
+													<small>
+														{formatDate(payment.createdAt, false, locale)}
+													</small>
+												</div>
+												<div>
+													<strong>
+														{formatMoney(
+															payment.amountMinor,
+															payment.currency,
+															locale,
+														)}
+													</strong>
+													<StatusBadge status={payment.status} />
+													<ReceiptState
+														status={payment.receiptStatus}
+														url={payment.receiptUrl}
+													/>
+												</div>
 											</div>
-										</div>
-									))}
-								</div>
-							</AiCard>
-						</div>
+										))}
+									</div>
+								</AiCard>
+							</div>
+						) : null}
 					</>
 				) : null}
 			</AsyncState>

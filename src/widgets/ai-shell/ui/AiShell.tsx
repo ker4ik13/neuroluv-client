@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	FiChevronDown,
 	FiClock,
+	FiGift,
 	FiHelpCircle,
 	FiImage,
 	FiMessageSquare,
@@ -35,6 +36,7 @@ import {
 	aiApiFetchCached,
 	type AiNavigationItem,
 	type AiNavigationResponse,
+	type AiPublicModel,
 	type AiSession,
 } from '@/shared/api/ai';
 import {
@@ -53,6 +55,7 @@ const CHAT_CATALOG_CACHE_TTL_MS = 5 * 60_000;
 const DESKTOP_MENU_DELAY_MS = 80;
 const DESKTOP_MENU_SKIP_DELAY_MS = 250;
 const DESKTOP_VIEWPORT_EDGE_GUTTER_PX = 24;
+const DEFAULT_GUEST_FREE_GENERATIONS = 5;
 
 type StudioNavigationItem = {
 	id: string | number;
@@ -116,6 +119,9 @@ function AiShellContent({
 	const [mobileSectionId, setMobileSectionId] = useState<string | null>(null);
 	const [apiNavigation, setApiNavigation] = useState<AiNavigationItem[]>([]);
 	const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
+	const [guestFreeGenerations, setGuestFreeGenerations] = useState(
+		DEFAULT_GUEST_FREE_GENERATIONS,
+	);
 	const isNavigationOpen = Boolean(desktopValue) || isMenuOpen;
 
 	useBodyScrollLock(isMenuOpen);
@@ -141,6 +147,29 @@ function AiShellContent({
 			isMounted = false;
 		};
 	}, [locale]);
+
+	useEffect(() => {
+		if (isLoading || session.authenticated) return;
+
+		let isMounted = true;
+		aiApiFetch<AiPublicModel[]>('/catalog/models?modality=text')
+			.then((models) => {
+				if (!isMounted) return;
+				const allowance = models.find(
+					(model) => model.freeAllowance?.benefitCode === 'gpt_5_mini_text',
+				)?.freeAllowance;
+				setGuestFreeGenerations(
+					allowance?.remaining ?? DEFAULT_GUEST_FREE_GENERATIONS,
+				);
+			})
+			.catch(() => {
+				// Keep the documented allowance visible when the catalog is unavailable.
+			});
+
+		return () => {
+			isMounted = false;
+		};
+	}, [isLoading, pathname, session.authenticated]);
 
 	useEffect(() => {
 		const timer = window.setTimeout(() => {
@@ -262,6 +291,28 @@ function AiShellContent({
 								>
 									<CreditBalance value={session.wallet.availableCredits} />
 								</Link>
+							) : !isLoading ? (
+								<Link
+									aria-label={t(
+										`Осталось бесплатных генераций: ${guestFreeGenerations}`,
+										`Free generations remaining: ${guestFreeGenerations}`,
+									)}
+									className={styles.creditPill}
+									href='/ai/balance'
+									title={t(
+										`${guestFreeGenerations} бесплатных генераций`,
+										`${guestFreeGenerations} free generations`,
+									)}
+									onClick={closeNavigation}
+								>
+									<FiGift aria-hidden='true' />
+									<span className={styles.creditValueFull}>
+										{guestFreeGenerations} {t('бесплатно', 'free')}
+									</span>
+									<span className={styles.creditValueCompact}>
+										{guestFreeGenerations}
+									</span>
+								</Link>
 							) : null}
 
 							<Link
@@ -324,6 +375,7 @@ function AiShellContent({
 						id='ai-mobile-navigation'
 					>
 						<MobileAccountCard
+							guestFreeGenerations={guestFreeGenerations}
 							isLoading={isLoading}
 							session={session}
 							onNavigate={closeNavigation}
@@ -566,10 +618,12 @@ function DesktopNavigation({
 }
 
 function MobileAccountCard({
+	guestFreeGenerations,
 	isLoading,
 	session,
 	onNavigate,
 }: {
+	guestFreeGenerations: number;
 	isLoading: boolean;
 	session: AiSession;
 	onNavigate: () => void;
@@ -619,6 +673,22 @@ function MobileAccountCard({
 						<strong>
 							{formatCredits(session.wallet.availableCredits, locale)}
 						</strong>
+					</span>
+				</Link>
+			) : !isLoading ? (
+				<Link
+					aria-label={t(
+						`Осталось бесплатных генераций: ${guestFreeGenerations}`,
+						`Free generations remaining: ${guestFreeGenerations}`,
+					)}
+					className={styles.mobileBalanceAction}
+					href='/ai/balance'
+					onClick={onNavigate}
+				>
+					<FiGift aria-hidden='true' />
+					<span>
+						<small>{t('Бесплатные генерации', 'Free generations')}</small>
+						<strong>{guestFreeGenerations}</strong>
 					</span>
 				</Link>
 			) : null}
