@@ -1,0 +1,35 @@
+@use '../../../../../../styles/functions' as *;
+@use '../../../../../../styles/mixins' as *;
+
+.content {
+	display: grid;
+	width: min(100%, rem(1280));
+	gap: rem(30);
+	margin: rem(40) auto 0;
+	padding-bottom: rem(12);
+}
+
+.heading {
+	@include heading-font(800);
+	margin: 0;
+	padding: 0 rem(20);
+	font-size: clamp(rem(30), 4vw, rem(48));
+	line-height: 1.05;
+	letter-spacing: -0.035em;
+}
+
+@media (max-width: em(1160)) {
+	.content {
+		margin-top: rem(32);
+	}
+}
+
+@media (max-width: em(767)) {
+	.content {
+		margin-top: rem(24);
+	}
+
+	.heading {
+		padding: 0 rem(16);
+	}
+}

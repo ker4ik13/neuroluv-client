@@ -806,6 +806,10 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	overflow: hidden;
 }
 
+.mainGenerationPage {
+	padding-top: rem(12);
+}
+
 @media (max-width: em($breakpoint-desktop)) {
 	.desktopNavList {
 		gap: rem(2);
@@ -945,6 +949,10 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 
 	.mainChatWorkspace {
 		padding: rem(8) rem(12) rem(10);
+	}
+
+	.mainGenerationPage {
+		padding-top: rem(8);
 	}
 }
 

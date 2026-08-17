@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import type { NavigationIcon } from "@/entities/navigation";
 import type { PageTaskGridBlock, PageTaskGridItem } from "@/entities/page";
 import { AppIcon } from "@/shared/ui/app-icon";
@@ -19,6 +21,8 @@ export function TaskGridBlock({ block }: TaskGridBlockProps) {
     return null;
   }
 
+  const columnCount = block.tasks.length === 4 ? 4 : Math.min(block.tasks.length, 3);
+
   return (
     <section className={styles.section}>
       <div className={styles.inner}>
@@ -29,7 +33,10 @@ export function TaskGridBlock({ block }: TaskGridBlockProps) {
           )}
         </div>
 
-        <div className={styles.cards}>
+        <div
+          className={styles.cards}
+          style={{ "--task-grid-columns": columnCount } as CSSProperties}
+        >
           {block.tasks.map((task, index) => (
             <TaskCard key={`task-grid-${task.id}-${index}`} task={task} />
           ))}

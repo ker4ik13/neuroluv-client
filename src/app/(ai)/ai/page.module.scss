@@ -1,0 +1,8 @@
+@use '../../../styles/functions' as *;
+
+.content {
+	display: grid;
+	width: min(100%, rem(1280));
+	gap: rem(30);
+	margin: rem(56) auto 0;
+}

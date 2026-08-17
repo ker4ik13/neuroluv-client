@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import 'server-only';
 import { getAiPageMetadata } from '@/shared/api/ai/public';
-import { getSiteSeo } from '@/shared/api/directus/seo';
-import { resolveSeoTemplate } from '@/shared/lib/seo/metadata';
+import { getPageSeoByPath, getSiteSeo } from '@/shared/api/directus/seo';
+import {
+	buildPageMetadata,
+	resolveSeoTemplate,
+} from '@/shared/lib/seo/metadata';
 
 type AiMetadataFallback = {
 	title: string;
@@ -18,10 +21,22 @@ export async function buildAiPageMetadata(
 		indexable?: boolean;
 	} = {},
 ): Promise<Metadata> {
-	const [page, siteSeo] = await Promise.all([
+	const [contentPageSeo, page, siteSeo] = await Promise.all([
+		getPageSeoByPath(path),
 		getAiPageMetadata(path),
 		getSiteSeo(),
 	]);
+
+	if (contentPageSeo) {
+		return buildPageMetadata(contentPageSeo, {
+			canonicalPath: options.canonicalPath || path,
+			fallbackDescription: fallback.description,
+			fallbackImage: siteSeo.defaultOgImage,
+			fallbackTitle: fallback.title,
+			noindex: options.indexable !== true,
+		});
+	}
+
 	const variables = {
 		SITE_NAME: page?.siteName || 'Нейролюб Studio',
 	};

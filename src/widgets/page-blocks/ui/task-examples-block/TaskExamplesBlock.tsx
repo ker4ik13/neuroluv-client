@@ -54,7 +54,9 @@ function TaskExamplesCard({ card }: { card: PageTaskExamplesCard }) {
         <span className={styles.iconBox}>
           <AppIcon className={styles.icon} icon={card.icon || FALLBACK_ICON} />
         </span>
-        <IconRenderer className={styles.arrow} code="FaArrowRight" library="fa" />
+        {card.href ? (
+          <IconRenderer className={styles.arrow} code="FaArrowRight" library="fa" />
+        ) : null}
       </div>
       <div className={styles.cardContent}>
         <h3 className={styles.cardTitle}>{card.title}</h3>

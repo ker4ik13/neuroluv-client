@@ -28,8 +28,9 @@
 	align-items: center;
 	gap: rem(9);
 
-	h1 {
+	.compactTitle {
 		overflow: hidden;
+		margin: 0;
 		font-size: clamp(rem(18), 2vw, rem(22));
 		line-height: 1.15;
 		text-overflow: ellipsis;
@@ -2157,7 +2158,7 @@
 
 @media (max-width: em(560)) {
 	.compactHeader {
-		h1 {
+		.compactTitle {
 			font-size: rem(18);
 		}
 	}

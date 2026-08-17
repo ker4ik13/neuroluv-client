@@ -229,6 +229,7 @@ function AiShellContent({
 	}, [apiNavigation, isEnglish, navigation, normalizedProvidedNavigation]);
 	const brandName = useMemo(() => splitProjectName(projectName), [projectName]);
 	const isChatWorkspace = isGenerationChatPath(pathname);
+	const isGenerationPage = isGenerationSeoPagePath(pathname);
 
 	function closeNavigation() {
 		setDesktopValue('');
@@ -421,7 +422,7 @@ function AiShellContent({
 			</header>
 
 			<main
-				className={`${styles.main} ${isChatWorkspace ? styles.mainChatWorkspace : ''}`}
+				className={`${styles.main} ${isChatWorkspace ? styles.mainChatWorkspace : ''} ${isGenerationPage ? styles.mainGenerationPage : ''}`}
 			>
 				{children}
 			</main>
@@ -805,9 +806,12 @@ function NavLinkContent({ item }: { item: StudioNavigationItem }) {
 }
 
 function isGenerationChatPath(pathname: string): boolean {
-	return (
-		/^\/ai\/create\/(?:photo|text|video)$/.test(pathname) ||
-		pathname === '/ai/tools/photo-to-prompt'
+	return pathname === '/ai/tools/photo-to-prompt';
+}
+
+function isGenerationSeoPagePath(pathname: string): boolean {
+	return /^\/ai\/create\/(?:photo|text|video)(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/.test(
+		pathname,
 	);
 }
 

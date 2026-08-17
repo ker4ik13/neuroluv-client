@@ -77,17 +77,25 @@ const CREATE_TYPES = [
 export function CreateStudioPage({
   kind,
   initialModelSlug,
+  pageTitle,
+  semanticTitle = true,
+  syncModelUrl = false,
 }: {
   kind: CreateKind;
   initialModelSlug?: string;
+  pageTitle?: string;
+  semanticTitle?: boolean;
+  syncModelUrl?: boolean;
 }) {
   const { t } = useAiLocale();
   if (kind !== "entry") {
     return (
       <GenerationChatPage
-        key={`${kind}:${initialModelSlug || "default"}`}
         initialModelSlug={initialModelSlug}
         kind={kind}
+        pageTitle={pageTitle}
+        semanticTitle={semanticTitle}
+        syncModelUrl={syncModelUrl}
       />
     );
   }
@@ -142,13 +150,13 @@ export function CreateStudioPage({
           </h1>
           <p className={styles.heroLead}>
             {t(
-              "AI-агрегатор: ChatGPT, Nano Banana, Claude, Gemini, DeepSeek и другие нейросети для текста, фото и видео. Один аккаунт для всех ИИ.",
+              "ChatGPT, Gemini, Claude, DeepSeek и нейросети для текста, фото и видео в одном русскоязычном сервисе. Один аккаунт, баланс и история работ.",
               "An AI aggregator for ChatGPT, Nano Banana, Claude, Gemini, DeepSeek and other models for text, images and video. One account for every AI.",
             )}
           </p>
           <p className={styles.heroSummary}>
             {t(
-              "Нейролюб Studio объединяет выбор модели, настройки, историю диалогов и оплату в одном русскоязычном интерфейсе.",
+              "Выберите задачу и модель, задайте параметры, запустите генерацию и возвращайтесь к результатам в одном рабочем пространстве.",
               "Neuroluv Studio brings model selection, settings, conversation history and billing into one clear interface.",
             )}
           </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   type CSSProperties,
@@ -235,10 +236,22 @@ function toPersistedDraft(draft: Draft): Draft {
 export function GenerationChatPage({
   kind,
   initialModelSlug,
+  pageTitle,
+  semanticTitle = true,
+  syncModelUrl = false,
 }: {
   kind: GenerationChatKind;
   initialModelSlug?: string;
+  pageTitle?: string;
+  semanticTitle?: boolean;
+  syncModelUrl?: boolean;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const requestedModelSlug =
+    initialModelSlug ||
+    (syncModelUrl ? getModelSlugFromGenerationPath(pathname, kind) : undefined);
+  const [initialRequestedModelSlug] = useState(requestedModelSlug);
   const { locale, isEnglish, t } = useAiLocale();
   const { session, isLoading: isSessionLoading } = useAiSession();
   const modality = getModality(kind);
@@ -290,7 +303,7 @@ export function GenerationChatPage({
   const supportsContext = session.authenticated && kind === "text";
   const [draftReady, setDraftReady] = useState(false);
   const [initialModelResolved, setInitialModelResolved] = useState(
-    !initialModelSlug,
+    !initialRequestedModelSlug,
   );
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [references, setReferences] = useState<PendingReference[]>([]);
@@ -429,7 +442,7 @@ export function GenerationChatPage({
     loadedStorageKey.current = "";
     const timer = window.setTimeout(() => {
       try {
-        const hasInitialModel = Boolean(initialModelSlug);
+        const hasInitialModel = Boolean(initialRequestedModelSlug);
         const saved = hasInitialModel
           ? {}
           : readLocalJson<Partial<Draft>>(storageKey, {});
@@ -524,7 +537,7 @@ export function GenerationChatPage({
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [canUseContext, initialModelSlug, isSessionLoading, storageKey]);
+  }, [canUseContext, initialRequestedModelSlug, isSessionLoading, storageKey]);
 
   useEffect(() => {
     if (
@@ -596,7 +609,7 @@ export function GenerationChatPage({
   useEffect(() => {
     if (
       initialModelResolved ||
-      !initialModelSlug ||
+      !requestedModelSlug ||
       !draftReady ||
       models.isLoading ||
       !models.data
@@ -604,18 +617,23 @@ export function GenerationChatPage({
       return;
     }
 
-    const normalizedSlug = initialModelSlug.toLocaleLowerCase("en-US");
+    const normalizedSlug = requestedModelSlug.toLocaleLowerCase("en-US");
+    const requestedFamily = createModelFamilies(models.data).find(
+      (family) =>
+        getModelFamilyRouteSlug(family.label, kind) === normalizedSlug,
+    );
     const requestedModel = models.data.find(
       (model) =>
-        model.id === initialModelSlug ||
+        model.id === requestedModelSlug ||
         model.slug.toLocaleLowerCase("en-US") === normalizedSlug,
-    );
+    ) || requestedFamily?.entries.find(({ model }) => model.available)?.model ||
+      requestedFamily?.entries[0]?.model;
     const timer = window.setTimeout(() => {
       if (!requestedModel) {
         setConversationError(
           t(
-            `Модель «${initialModelSlug}» не найдена для этого типа генерации. Выберите доступную модель.`,
-            `Model “${initialModelSlug}” is not available for this generation type. Choose an available model.`,
+            `Модель «${requestedModelSlug}» не найдена для этого типа генерации. Выберите доступную модель.`,
+            `Model “${requestedModelSlug}” is not available for this generation type. Choose an available model.`,
           ),
         );
         setInitialModelResolved(true);
@@ -651,9 +669,10 @@ export function GenerationChatPage({
   }, [
     draftReady,
     initialModelResolved,
-    initialModelSlug,
+    kind,
     models.data,
     models.isLoading,
+    requestedModelSlug,
     t,
   ]);
 
@@ -2279,12 +2298,19 @@ export function GenerationChatPage({
     if (!model) return;
     setQuoteError(null);
     setDraft((current) => selectDraftModel(current, model.id));
+    if (syncModelUrl) {
+      const familySlug = getModelFamilyRouteSlug(family.label, kind);
+      const nextPath = `/ai/create/${getCreatePathKind(kind)}/${familySlug}`;
+      if (pathname !== nextPath) router.replace(nextPath, { scroll: true });
+    }
   }
 
   function selectModelVersion(modelId: string) {
     setQuoteError(null);
     setDraft((current) => selectDraftModel(current, modelId));
   }
+
+  const CompactTitle = semanticTitle ? "h1" : "div";
 
   return (
     <AiPage className={styles.workspacePage}>
@@ -2295,7 +2321,9 @@ export function GenerationChatPage({
             <span>{t("Назад", "Back")}</span>
           </Link>
           <span aria-hidden="true" className={styles.compactDivider} />
-          <h1>{getCreateTitle(kind, isEnglish)}</h1>
+          <CompactTitle className={styles.compactTitle}>
+            {pageTitle || getCreateTitle(kind, isEnglish)}
+          </CompactTitle>
         </div>
 
         <div className={styles.workspaceBody}>
@@ -2365,7 +2393,7 @@ export function GenerationChatPage({
                     <FiMessageCircle aria-hidden="true" />
                     <p>{t("Войдите, чтобы сохранять и открывать историю чатов.", "Sign in to save and open chat history.")}</p>
                         <Link
-                          href={`/ai/auth?returnTo=${encodeURIComponent(getGenerationPath(kind, initialModelSlug))}`}
+                          href={`/ai/auth?returnTo=${encodeURIComponent(getGenerationPath(kind, requestedModelSlug))}`}
                         >
                       {t("Войти", "Sign in")}
                     </Link>
@@ -3957,6 +3985,40 @@ function createModelFamilies(models: AiPublicModel[]): ModelFamily[] {
     }));
 }
 
+function getCreatePathKind(kind: GenerationChatKind): "photo" | "text" | "video" {
+  if (kind === "image") return "photo";
+  if (kind === "video") return "video";
+  return "text";
+}
+
+function getModelFamilyRouteSlug(
+  familyLabel: string,
+  kind: GenerationChatKind,
+): string {
+  const normalized = familyLabel
+    .trim()
+    .toLocaleLowerCase("en-US")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  if (kind === "image") {
+    if (normalized === "gpt-image") return "gpt-image-2";
+    if (normalized === "grok" || normalized === "grok-imagine-image") {
+      return "grok-imagine";
+    }
+    if (normalized === "wan") return "wan-image";
+  }
+
+  if (kind === "video") {
+    if (normalized === "grok" || normalized === "grok-imagine") {
+      return "grok-imagine-video";
+    }
+    if (normalized === "wan") return "wan-video";
+  }
+
+  return normalized || "model";
+}
+
 function createModelVersionOptions(
   family: ModelFamily | null,
   isEnglish: boolean,
@@ -4925,9 +4987,21 @@ function getGenerationPath(
         ? "/ai/tools/photo-to-prompt"
         : `/ai/create/${kind}`;
 
-  return initialModelSlug
+  if (!initialModelSlug) return pathname;
+  return kind === "photo-to-prompt"
     ? `${pathname}?model=${encodeURIComponent(initialModelSlug)}`
-    : pathname;
+    : `${pathname}/${encodeURIComponent(initialModelSlug)}`;
+}
+
+function getModelSlugFromGenerationPath(
+  pathname: string,
+  kind: GenerationChatKind,
+): string | undefined {
+  if (kind === "photo-to-prompt") return undefined;
+  const prefix = `/ai/create/${getCreatePathKind(kind)}/`;
+  if (!pathname.startsWith(prefix)) return undefined;
+  const slug = pathname.slice(prefix.length);
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : undefined;
 }
 
 function getCreateTitle(kind: GenerationChatKind, isEnglish = false): string {
