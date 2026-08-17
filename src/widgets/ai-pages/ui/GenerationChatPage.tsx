@@ -2301,7 +2301,7 @@ export function GenerationChatPage({
     if (syncModelUrl) {
       const familySlug = getModelFamilyRouteSlug(family.label, kind);
       const nextPath = `/ai/create/${getCreatePathKind(kind)}/${familySlug}`;
-      if (pathname !== nextPath) router.replace(nextPath, { scroll: true });
+      if (pathname !== nextPath) router.replace(nextPath, { scroll: false });
     }
   }
 
