@@ -342,7 +342,13 @@ export type AiSubscriptionState = {
 	planId: string | null;
 	planName?: string | null;
 	periodEndsAt?: string | null;
-	autoRenew?: boolean;
+};
+
+export type AiScheduledSubscriptionState = {
+	planId: string;
+	planName?: string | null;
+	startsAt: string;
+	periodEndsAt: string;
 };
 
 export type AiPlan = {
@@ -356,7 +362,6 @@ export type AiPlan = {
 	intervalLabel: string;
 	priceSuffix: string;
 	features: string[];
-	recurringAvailable: boolean;
 	badge?: string | null;
 };
 
@@ -535,13 +540,13 @@ export type AiPaymentProvider = {
 	name: string;
 	description?: string | null;
 	currencies: string[];
-	recurringAvailable: boolean;
 	available: boolean;
 	unavailableReason?: string | null;
 };
 
 export type AiBillingProducts = {
 	subscription: AiSubscriptionState;
+	scheduledSubscription: AiScheduledSubscriptionState | null;
 	plans: AiPlan[];
 	topups: AiTopupPackage[];
 	paymentProviders: AiPaymentProvider[];
@@ -558,6 +563,9 @@ export type AiPaymentSummary = {
 	receiptUrl?: string | null;
 	receiptReference?: string | null;
 	receiptStatus?: AiReceiptRegistrationStatus | null;
+	activationMode?: 'after_current_period' | 'extend' | 'immediate' | null;
+	activationScheduledFor?: string | null;
+	activationState?: string | null;
 };
 
 export type AiUserProfile = {

@@ -148,7 +148,7 @@ export function PromptsPage({
             <p className={styles.heroDescription}>{heroDescription}</p>
             <a
               className={styles.heroButton}
-              href="https://t.me/neuroluv"
+              href="https://t.me/+uThlnd6M6KwwY2Y6"
               rel="noreferrer"
               target="_blank"
             >
@@ -534,7 +534,7 @@ function PromptsSidebar({
             <strong>Подпишись на Telegram</strong>
           </div>
           <p>6000+ подписчиков. Лучшие промпты каждую неделю.</p>
-          <a href="https://t.me/neuroluv" rel="noreferrer" target="_blank">
+          <a href="https://t.me/+uThlnd6M6KwwY2Y6" rel="noreferrer" target="_blank">
             Подписаться
             <FaArrowRight aria-hidden="true" />
           </a>

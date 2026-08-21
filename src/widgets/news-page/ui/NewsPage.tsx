@@ -529,7 +529,7 @@ function NewsSidebar({
         </p>
         <a
           className={styles.telegramButton}
-          href="https://t.me/neuroluv"
+          href="https://t.me/+uThlnd6M6KwwY2Y6"
           rel="noreferrer"
           target="_blank"
         >

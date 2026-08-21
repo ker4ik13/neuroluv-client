@@ -325,12 +325,22 @@ function notifyPayment(
 	if (!enabled) return;
 	void showNotificationOnce(
 		`payment:${payment.id}:paid`,
-		locale === 'en-US' ? 'Payment credited' : 'Оплата зачислена',
+		payment.activationState === 'scheduled'
+			? locale === 'en-US'
+				? 'Plan paid'
+				: 'Тариф оплачен'
+			: locale === 'en-US'
+				? 'Payment credited'
+				: 'Оплата зачислена',
 		{
 			body:
-				locale === 'en-US'
-					? 'Your balance and subscription have been updated'
-					: 'Баланс и подписка уже обновлены',
+				payment.activationState === 'scheduled'
+					? locale === 'en-US'
+						? 'The new plan will start after your current plan ends'
+						: 'Новый тариф включится после завершения текущего'
+					: locale === 'en-US'
+						? 'Your balance and subscription have been updated'
+						: 'Баланс и подписка уже обновлены',
 			href: '/ai/balance',
 		},
 	);

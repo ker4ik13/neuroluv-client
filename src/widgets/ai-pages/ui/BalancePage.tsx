@@ -57,6 +57,7 @@ type CheckoutProduct =
 	| { type: 'topup'; value: AiTopupPackage };
 
 type BillingPeriod = Extract<AiPlan['interval'], 'month' | 'year'>;
+type SubscriptionActivationMode = 'immediate' | 'after_current_period';
 
 export function BalancePage() {
 	const { locale, t } = useAiLocale();
@@ -81,7 +82,8 @@ export function BalancePage() {
 		useState<CheckoutProduct | null>(null);
 	const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('month');
 	const [paymentProviderId, setPaymentProviderId] = useState('');
-	const [autoRenew, setAutoRenew] = useState(true);
+	const [activationMode, setActivationMode] =
+		useState<SubscriptionActivationMode | null>(null);
 	const [isPending, setIsPending] = useState(false);
 	const [isPromoPending, setIsPromoPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -114,15 +116,21 @@ export function BalancePage() {
 			if (['paid', 'succeeded'].includes(payment.status)) {
 				setError(null);
 				setNotice(
-					payment.credits && payment.credits > 0
+					payment.activationMode === 'after_current_period' &&
+						payment.activationState === 'scheduled'
 						? t(
-								`Оплата прошла успешно. Начислено ${formatCredits(payment.credits, locale)}.`,
-								`Payment completed. ${formatCredits(payment.credits, locale)} added.`,
+								`Оплата прошла успешно. Новый тариф включится ${formatDate(payment.activationScheduledFor ?? '', false, locale)}, тогда же начислятся его кредиты.`,
+								`Payment completed. The new plan will start on ${formatDate(payment.activationScheduledFor ?? '', false, locale)} and its credits will be added then.`,
 							)
-						: t(
-								'Оплата прошла успешно. Баланс обновлён.',
-								'Payment completed. Your balance has been updated.',
-							),
+						: payment.credits && payment.credits > 0
+							? t(
+									`Оплата прошла успешно. Начислено ${formatCredits(payment.credits, locale)}.`,
+									`Payment completed. ${formatCredits(payment.credits, locale)} added.`,
+								)
+							: t(
+									'Оплата прошла успешно. Баланс обновлён.',
+									'Payment completed. Your balance has been updated.',
+								),
 				);
 			} else if (
 				['canceled', 'cancelled', 'expired', 'failed'].includes(payment.status)
@@ -177,20 +185,13 @@ export function BalancePage() {
 	)
 		? paymentProviderId
 		: compatibleProviders[0]?.id || '';
-	const activeProvider = compatibleProviders.find(
-		(provider) => provider.id === activeProviderId,
-	);
-	const recurringAvailable = Boolean(
-		checkoutProduct?.type === 'subscription' &&
-		activeProvider?.recurringAvailable,
-	);
-	const requestedAutoRenew = recurringAvailable && autoRenew;
-	const canEnableExistingAutoRenew = Boolean(
-		products.data?.paymentProviders.some(
-			(provider) => provider.available && provider.recurringAvailable,
-		),
-	);
 	const activePlanId = products.data?.subscription.planId ?? null;
+	const scheduledSubscription = products.data?.scheduledSubscription ?? null;
+	const requiresActivationChoice = Boolean(
+		checkoutProduct?.type === 'subscription' &&
+		activePlanId &&
+		checkoutProduct.value.id !== activePlanId,
+	);
 	const authReturnHref = `/ai/auth?returnTo=${encodeURIComponent('/ai/balance')}`;
 	const activePlan = useMemo(
 		() => products.data?.plans.find((plan) => plan.id === activePlanId) ?? null,
@@ -217,6 +218,7 @@ export function BalancePage() {
 
 	function closeCheckout() {
 		setCheckoutProduct(null);
+		setActivationMode(null);
 		setError(null);
 		setPromoCode('');
 		setPromoQuote(null);
@@ -224,11 +226,13 @@ export function BalancePage() {
 	}
 
 	function openCheckout(product: CheckoutProduct) {
-		if (product.type === 'subscription' && product.value.id === activePlanId) {
+		if (product.type === 'subscription' && scheduledSubscription) {
 			return;
 		}
 		setPaymentProviderId('');
-		setAutoRenew(product.type === 'subscription');
+		setActivationMode(
+			product.type === 'subscription' && !activePlanId ? 'immediate' : null,
+		);
 		setPromoCode('');
 		setPromoQuote(null);
 		setPromoError(null);
@@ -246,6 +250,15 @@ export function BalancePage() {
 			);
 			return;
 		}
+		if (requiresActivationChoice && !activationMode) {
+			setError(
+				t(
+					'Выберите, когда активировать новый тариф',
+					'Choose when to activate the new plan',
+				),
+			);
+			return;
+		}
 
 		setIsPending(true);
 		setError(null);
@@ -256,7 +269,7 @@ export function BalancePage() {
 				checkoutProduct.value.id,
 				activeProviderId,
 				promoQuote?.code || '',
-				requestedAutoRenew ? 'auto' : 'manual',
+				activationMode || 'extend',
 			].join(':');
 			if (checkoutIntent.current?.signature !== signature) {
 				checkoutIntent.current = { signature, key: crypto.randomUUID() };
@@ -272,7 +285,9 @@ export function BalancePage() {
 					productType: checkoutProduct.type,
 					productId: checkoutProduct.value.id,
 					providerId: activeProviderId,
-					autoRenew: requestedAutoRenew,
+					...(checkoutProduct.type === 'subscription' && activationMode
+						? { activationMode }
+						: {}),
 					...(promoQuote ? { promoCode: promoQuote.code } : {}),
 				},
 			});
@@ -346,55 +361,6 @@ export function BalancePage() {
 			setPromoError(getAiErrorMessage(requestError));
 		} finally {
 			setIsPromoPending(false);
-		}
-	}
-
-	async function cancelRenewal() {
-		if (
-			!window.confirm(
-				t(
-					'Отключить автопродление в конце оплаченного периода?',
-					'Disable auto-renewal at the end of the paid period?',
-				),
-			)
-		)
-			return;
-		setIsPending(true);
-		setError(null);
-		try {
-			await aiApiFetch('/billing/subscription/cancel', { method: 'POST' });
-			products.reload();
-			setNotice(
-				t(
-					'Автопродление отключено. Доступ сохранится до конца периода.',
-					'Auto-renewal disabled. Access remains until the end of the period.',
-				),
-			);
-		} catch (requestError) {
-			setError(getAiErrorMessage(requestError));
-		} finally {
-			setIsPending(false);
-		}
-	}
-
-	async function enableRenewal() {
-		setIsPending(true);
-		setError(null);
-		try {
-			await aiApiFetch('/billing/subscription/auto-renew/enable', {
-				method: 'POST',
-			});
-			await products.reload();
-			setNotice(
-				t(
-					'Автопродление включено. Следующая оплата пройдёт в конце текущего периода.',
-					'Auto-renewal enabled. The next payment will be charged at the end of the current period.',
-				),
-			);
-		} catch (requestError) {
-			setError(getAiErrorMessage(requestError));
-		} finally {
-			setIsPending(false);
 		}
 	}
 
@@ -501,40 +467,23 @@ export function BalancePage() {
 														)}
 											</p>
 											<div className={styles.subscriptionFooter}>
-												<span>
-													{products.data.subscription.autoRenew
-														? t(
-																'Автопродление включено',
-																'Auto-renewal enabled',
-															)
-														: t('Продление вручную', 'Manual renewal')}
-												</span>
-												{products.data.subscription.autoRenew ? (
-													<AiButton
-														disabled={isPending}
-														variant='ghost'
-														onClick={() => void cancelRenewal()}
-													>
-														{t('Отключить', 'Disable')}
-													</AiButton>
-												) : (
-													<AiButton
-														disabled={isPending || !canEnableExistingAutoRenew}
-														title={
-															canEnableExistingAutoRenew
-																? undefined
-																: t(
-																		'Станет доступно после включения рекуррентных платежей у платёжного провайдера',
-																		'Available after recurring payments are enabled for the payment provider',
-																	)
-														}
-														variant='ghost'
-														onClick={() => void enableRenewal()}
-													>
-														{t('Включить', 'Enable')}
-													</AiButton>
-												)}
+												<span>{t('Продление вручную', 'Manual renewal')}</span>
 											</div>
+											{scheduledSubscription ? (
+												<p>
+													{t('Следующий тариф', 'Next plan')}:{' '}
+													<strong>
+														{scheduledSubscription.planName ||
+															t('Выбранный тариф', 'Selected plan')}
+													</strong>{' '}
+													· {t('с', 'from')}{' '}
+													{formatDate(
+														scheduledSubscription.startsAt,
+														false,
+														locale,
+													)}
+												</p>
+											) : null}
 										</>
 									) : (
 										<p>
@@ -586,6 +535,8 @@ export function BalancePage() {
 								<div className={styles.planGrid}>
 									{visiblePlans.map((plan) => {
 										const isActivePlan = plan.id === activePlanId;
+										const isScheduledPlan =
+											plan.id === scheduledSubscription?.planId;
 
 										return (
 											<AiCard
@@ -597,7 +548,13 @@ export function BalancePage() {
 												} ${isActivePlan ? styles.planCardActive : ''}`}
 												key={plan.id}
 											>
-												{isActivePlan ? (
+												{isScheduledPlan ? (
+													<span
+														className={`${styles.planBadge} ${styles.planBadgeActive}`}
+													>
+														{t('Запланирован', 'Scheduled')}
+													</span>
+												) : isActivePlan ? (
 													<span
 														className={`${styles.planBadge} ${styles.planBadgeActive}`}
 													>
@@ -661,7 +618,15 @@ export function BalancePage() {
 												) : null}
 												{session.authenticated ? (
 													<AiButton
-														disabled={isActivePlan}
+														disabled={Boolean(scheduledSubscription)}
+														title={
+															scheduledSubscription
+																? t(
+																		'Сначала дождитесь активации уже оплаченного тарифа',
+																		'Wait for the already paid plan to activate first',
+																	)
+																: undefined
+														}
 														variant='secondary'
 														onClick={() =>
 															openCheckout({
@@ -672,8 +637,8 @@ export function BalancePage() {
 													>
 														{isActivePlan ? (
 															<>
-																<FiCheck aria-hidden='true' />
-																{t('Тариф активен', 'Plan active')}
+																<FiCreditCard aria-hidden='true' />
+																{t('Продлить', 'Extend')}
 															</>
 														) : (
 															<>
@@ -873,6 +838,65 @@ export function BalancePage() {
 								? ` ${checkoutProduct.value.priceSuffix}`
 								: ''}
 						</p>
+						{requiresActivationChoice ? (
+							<div className={styles.consentStack}>
+								<strong>
+									{t(
+										'Когда активировать тариф?',
+										'When should the plan start?',
+									)}
+								</strong>
+								<label className={styles.consentField}>
+									<input
+										checked={activationMode === 'immediate'}
+										name='subscription-activation-mode'
+										type='radio'
+										onChange={() => {
+											setActivationMode('immediate');
+											checkoutIntent.current = null;
+										}}
+									/>
+									<span>
+										<strong>
+											{t('Сразу после оплаты', 'Immediately after payment')}
+										</strong>
+										<br />
+										{t(
+											'Текущий тариф завершится, новый начнётся сразу. Неиспользованные кредиты сохранятся.',
+											'The current plan will end and the new one will start immediately. Unused credits will remain.',
+										)}
+									</span>
+								</label>
+								<label className={styles.consentField}>
+									<input
+										checked={activationMode === 'after_current_period'}
+										name='subscription-activation-mode'
+										type='radio'
+										onChange={() => {
+											setActivationMode('after_current_period');
+											checkoutIntent.current = null;
+										}}
+									/>
+									<span>
+										<strong>
+											{t('После текущего тарифа', 'After the current plan')}
+										</strong>
+										<br />
+										{t('Новый тариф начнётся', 'The new plan will start')}{' '}
+										{formatDate(
+											products.data?.subscription.periodEndsAt ?? '',
+											false,
+											locale,
+										)}
+										.{' '}
+										{t(
+											'Его кредиты начислятся при активации.',
+											'Its credits will be added on activation.',
+										)}
+									</span>
+								</label>
+							</div>
+						) : null}
 						{compatibleProviders.length ? (
 							<div className={styles.providerList}>
 								{compatibleProviders.map((provider, index) => (
@@ -882,10 +906,6 @@ export function BalancePage() {
 										key={provider.id}
 										provider={provider}
 										onChange={() => {
-											setAutoRenew(
-												checkoutProduct.type === 'subscription' &&
-													provider.recurringAvailable,
-											);
 											setPaymentProviderId(provider.id);
 										}}
 									/>
@@ -899,20 +919,6 @@ export function BalancePage() {
 								)}
 							</FieldMessage>
 						)}
-						{checkoutProduct.type === 'subscription' ? (
-							recurringAvailable ? (
-								<label className={styles.consentField}>
-									<input
-										checked={autoRenew}
-										type='checkbox'
-										onChange={(event) => setAutoRenew(event.target.checked)}
-									/>
-									<span>
-										<strong>{t('Автопродление', 'Auto-renewal')}</strong>
-									</span>
-								</label>
-							) : null
-						) : null}
 						<form
 							className={styles.checkoutPromo}
 							onSubmit={(event) => void applyPromo(event)}
@@ -973,7 +979,11 @@ export function BalancePage() {
 						{error ? <FieldMessage>{error}</FieldMessage> : null}
 						<div className={styles.modalActions}>
 							<AiButton
-								disabled={isPending || !activeProviderId}
+								disabled={
+									isPending ||
+									!activeProviderId ||
+									(requiresActivationChoice && !activationMode)
+								}
 								onClick={() => void startCheckout()}
 							>
 								{isPending
