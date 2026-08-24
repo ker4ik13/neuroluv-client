@@ -4002,7 +4002,6 @@ function getModelFamilyRouteSlug(
     .replace(/^-+|-+$/g, "");
 
   if (kind === "image") {
-    if (normalized === "gpt-image") return "gpt-image-2";
     if (normalized === "grok" || normalized === "grok-imagine-image") {
       return "grok-imagine";
     }

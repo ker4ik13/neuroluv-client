@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
 	async redirects() {
 		return [
 			{
+				source: '/ai/create/photo/gpt-image-2',
+				destination: '/ai/create/photo/gpt-image',
+				permanent: true,
+			},
+			{
 				source: '/ai/create',
 				destination: '/ai',
 				permanent: true,
