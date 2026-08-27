@@ -58,8 +58,8 @@
 }
 
 .steps {
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, rem(280)), 1fr));
 	align-items: stretch;
 	gap: rem(20);
 }
@@ -67,11 +67,8 @@
 .step {
 	position: relative;
 	display: flex;
-	min-width: rem(210);
-	min-height: rem(190);
-	flex: 1 1 rem(210);
+	min-width: 0;
 	flex-direction: column;
-	justify-content: space-between;
 	gap: rem(26);
 	padding: rem(26);
 	color: var(--ai-text, #{$color-white});
@@ -81,9 +78,6 @@
 	box-shadow: 0 rem(14) rem(18) rgba(0, 0, 0, 0.08);
 
 	@media (max-width: em($breakpoint-tablet)) {
-		min-width: 0;
-		min-height: 0;
-		flex-basis: 100%;
 		padding: rem(22);
 		border-radius: rem(20);
 	}
@@ -99,6 +93,7 @@
 
 .stepContent {
 	display: flex;
+	min-width: 0;
 	flex-direction: column;
 	gap: rem(12);
 }
@@ -108,6 +103,8 @@
 
 	font-size: rem(24);
 	line-height: 1.08;
+	overflow-wrap: anywhere;
+	text-wrap: balance;
 }
 
 .stepDescription {
@@ -116,4 +113,5 @@
 	color: var(--ai-muted, #d1e0eb);
 	font-size: rem(17);
 	line-height: 1.35;
+	overflow-wrap: anywhere;
 }

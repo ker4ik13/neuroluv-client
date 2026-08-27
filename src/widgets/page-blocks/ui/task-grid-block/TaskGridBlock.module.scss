@@ -57,22 +57,13 @@
 
 .cards {
 	display: grid;
-	grid-template-columns: repeat(var(--task-grid-columns, 3), minmax(0, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, rem(280)), 1fr));
 	align-items: stretch;
 	gap: rem(20);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		grid-template-columns: minmax(0, 1fr);
-	}
 }
 
 .card {
 	display: flex;
-	min-height: rem(250);
 	min-width: 0;
 	flex-direction: column;
 	gap: rem(20);
@@ -83,13 +74,7 @@
 	border-radius: rem(24);
 	box-shadow: 0 rem(14) rem(20) rgba(0, 0, 0, 0.08);
 
-	@media (max-width: em($breakpoint-laptop)) {
-		min-height: rem(220);
-	}
-
 	@media (max-width: em($breakpoint-tablet)) {
-		min-width: 0;
-		min-height: 0;
 		padding: rem(22);
 		border-radius: rem(20);
 	}
@@ -117,6 +102,8 @@
 	color: var(--ai-text, #{$color-white});
 	font-size: rem(22);
 	line-height: 1.18;
+	overflow-wrap: anywhere;
+	text-wrap: balance;
 
 	@media (max-width: em($breakpoint-tablet)) {
 		font-size: rem(20);
@@ -126,8 +113,8 @@
 .cardDescription {
 	@include body-font(400);
 
-	margin-top: auto;
 	color: var(--ai-muted, rgba($color-white, 0.72));
 	font-size: rem(16);
 	line-height: 1.4;
+	overflow-wrap: anywhere;
 }
