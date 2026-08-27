@@ -75,26 +75,19 @@ export async function proxy(request: NextRequest) {
   }
 
   const pathname = normalizePath(request.nextUrl.pathname);
-
-  // The AI application owns its namespace and must not be shadowed by CMS redirects.
-  if (pathname === "/ai" || pathname.startsWith("/ai/")) {
-    return nextAiResponse(request);
-  }
-
+  const isAiPath = pathname === "/ai" || pathname.startsWith("/ai/");
   const redirects = await getRedirectRules();
   const redirect = redirects.find((rule) => rule.fromPath === pathname);
 
-  if (!redirect) {
-    return NextResponse.next();
+  if (redirect) {
+    const target = buildRedirectTarget(request, redirect);
+
+    if (!isSameUrl(request.nextUrl, target)) {
+      return NextResponse.redirect(target, redirect.status);
+    }
   }
 
-  const target = buildRedirectTarget(request, redirect);
-
-  if (isSameUrl(request.nextUrl, target)) {
-    return NextResponse.next();
-  }
-
-  return NextResponse.redirect(target, redirect.status);
+  return isAiPath ? nextAiResponse(request) : NextResponse.next();
 }
 
 function nextAiResponse(request: NextRequest): NextResponse {
