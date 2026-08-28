@@ -39,10 +39,7 @@ import {
 	type AiPublicModel,
 	type AiSession,
 } from '@/shared/api/ai';
-import {
-	useBodyScrollLock,
-	useViewportScrollLock,
-} from '@/shared/lib/dom/useBodyScrollLock';
+import { useViewportScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
 import { formatCreditNumber, formatCredits } from '@/shared/lib/formatCredits';
 import { AppIcon } from '@/shared/ui/app-icon';
 import { Container } from '@/shared/ui/container';
@@ -124,8 +121,7 @@ function AiShellContent({
 	);
 	const isNavigationOpen = Boolean(desktopValue) || isMenuOpen;
 
-	useBodyScrollLock(isMenuOpen);
-	useViewportScrollLock(Boolean(desktopValue));
+	useViewportScrollLock(isNavigationOpen);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -373,6 +369,7 @@ function AiShellContent({
 					<div
 						aria-hidden={!isMenuOpen}
 						className={`${styles.mobilePanel} ${isMenuOpen ? styles.mobilePanelOpen : ''}`}
+						data-viewport-scroll-lock-scrollable
 						id='ai-mobile-navigation'
 					>
 						<MobileAccountCard

@@ -23,6 +23,7 @@ import {
   replacePaginationPageInAddressBar,
 } from "@/shared/lib/url/pagination";
 import { Noindex } from "@/shared/ui/noindex";
+import { MobileFilterSheet } from "@/shared/ui/mobile-filter-sheet";
 import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
@@ -457,9 +458,9 @@ function PromptsSidebar({
     (tag) => tag.isFilterable === true && (tag.count || 0) > 0,
   );
 
-  return (
-    <Noindex>
-      <SmartStickySidebar className={styles.sidebar}>
+  function renderSidebarContent() {
+    return (
+      <>
         {filterableGoals.length > 0 && (
           <SidebarPanel title="Цель промпта">
             <div className={styles.categoryList}>
@@ -539,7 +540,16 @@ function PromptsSidebar({
             <FaArrowRight aria-hidden="true" />
           </a>
         </div>
+      </>
+    );
+  }
+
+  return (
+    <Noindex>
+      <SmartStickySidebar className={styles.sidebar}>
+        {renderSidebarContent()}
       </SmartStickySidebar>
+      <MobileFilterSheet>{renderSidebarContent()}</MobileFilterSheet>
     </Noindex>
   );
 }

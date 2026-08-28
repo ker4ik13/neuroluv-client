@@ -3,7 +3,8 @@
 @use '../../../../styles/vars' as *;
 
 .about {
-	max-width: rem(1280);
+	width: 100%;
+	max-width: rem($container + 40);
 	margin: 0 auto;
 	padding: rem(40) rem(20);
 

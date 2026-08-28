@@ -214,12 +214,14 @@
 
 .option {
 	display: grid;
+	width: 100%;
 	min-height: rem(42);
 	grid-template-columns: minmax(0, 1fr) rem(22);
 	align-items: center;
 	gap: rem(10);
 	padding: rem(7) rem(9);
 	color: var(--ai-text);
+	text-decoration: none;
 	border-radius: rem(10);
 	cursor: pointer;
 	outline: none;

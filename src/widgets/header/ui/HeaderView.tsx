@@ -11,10 +11,7 @@ import type {
 	NavigationItem,
 	SocialLink,
 } from '@/entities/navigation';
-import {
-	useBodyScrollLock,
-	useViewportScrollLock,
-} from '@/shared/lib/dom/useBodyScrollLock';
+import { useViewportScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
 import { AppIcon } from '@/shared/ui/app-icon';
 import { BrandIcon } from '@/shared/ui/brand-icon';
 import { Container } from '@/shared/ui/container';
@@ -37,8 +34,7 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 	const [mobileSectionId, setMobileSectionId] = useState<number | null>(null);
 	const isNavigationOpen = Boolean(desktopValue) || isMobileMenuOpen;
 
-	useBodyScrollLock(isMobileMenuOpen);
-	useViewportScrollLock(Boolean(desktopValue));
+	useViewportScrollLock(isNavigationOpen);
 
 	useEffect(() => {
 		function handleEscape(event: KeyboardEvent) {
@@ -116,6 +112,8 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 
 					<div
 						className={`${styles.content} ${isMobileMenuOpen ? styles.contentOpen : ''}`}
+						data-viewport-scroll-lock-scrollable
+						id='mobile-site-navigation'
 					>
 						<DesktopNavigation
 							items={navigation.items}
@@ -406,7 +404,6 @@ function MobileNavigation({
 		<nav
 			aria-label='Мобильная навигация'
 			className={styles.mobileNavigation}
-			id='mobile-site-navigation'
 		>
 			{items.map((item, index) => {
 				const isActive = isNavigationItemActive(item, pathname);

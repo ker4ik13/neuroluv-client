@@ -1,0 +1,182 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+@use '../../../styles/vars' as *;
+
+.triggerWrap {
+	display: none;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		display: block;
+		width: 100%;
+		order: -1;
+	}
+}
+
+.trigger {
+	@include body-font(700);
+
+	display: flex;
+	width: 100%;
+	min-height: rem(52);
+	align-items: center;
+	justify-content: center;
+	gap: rem(10);
+	padding: rem(12) rem(18);
+	color: $color-ink;
+	font-size: rem(17);
+	background: $color-white;
+	border: rem(1) solid $color-border;
+	border-radius: rem(16);
+	box-shadow: 0 rem(10) rem(24) rgba($color-ink, 0.06);
+	cursor: pointer;
+
+	svg {
+		width: rem(17);
+		height: rem(17);
+		color: $color-cyan;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.portal {
+	position: fixed;
+	inset: 0;
+	z-index: $z-index-modal;
+	pointer-events: none;
+	visibility: hidden;
+	transition: visibility 0s linear 280ms;
+}
+
+.portalOpen {
+	pointer-events: auto;
+	visibility: visible;
+	transition-delay: 0s;
+}
+
+.backdrop {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	background: rgba($color-ink, 0.46);
+	border: 0;
+	opacity: 0;
+	transition: opacity 220ms ease;
+}
+
+.portalOpen .backdrop {
+	opacity: 1;
+}
+
+.sheet {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	display: flex;
+	width: 100%;
+	max-height: min(82dvh, rem(720));
+	flex-direction: column;
+	overflow: hidden;
+	background: $color-surface;
+	border-radius: rem(26) rem(26) 0 0;
+	box-shadow: 0 rem(-18) rem(60) rgba($color-ink, 0.22);
+	transform: translate3d(0, calc(100% + rem(24)), 0);
+	transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+	will-change: transform;
+}
+
+.sheetOpen {
+	transform: translate3d(0, var(--mobile-filter-sheet-drag, 0), 0);
+}
+
+.sheetDragging {
+	transition: none;
+}
+
+.sheetHeader {
+	position: relative;
+	display: grid;
+	min-height: rem(76);
+	flex: 0 0 auto;
+	grid-template-columns: rem(40) minmax(0, 1fr) rem(40);
+	align-items: center;
+	gap: rem(8);
+	padding: rem(18) rem(16) rem(12);
+	touch-action: none;
+	user-select: none;
+
+	h2 {
+		@include heading-font(800);
+
+		color: $color-ink;
+		font-size: rem(22);
+		line-height: 1.1;
+		text-align: center;
+	}
+}
+
+.dragHandle {
+	position: absolute;
+	top: rem(9);
+	left: 50%;
+	width: rem(44);
+	height: rem(5);
+	background: rgba($color-ink-muted, 0.34);
+	border-radius: rem(100);
+	transform: translateX(-50%);
+}
+
+.closeButton {
+	display: inline-flex;
+	width: rem(40);
+	height: rem(40);
+	grid-column: 3;
+	align-items: center;
+	justify-content: center;
+	color: $color-ink;
+	background: $color-white;
+	border: rem(1) solid $color-border;
+	border-radius: rem(12);
+	cursor: pointer;
+
+	svg {
+		width: rem(16);
+		height: rem(16);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.sheetContent {
+	display: flex;
+	min-height: 0;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: rem(14);
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: rem(4) rem(16) calc(rem(24) + env(safe-area-inset-bottom));
+	-webkit-overflow-scrolling: touch;
+
+	> * {
+		width: 100%;
+		min-width: 0;
+		flex: 0 0 auto;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.portal,
+	.backdrop,
+	.sheet {
+		transition: none;
+	}
+}

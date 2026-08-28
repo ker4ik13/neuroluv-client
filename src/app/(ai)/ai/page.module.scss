@@ -1,8 +1,9 @@
 @use '../../../styles/functions' as *;
+@use '../../../styles/vars' as *;
 
 .content {
 	display: grid;
-	width: min(100%, rem(1280));
+	width: min(100%, rem($container));
 	gap: rem(30);
 	margin: rem(56) auto 0;
 }

@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useEffect,
   useLayoutEffect,
@@ -26,6 +28,7 @@ export type AiSelectOptionGroup = {
 export type AiSelectOption<Value extends AiSelectValue = string> = {
   value: Value;
   label: string;
+  href?: string;
   selectedLabel?: string;
   description?: string;
   visual?: ReactNode;
@@ -96,7 +99,7 @@ export function AiSelect<Value extends AiSelectValue = string>({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
-  const optionRefs = useRef(new Map<number, HTMLLIElement>());
+  const optionRefs = useRef(new Map<number, HTMLElement>());
   const typeaheadRef = useRef("");
   const typeaheadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -312,6 +315,25 @@ export function AiSelect<Value extends AiSelectValue = string>({
     close({ restoreFocus: true });
   }
 
+  function handleOptionLinkClick(
+    event: ReactMouseEvent<HTMLAnchorElement>,
+    index: number,
+  ) {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      close();
+      return;
+    }
+
+    event.preventDefault();
+    selectOption(index);
+  }
+
   function moveActive(direction: 1 | -1) {
     const nextIndex = findEnabledOption(options, resolvedActiveIndex, direction);
     if (nextIndex >= 0) setActiveIndex(nextIndex);
@@ -481,24 +503,10 @@ export function AiSelect<Value extends AiSelectValue = string>({
             }
           >
             {optionSections.map((section, sectionIndex) => {
-              const renderedOptions = section.options.map(({ option, index }) => (
-                <li
-                  aria-disabled={option.disabled || undefined}
-                  aria-selected={index === selectedIndex}
-                  className={`${styles.option} ${index === resolvedActiveIndex ? styles.optionActive : ""} ${index === selectedIndex ? styles.optionSelected : ""} ${option.disabled ? styles.optionDisabled : ""}`}
-                  id={getOptionId(id, index)}
-                  key={`${typeof option.value}:${String(option.value)}`}
-                  ref={(element) => {
-                    if (element) optionRefs.current.set(index, element);
-                    else optionRefs.current.delete(index);
-                  }}
-                  role="option"
-                  onClick={() => selectOption(index)}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onMouseMove={() => {
-                    if (!option.disabled) setActiveIndex(index);
-                  }}
-                >
+              const renderedOptions = section.options.map(({ option, index }) => {
+                const optionClassName = `${styles.option} ${index === resolvedActiveIndex ? styles.optionActive : ""} ${index === selectedIndex ? styles.optionSelected : ""} ${option.disabled ? styles.optionDisabled : ""}`;
+                const optionContents = (
+                  <>
                   <span className={styles.selectionMain}>
                     {option.visual ? (
                       <span aria-hidden="true" className={styles.optionVisual}>
@@ -518,8 +526,53 @@ export function AiSelect<Value extends AiSelectValue = string>({
                   <span aria-hidden="true" className={styles.checkSlot}>
                     {index === selectedIndex ? <FiCheck /> : null}
                   </span>
-                </li>
-              ));
+                  </>
+                );
+                const setOptionRef = (element: HTMLElement | null) => {
+                  if (element) optionRefs.current.set(index, element);
+                  else optionRefs.current.delete(index);
+                };
+                const optionKey = `${typeof option.value}:${String(option.value)}`;
+                const handleMouseMove = () => {
+                  if (!option.disabled) setActiveIndex(index);
+                };
+
+                if (option.href && !option.disabled) {
+                  return (
+                    <li key={optionKey} role="presentation">
+                      <Link
+                        aria-selected={index === selectedIndex}
+                        className={optionClassName}
+                        href={option.href}
+                        id={getOptionId(id, index)}
+                        ref={setOptionRef}
+                        role="option"
+                        onClick={(event) => handleOptionLinkClick(event, index)}
+                        onMouseMove={handleMouseMove}
+                      >
+                        {optionContents}
+                      </Link>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li
+                    aria-disabled={option.disabled || undefined}
+                    aria-selected={index === selectedIndex}
+                    className={optionClassName}
+                    id={getOptionId(id, index)}
+                    key={optionKey}
+                    ref={setOptionRef}
+                    role="option"
+                    onClick={() => selectOption(index)}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseMove={handleMouseMove}
+                  >
+                    {optionContents}
+                  </li>
+                );
+              });
 
               if (!section.group) return renderedOptions;
 

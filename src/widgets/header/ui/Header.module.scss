@@ -12,50 +12,40 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	z-index: $z-index-header;
 	width: 100%;
 	margin: 0 auto;
-	padding-top: rem(30);
+	background: transparent;
+	border-bottom: rem(1) solid rgba($color-border, 0.9);
+	box-shadow: 0 rem(6) rem(22) rgba($color-ink, 0.06);
 
 	&::before {
 		position: absolute;
-		top: 0;
-		left: 0;
+		inset: 0;
 		z-index: 0;
-		width: 100%;
-		height: rem(110);
 		pointer-events: none;
-		backdrop-filter: blur(rem(4));
-		background: linear-gradient(
-			180deg,
-			rgba($color-surface, 0.8) 0%,
-			rgba($color-surface, 0.7) 48%,
-			rgba($color-surface, 0) 100%
-		);
+		background: rgba($color-white, 0.98);
 		content: '';
-		mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 100%);
 	}
 
 	@media (max-width: em($header-burger-breakpoint)) {
-		min-height: rem(108);
+		min-height: rem(66);
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
-		min-height: rem(94);
-		padding-top: rem(16);
-
-		&::before {
-			height: rem(100);
-		}
+		min-height: rem(64);
 	}
 }
 
 .container {
 	position: relative;
 	z-index: 1;
-	max-width: rem(1284);
+	max-width: rem($container + ($page-gutter * 2));
 }
 
 .menuBackdrop {
 	position: fixed;
-	inset: 0;
+	top: rem(66);
+	right: 0;
+	bottom: 0;
+	left: 0;
 	z-index: 0;
 	padding: 0;
 	pointer-events: none;
@@ -67,6 +57,10 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	transition:
 		opacity 180ms $menu-easing,
 		visibility 0s linear 180ms;
+
+	@media (max-width: em($breakpoint-mobile)) {
+		top: rem(64);
+	}
 }
 
 .menuBackdropOpen {
@@ -85,26 +79,22 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	align-items: center;
 	justify-content: flex-start;
 	gap: rem(20);
-	padding: rem(12) rem(16);
+	padding: rem(10) 0;
 	color: $color-ink;
-	background: $color-white;
-	border-radius: rem($radius-header);
-	box-shadow: 0 rem(10) rem(30) rgba($color-ink, 0.08);
+	background: transparent;
 
 	@media (max-width: em($header-burger-breakpoint)) {
-		position: fixed;
-		top: rem(30);
-		left: rem($page-gutter);
-		right: rem($page-gutter);
+		position: relative;
+		top: auto;
+		right: auto;
+		left: auto;
 		z-index: $z-index-header + 2;
-		width: auto;
-		padding: rem(10) rem(14);
+		width: 100%;
+		padding: rem(9) 0;
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
-		top: rem(16);
-		left: rem($page-gutter-mobile);
-		right: rem($page-gutter-mobile);
+		padding: rem(8) 0;
 	}
 }
 
@@ -194,13 +184,13 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 
 	@media (max-width: em($header-burger-breakpoint)) {
 		position: fixed;
-		top: rem(108);
-		left: rem($page-gutter);
-		right: rem($page-gutter);
+		top: rem(66);
+		left: 0;
+		right: 0;
 		z-index: $z-index-header + 1;
 		display: flex;
 		width: auto;
-		max-height: calc(100dvh - rem(128));
+		max-height: calc(100dvh - rem(82));
 		box-sizing: border-box;
 		flex-direction: column;
 		align-items: flex-end;
@@ -213,8 +203,9 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 		pointer-events: none;
 		visibility: hidden;
 		background: $color-white;
-		border: rem(1) solid rgba($color-border, 0.9);
-		border-radius: rem(20);
+		border: 0;
+		border-bottom: rem(1) solid rgba($color-border, 0.9);
+		border-radius: 0;
 		box-shadow: 0 rem(22) rem(60) rgba($color-ink, 0.14);
 		opacity: 0;
 		transform: translateY(rem(-8));
@@ -225,10 +216,8 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
-		top: rem(94);
-		left: rem($page-gutter-mobile);
-		right: rem($page-gutter-mobile);
-		max-height: calc(100dvh - rem(110));
+		top: rem(64);
+		max-height: calc(100dvh - rem(76));
 	}
 }
 

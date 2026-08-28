@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { AiOutlineSearch } from "react-icons/ai";
 import { FaArrowDown, FaArrowRight, FaChevronDown } from "react-icons/fa";
 
@@ -63,6 +63,31 @@ export function ContentListControls({
     Boolean(searchDefaultValue) ||
     Object.values(hiddenInputs).some(Boolean) ||
     filters.some((filter) => filter.isActive && filter.id !== "all");
+
+  useEffect(() => {
+    const closeSortSelect = () => {
+      if (sortSelectRef.current) sortSelectRef.current.open = false;
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        sortSelectRef.current?.open &&
+        event.target instanceof Node &&
+        !sortSelectRef.current.contains(event.target)
+      ) {
+        closeSortSelect();
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeSortSelect();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   return (
     <Noindex>

@@ -333,7 +333,9 @@
 	width: 100%;
 	flex-wrap: wrap;
 	align-items: center;
+	justify-content: center;
 	gap: rem(12) rem(24);
+	text-align: center;
 	color: #c7dbe5;
 	font-size: rem(14);
 	line-height: rem(20);
@@ -341,6 +343,7 @@
 	@media (max-width: em($breakpoint-tablet)) {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+		justify-items: center;
 		gap: rem(12) rem(20);
 	}
 

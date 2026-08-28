@@ -1,9 +1,10 @@
 @use '../../../../../../styles/functions' as *;
 @use '../../../../../../styles/mixins' as *;
+@use '../../../../../../styles/vars' as *;
 
 .content {
 	display: grid;
-	width: min(100%, rem(1280));
+	width: min(100%, rem($container));
 	gap: rem(30);
 	margin: rem(40) auto 0;
 	padding-bottom: rem(12);

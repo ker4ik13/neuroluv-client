@@ -2,7 +2,7 @@
 @use '../../../styles/mixins' as *;
 @use '../../../styles/vars' as *;
 
-$sticky-sidebar-top: 112;
+$sticky-sidebar-top: 82;
 
 .page {
 	width: 100%;
@@ -213,6 +213,7 @@ $sticky-sidebar-top: 112;
 	width: rem(420);
 	height: auto;
 	flex: 0 0 rem(420);
+	margin-left: auto;
 	overflow: hidden;
 	aspect-ratio: var(--prompt-media-ratio, 1 / 1);
 	background: #f1f4f6;
@@ -248,6 +249,7 @@ $sticky-sidebar-top: 112;
 		width: 100%;
 		height: auto;
 		flex-basis: auto;
+		margin-left: 0;
 	}
 }
 

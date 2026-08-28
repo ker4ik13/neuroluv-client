@@ -2,20 +2,21 @@
 @use '../../../../../styles/mixins' as *;
 
 .workspace {
-	height: calc(100dvh - rem(132));
+	width: 100%;
+	height: calc(100dvh - rem(73));
 	min-height: rem(620);
 }
 
 @media (max-width: em(1160)) {
 	.workspace {
-		height: calc(100dvh - rem(118));
+		height: calc(100dvh - rem(73));
 		min-height: rem(560);
 	}
 }
 
 @media (max-width: em(767)) {
 	.workspace {
-		height: calc(100dvh - rem(102));
+		height: calc(100dvh - rem(65));
 		min-height: rem(520);
 	}
 }

@@ -1,8 +1,9 @@
 @use '../../../styles/functions' as *;
 @use '../../../styles/mixins' as *;
+@use '../../../styles/vars' as *;
 
 .page {
-	width: min(100%, rem(1240));
+	width: min(100%, rem($container));
 	margin: 0 auto;
 }
 
@@ -740,7 +741,7 @@
 }
 .studioAside {
 	position: sticky;
-	top: rem(112);
+	top: rem(82);
 	display: grid;
 	gap: rem(16);
 }
@@ -2262,7 +2263,7 @@
 .workAside,
 .shareAside {
 	position: sticky;
-	top: rem(112);
+	top: rem(82);
 	display: grid;
 	gap: rem(16);
 }

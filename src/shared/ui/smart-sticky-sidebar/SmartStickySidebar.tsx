@@ -9,7 +9,7 @@ import {
 } from "react";
 
 const DESKTOP_MEDIA_QUERY = "(min-width: 1025px)";
-const DEFAULT_TOP_OFFSET = 112;
+const DEFAULT_TOP_OFFSET = 82;
 const DEFAULT_BOTTOM_OFFSET = 20;
 
 type SmartStickyStyle = CSSProperties & {

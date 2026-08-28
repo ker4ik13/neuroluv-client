@@ -2260,6 +2260,9 @@ export function GenerationChatPage({
         return {
           value: family.key,
           label: family.label,
+          href: syncModelUrl
+            ? `/ai/create/${getCreatePathKind(kind)}/${getModelFamilyRouteSlug(family.label, kind)}`
+            : undefined,
           disabled: family.entries.every(({ model }) => !model.available),
           visual: (
             <AiModelLogo
@@ -2283,7 +2286,7 @@ export function GenerationChatPage({
             : {}),
         };
       }),
-    [isEnglish, modelFamilies],
+    [isEnglish, kind, modelFamilies, syncModelUrl],
   );
   const modelVersionOptions = useMemo<AiSelectOption<string>[]>(
     () => createModelVersionOptions(selectedModelFamily, isEnglish),

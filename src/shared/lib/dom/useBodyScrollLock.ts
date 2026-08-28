@@ -98,7 +98,18 @@ function isNavigationKeyTarget(
 	return (
 		target instanceof HTMLElement &&
 		NAVIGATION_KEYS.has(key) &&
-		Boolean(target.closest('[data-viewport-scroll-lock-navigation]'))
+		Boolean(
+			target.closest(
+				'[data-viewport-scroll-lock-navigation], [data-viewport-scroll-lock-scrollable]',
+			),
+		)
+	);
+}
+
+function isAllowedScrollTarget(target: EventTarget | null): boolean {
+	return (
+		target instanceof Element &&
+		Boolean(target.closest('[data-viewport-scroll-lock-scrollable]'))
 	);
 }
 
@@ -121,6 +132,10 @@ function lockViewportScroll(): () => void {
 	body.style.overscrollBehavior = 'none';
 
 	function preventScroll(event: Event) {
+		if (isAllowedScrollTarget(event.target)) {
+			return;
+		}
+
 		event.preventDefault();
 	}
 

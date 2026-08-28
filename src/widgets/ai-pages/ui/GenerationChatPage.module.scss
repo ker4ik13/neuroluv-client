@@ -2,8 +2,11 @@
 @use '../../../styles/mixins' as *;
 
 .workspacePage {
+	width: 100%;
+	max-width: none;
 	height: 100%;
 	min-height: 0;
+	margin: 0;
 	overflow: hidden;
 }
 
@@ -11,8 +14,7 @@
 	display: grid;
 	height: 100%;
 	min-height: 0;
-	grid-template-rows: auto minmax(0, 1fr);
-	gap: rem(8);
+	grid-template-rows: minmax(0, 1fr);
 	overflow: hidden;
 }
 
@@ -22,20 +24,7 @@
 }
 
 .compactHeader {
-	display: flex;
-	min-width: 0;
-	min-height: rem(34);
-	align-items: center;
-	gap: rem(9);
-
-	.compactTitle {
-		overflow: hidden;
-		margin: 0;
-		font-size: clamp(rem(18), 2vw, rem(22));
-		line-height: 1.15;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
+	display: none;
 }
 
 .compactBack {
@@ -70,9 +59,9 @@
 	display: grid;
 	height: 100%;
 	min-height: 0;
-	grid-template-columns: rem(218) minmax(0, 1fr) rem(326);
+	grid-template-columns: rem(280) minmax(0, 1fr) rem(360);
 	align-items: stretch;
-	gap: rem(16);
+	gap: 0;
 }
 
 .chat {
@@ -84,6 +73,10 @@
 	grid-template-rows: auto minmax(0, 1fr) auto;
 	overflow: hidden;
 	isolation: isolate;
+	background: var(--ai-surface);
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
 }
 
 .dropOverlay {
@@ -99,7 +92,8 @@
 	color: var(--ai-primary);
 	text-align: center;
 	background: color-mix(in srgb, var(--ai-surface) 92%, transparent);
-	border: rem(2) dashed color-mix(in srgb, var(--ai-primary) 62%, var(--ai-border));
+	border: rem(2) dashed
+		color-mix(in srgb, var(--ai-primary) 62%, var(--ai-border));
 	border-radius: rem(18);
 	box-shadow:
 		inset 0 0 0 rem(1) color-mix(in srgb, var(--ai-border) 72%, transparent),
@@ -148,6 +142,10 @@
 	gap: rem(13);
 	padding: rem(15);
 	overflow: hidden;
+	border: 0;
+	border-right: rem(1) solid var(--ai-border);
+	border-radius: 0;
+	box-shadow: none;
 }
 
 .historyHeading {
@@ -311,7 +309,8 @@
 
 	.historyItemRow:hover .historyTitleOverflowing > span,
 	.historyItemRow:focus-within .historyTitleOverflowing > span {
-		animation: history-title-marquee var(--history-title-duration) ease-in-out 300ms infinite alternate;
+		animation: history-title-marquee var(--history-title-duration) ease-in-out
+			300ms infinite alternate;
 	}
 
 	.historyDeleteButton {
@@ -1680,6 +1679,10 @@
 	overscroll-behavior-y: contain;
 	scrollbar-gutter: stable;
 	scrollbar-width: thin;
+	border: 0;
+	border-left: rem(1) solid var(--ai-border);
+	border-radius: 0;
+	box-shadow: none;
 }
 
 .settingsHeading {
@@ -2028,8 +2031,7 @@
 
 @media (max-width: em(1180)) {
 	.layout {
-		grid-template-columns: rem(196) minmax(0, 1fr) rem(300);
-		gap: rem(13);
+		grid-template-columns: rem(248) minmax(0, 1fr) rem(320);
 	}
 
 	.composerShortcutHint {
@@ -2039,7 +2041,7 @@
 
 @media (max-width: em(1020)) {
 	.layout {
-		grid-template-columns: minmax(0, 1fr) rem(310);
+		grid-template-columns: minmax(0, 1fr) rem(320);
 	}
 
 	.mobileHistoryButton {
@@ -2048,7 +2050,7 @@
 
 	.historyBackdrop {
 		position: fixed;
-		inset: rem(108) 0 0;
+		inset: rem(72) 0 0;
 		z-index: 78;
 		display: block;
 		width: 100%;
@@ -2059,13 +2061,13 @@
 
 	.history {
 		position: fixed;
-		top: rem(108);
-		bottom: rem(8);
+		top: rem(72);
+		bottom: 0;
 		left: 0;
 		z-index: 80;
 		display: block;
 		width: min(rem(350), calc(100vw - rem(28)));
-		padding: rem(8) rem(12) 0;
+		padding: 0;
 		visibility: hidden;
 		opacity: 0;
 		transform: translateX(-100%);
@@ -2084,7 +2086,9 @@
 	.historyCard {
 		height: 100%;
 		min-height: 0;
-		border-radius: rem(20);
+		border: 0;
+		border-right: rem(1) solid var(--ai-border);
+		border-radius: 0;
 		box-shadow: 0 rem(28) rem(80) rgba(8, 26, 40, 0.25);
 	}
 
@@ -2109,7 +2113,7 @@
 
 	.settingsBackdrop {
 		position: fixed;
-		inset: rem(108) 0 0;
+		inset: rem(72) 0 0;
 		z-index: 78;
 		display: block;
 		width: 100%;
@@ -2120,13 +2124,13 @@
 
 	.settings {
 		position: fixed;
-		top: rem(108);
+		top: rem(72);
 		right: 0;
-		bottom: rem(8);
+		bottom: 0;
 		z-index: 80;
 		display: block;
 		width: min(rem(390), calc(100vw - rem(28)));
-		padding: rem(8) rem(12) 0;
+		padding: 0;
 		overflow: hidden;
 		visibility: hidden;
 		opacity: 0;
@@ -2147,7 +2151,9 @@
 		height: 100%;
 		min-height: 0;
 		align-content: start;
-		border-radius: rem(20);
+		border: 0;
+		border-left: rem(1) solid var(--ai-border);
+		border-radius: 0;
 		box-shadow: 0 rem(28) rem(80) rgba(8, 26, 40, 0.25);
 	}
 
@@ -2168,7 +2174,7 @@
 		min-height: 0;
 		border-right: 0;
 		border-left: 0;
-		border-radius: rem(16);
+		border-radius: 0;
 	}
 
 	.chatToolbar {
@@ -2228,12 +2234,12 @@
 @media (max-width: em(480)) {
 	.historyBackdrop,
 	.settingsBackdrop {
-		inset: rem(94) 0 0;
+		inset: rem(64) 0 0;
 	}
 
 	.history,
 	.settings {
-		top: rem(94);
+		top: rem(64);
 	}
 }
 
