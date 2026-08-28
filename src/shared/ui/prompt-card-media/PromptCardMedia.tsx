@@ -146,6 +146,7 @@ export function PromptCardMedia({
   const playVideo = () => {
     if (mode === "detail" || autoPlay) return;
     const video = rootRef.current?.querySelector("video");
+    if (video) video.muted = true;
     void video?.play().catch(() => undefined);
   };
 
@@ -258,7 +259,13 @@ export function PromptCardMedia({
             <div aria-label="Просмотр медиа на весь экран" aria-modal="true" className={styles.fullscreen} role="dialog" onClick={() => setFullscreen(false)}>
               <button aria-label="Закрыть" className={styles.fullscreenClose} onClick={() => setFullscreen(false)} type="button"><FaXmark /></button>
               {isVideo(normalizedItems[currentIndex]) ? (
-                <video autoPlay controls playsInline src={normalizedItems[currentIndex].url} />
+                <video
+                  autoPlay
+                  controls
+                  muted
+                  playsInline
+                  src={normalizedItems[currentIndex].url}
+                />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element -- original Directus asset in fullscreen.
                 <img alt={normalizedItems[currentIndex].title || alt} onClick={(event) => event.stopPropagation()} src={normalizedItems[currentIndex].url} />

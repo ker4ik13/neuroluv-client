@@ -222,7 +222,7 @@ function PublicResult({ share }: { share: AiPublicShare }) {
     return <div className={styles.deletedResult}><FiImage aria-hidden="true" /><h2>{t("Файл недоступен", "File unavailable")}</h2></div>;
   }
   if (share.modality === "video" && share.outputUrl) {
-    return <video controls playsInline preload="metadata" src={share.outputUrl} />;
+    return <video controls muted playsInline preload="metadata" src={share.outputUrl} />;
   }
   if (share.modality === "text" && share.textContent) {
     return <div className={styles.textResult}><p>{share.textContent}</p></div>;

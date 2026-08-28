@@ -496,6 +496,7 @@ function WorkVideoPreview({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting && entry.intersectionRatio >= 0.65) {
+          video.muted = true;
           void video.play().catch(() => undefined);
         } else {
           video.pause();
@@ -520,6 +521,7 @@ function WorkVideoPreview({
       src={withFirstFrameFragment(src)}
       onPointerEnter={(event) => {
         if (window.matchMedia("(hover: hover)").matches) {
+          event.currentTarget.muted = true;
           void event.currentTarget.play().catch(() => undefined);
         }
       }}

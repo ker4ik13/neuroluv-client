@@ -183,7 +183,7 @@ function ContentBlockView({
       <figure className={styles.videoBlock}>
         {block.title && <h2 id={headingId}>{block.title}</h2>}
         {block.video ? (
-          <video controls playsInline preload="metadata" src={block.video.url} />
+          <video controls muted playsInline preload="metadata" src={block.video.url} />
         ) : (
           <a href={block.videoUrl || "#"} rel="noreferrer" target="_blank">
             Смотреть видео

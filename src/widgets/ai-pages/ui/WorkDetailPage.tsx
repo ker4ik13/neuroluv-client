@@ -438,7 +438,7 @@ function WorkResult({ work, output }: { work: AiWorkDetail; output: AiWorkOutput
   }
 
   if (outputType === "video" && outputUrl) {
-    return <video controls playsInline preload="metadata" src={outputUrl} />;
+    return <video controls muted playsInline preload="metadata" src={outputUrl} />;
   }
 
   if (outputType === "text" && text) {

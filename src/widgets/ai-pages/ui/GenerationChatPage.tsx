@@ -3809,6 +3809,7 @@ function ChatVideoOutput({
       <video
         className={styles.videoOutput}
         controls
+        muted
         playsInline
         preload="metadata"
         src={url}
