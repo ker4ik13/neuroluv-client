@@ -107,9 +107,17 @@ function isNavigationKeyTarget(
 }
 
 function isAllowedScrollTarget(target: EventTarget | null): boolean {
+	if (!(target instanceof Element)) {
+		return false;
+	}
+
+	const scrollContainer = target.closest(
+		'[data-viewport-scroll-lock-scrollable]',
+	);
+
 	return (
-		target instanceof Element &&
-		Boolean(target.closest('[data-viewport-scroll-lock-scrollable]'))
+		scrollContainer instanceof HTMLElement &&
+		scrollContainer.scrollHeight > scrollContainer.clientHeight
 	);
 }
 

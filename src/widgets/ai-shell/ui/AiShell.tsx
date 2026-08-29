@@ -108,7 +108,6 @@ function AiShellContent({
 	navigation,
 }: AiShellContentProps) {
 	const pathname = usePathname();
-	const headerRef = useRef<HTMLElement>(null);
 	const { isEnglish, locale, t } = useAiLocale();
 	const { session, isLoading } = useAiSession();
 	const [desktopValue, setDesktopValue] = useState('');
@@ -186,28 +185,12 @@ function AiShellContent({
 			setMobileSectionId(null);
 		}
 
-		function handlePointerDown(event: PointerEvent) {
-			if (!isMenuOpen) return;
-			const target = event.target;
-
-			if (
-				target instanceof Node &&
-				headerRef.current &&
-				!headerRef.current.contains(target)
-			) {
-				setIsMenuOpen(false);
-				setMobileSectionId(null);
-			}
-		}
-
 		document.addEventListener('keydown', handleEscape);
-		document.addEventListener('pointerdown', handlePointerDown);
 
 		return () => {
 			document.removeEventListener('keydown', handleEscape);
-			document.removeEventListener('pointerdown', handlePointerDown);
 		};
-	}, [isMenuOpen]);
+	}, []);
 
 	const normalizedProvidedNavigation = useMemo(
 		() => normalizeDirectusNavigation(navigation || []),
@@ -243,7 +226,7 @@ function AiShellContent({
 		<div
 			className={`${styles.app} ${isChatWorkspace ? styles.appChatWorkspace : ''}`}
 		>
-			<header className={styles.header} ref={headerRef}>
+			<header className={styles.header}>
 				<Container className={styles.headerContainer}>
 					<div className={styles.headerInner}>
 						<Link
@@ -414,7 +397,11 @@ function AiShellContent({
 					className={`${styles.menuBackdrop} ${isNavigationOpen ? styles.menuBackdropOpen : ''}`}
 					disabled={!isNavigationOpen}
 					type='button'
-					onClick={closeNavigation}
+					onClick={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						closeNavigation();
+					}}
 				/>
 			</header>
 

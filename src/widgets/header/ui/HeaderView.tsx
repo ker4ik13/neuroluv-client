@@ -28,7 +28,6 @@ type HeaderViewProps = {
 
 export function HeaderView({ navigation }: HeaderViewProps) {
 	const pathname = usePathname();
-	const headerRef = useRef<HTMLDivElement>(null);
 	const [desktopValue, setDesktopValue] = useState('');
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [mobileSectionId, setMobileSectionId] = useState<number | null>(null);
@@ -47,31 +46,12 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 			setMobileSectionId(null);
 		}
 
-		function handlePointerDown(event: PointerEvent) {
-			if (!isMobileMenuOpen) {
-				return;
-			}
-
-			const target = event.target;
-
-			if (
-				target instanceof Node &&
-				headerRef.current &&
-				!headerRef.current.contains(target)
-			) {
-				setIsMobileMenuOpen(false);
-				setMobileSectionId(null);
-			}
-		}
-
 		document.addEventListener('keydown', handleEscape);
-		document.addEventListener('pointerdown', handlePointerDown);
 
 		return () => {
 			document.removeEventListener('keydown', handleEscape);
-			document.removeEventListener('pointerdown', handlePointerDown);
 		};
-	}, [isMobileMenuOpen]);
+	}, []);
 
 	function closeNavigation() {
 		setDesktopValue('');
@@ -82,7 +62,7 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 	return (
 		<header className={styles.header}>
 			<Container className={styles.container}>
-				<div className={styles.inner} ref={headerRef}>
+				<div className={styles.inner}>
 					<Link
 						aria-label='На главную'
 						className={styles.logo}
@@ -146,7 +126,11 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 				className={`${styles.menuBackdrop} ${isNavigationOpen ? styles.menuBackdropOpen : ''}`}
 				disabled={!isNavigationOpen}
 				type='button'
-				onClick={closeNavigation}
+				onClick={(event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					closeNavigation();
+				}}
 			/>
 		</header>
 	);

@@ -115,6 +115,7 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	background: rgba(3, 10, 16, 0.2);
 	border: 0;
 	opacity: 0;
+	touch-action: none;
 	cursor: default;
 	transition:
 		opacity 180ms $menu-easing,
@@ -855,8 +856,6 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 		border: 0;
 		border-bottom: rem(1) solid var(--ai-border);
 		border-radius: 0;
-		box-shadow: 0 rem(22) rem(60)
-			color-mix(in srgb, var(--ai-text) 16%, transparent);
 		opacity: 0;
 		transform: translateY(rem(-8));
 		transition:
