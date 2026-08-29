@@ -12,18 +12,9 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	z-index: $z-index-header;
 	width: 100%;
 	margin: 0 auto;
-	background: transparent;
+	background: $color-white;
 	border-bottom: rem(1) solid rgba($color-border, 0.9);
 	box-shadow: 0 rem(6) rem(22) rgba($color-ink, 0.06);
-
-	&::before {
-		position: absolute;
-		inset: 0;
-		z-index: 0;
-		pointer-events: none;
-		background: rgba($color-white, 0.98);
-		content: '';
-	}
 
 	@media (max-width: em($header-burger-breakpoint)) {
 		min-height: rem(66);
