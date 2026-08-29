@@ -1,4 +1,4 @@
-const ATTRIBUTION_QUERY_PARAMETERS = new Set([
+export const ATTRIBUTION_QUERY_PARAMETER_NAMES = [
 	'_openstat',
 	'dclid',
 	'fbclid',
@@ -13,13 +13,46 @@ const ATTRIBUTION_QUERY_PARAMETERS = new Set([
 	'yqrid',
 	'ysclid',
 	'yzclid',
-]);
+] as const;
 
-const ANALYTICS_DIAGNOSTIC_QUERY_PARAMETERS = new Set([
+export const ANALYTICS_DIAGNOSTIC_QUERY_PARAMETER_NAMES = [
 	'_ym_debug',
 	'_ym_lang',
 	'_ym_status-check',
-]);
+] as const;
+
+// Public catalog state that represents a meaningful virtual pageview. Keep
+// authentication, billing and private account parameters out of analytics.
+export const METRIKA_ROUTE_QUERY_PARAMETER_NAMES = [
+	'category',
+	'collection',
+	'favorite',
+	'favorites',
+	'goal',
+	'kind',
+	'modal',
+	'modality',
+	'model',
+	'network',
+	'page',
+	'q',
+	'search',
+	'sort',
+	'status',
+	'tag',
+	'topic',
+	'type',
+] as const;
+
+const ATTRIBUTION_QUERY_PARAMETERS = new Set<string>(
+	ATTRIBUTION_QUERY_PARAMETER_NAMES,
+);
+const ANALYTICS_DIAGNOSTIC_QUERY_PARAMETERS = new Set<string>(
+	ANALYTICS_DIAGNOSTIC_QUERY_PARAMETER_NAMES,
+);
+const METRIKA_ROUTE_QUERY_PARAMETERS = new Set<string>(
+	METRIKA_ROUTE_QUERY_PARAMETER_NAMES,
+);
 
 export function isAttributionQueryParameter(name: string): boolean {
 	const normalizedName = name.toLowerCase();
@@ -38,6 +71,15 @@ export function shouldPreserveAnalyticsQueryParameter(name: string): boolean {
 	);
 }
 
+export function shouldTrackMetrikaQueryParameter(name: string): boolean {
+	const normalizedName = name.toLowerCase();
+
+	return (
+		shouldPreserveAnalyticsQueryParameter(normalizedName) ||
+		METRIKA_ROUTE_QUERY_PARAMETERS.has(normalizedName)
+	);
+}
+
 export function getAnalyticsSearchParams(
 	search: string | URLSearchParams,
 ): URLSearchParams {
@@ -47,6 +89,22 @@ export function getAnalyticsSearchParams(
 
 	source.forEach((value, key) => {
 		if (shouldPreserveAnalyticsQueryParameter(key)) {
+			result.append(key, value);
+		}
+	});
+
+	return result;
+}
+
+export function getMetrikaSearchParams(
+	search: string | URLSearchParams,
+): URLSearchParams {
+	const source =
+		typeof search === 'string' ? new URLSearchParams(search) : search;
+	const result = new URLSearchParams();
+
+	source.forEach((value, key) => {
+		if (shouldTrackMetrikaQueryParameter(key)) {
 			result.append(key, value);
 		}
 	});
@@ -105,6 +163,21 @@ export function buildAttributionUrl(
 	const url = new URL(normalizedPathname || '/', origin);
 
 	url.search = getAnalyticsSearchParams(search).toString();
+
+	return url.href;
+}
+
+export function buildMetrikaUrl(
+	origin: string,
+	pathname: string,
+	search: string | URLSearchParams,
+): string {
+	const normalizedPathname = pathname.startsWith('/')
+		? pathname
+		: `/${pathname}`;
+	const url = new URL(normalizedPathname || '/', origin);
+
+	url.search = getMetrikaSearchParams(search).toString();
 
 	return url.href;
 }

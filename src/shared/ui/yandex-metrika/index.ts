@@ -1,1 +1,1 @@
-export { YandexMetrika } from "./YandexMetrika";
+export { YandexMetrika, YandexMetrikaHead } from "./YandexMetrika";
