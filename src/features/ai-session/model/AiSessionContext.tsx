@@ -9,8 +9,28 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  AiApiError,
+  aiApiFetch,
+  type AiSession,
+  type AiTelegramMiniAppAuth,
+  clearAiCsrfToken,
+} from "@/shared/api/ai";
 
-import { AiApiError, aiApiFetch, type AiSession } from "@/shared/api/ai";
+const TELEGRAM_SDK_READY_EVENT = "neuroluv:telegram-sdk-ready";
+const TELEGRAM_SDK_WAIT_MS = 2_500;
+
+type TelegramWebApp = {
+  initData?: string;
+  ready?: () => void;
+  expand?: () => void;
+};
+
+declare global {
+  interface Window {
+    Telegram?: { WebApp?: TelegramWebApp };
+  }
+}
 
 type AiSessionContextValue = {
   session: AiSession;
@@ -44,8 +64,30 @@ export function AiSessionProvider({ children }: { children: React.ReactNode }) {
       try {
         setSession(await aiApiFetch<AiSession>("/auth/me"));
       } catch (requestError) {
-        if (requestError instanceof AiApiError && requestError.problem.status === 401) {
-          setSession(GUEST_SESSION);
+        if (
+          requestError instanceof AiApiError &&
+          requestError.problem.status === 401
+        ) {
+          try {
+            const miniAppResult = await authenticateTelegramMiniApp();
+            if (miniAppResult?.registrationRequired) {
+              window.location.replace(miniAppResult.registrationUrl);
+              return;
+            }
+            if (miniAppResult?.authenticated) {
+              clearAiCsrfToken();
+              setSession(miniAppResult);
+            } else {
+              setSession(GUEST_SESSION);
+            }
+          } catch (miniAppError) {
+            setSession(GUEST_SESSION);
+            setError(
+              miniAppError instanceof Error
+                ? miniAppError.message
+                : "Не удалось войти через Telegram Mini App",
+            );
+          }
         } else {
           setError(
             requestError instanceof Error
@@ -80,6 +122,51 @@ export function AiSessionProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AiSessionContext.Provider>
   );
+}
+
+async function authenticateTelegramMiniApp(): Promise<AiTelegramMiniAppAuth | null> {
+  if (window.location.pathname === "/ai/auth/telegram-complete") return null;
+
+  const webApp = await waitForTelegramWebApp();
+  const initData = webApp?.initData?.trim();
+  if (!webApp || !initData) return null;
+
+  try {
+    webApp.ready?.();
+    webApp.expand?.();
+  } catch {
+    // Authentication relies on signed initData; viewport helpers are optional.
+  }
+
+  const returnTo = `${window.location.pathname}${window.location.search}`;
+  return aiApiFetch<AiTelegramMiniAppAuth>("/auth/telegram/mini-app", {
+    method: "POST",
+    body: { initData, returnTo },
+    csrf: false,
+  });
+}
+
+function waitForTelegramWebApp(): Promise<TelegramWebApp | null> {
+  const current = window.Telegram?.WebApp;
+  if (current) return Promise.resolve(current);
+  const launchParameters = `${window.location.search}&${window.location.hash}`;
+  if (!launchParameters.includes("tgWebAppData")) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      window.removeEventListener(TELEGRAM_SDK_READY_EVENT, handleReady);
+      resolve(window.Telegram?.WebApp || null);
+    };
+    const handleReady = () => finish();
+    const timeout = window.setTimeout(finish, TELEGRAM_SDK_WAIT_MS);
+    window.addEventListener(TELEGRAM_SDK_READY_EVENT, handleReady, {
+      once: true,
+    });
+  });
 }
 
 export function useAiSession(): AiSessionContextValue {

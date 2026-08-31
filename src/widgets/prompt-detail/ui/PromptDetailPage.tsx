@@ -4,10 +4,11 @@ import { BsStars } from "react-icons/bs";
 import { FaArrowRight, FaTelegram } from "react-icons/fa";
 import { FaVk } from "react-icons/fa6";
 
-import type {
-  PromptContentBlock,
-  PromptDetail,
-  PromptItem,
+import {
+  PromptCard,
+  type PromptContentBlock,
+  type PromptDetail,
+  type PromptItem,
 } from "@/entities/prompt";
 import { SHARE_SITE_URL } from "@/shared/config/site";
 import {
@@ -171,7 +172,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
           </div>
           <div className={styles.relatedGrid}>
             {related.slice(0, 6).map((prompt, index) => (
-              <RelatedPromptCard
+              <PromptCard
                 key={`related-prompt-${prompt.id}-${index}`}
                 prompt={prompt}
               />
@@ -286,33 +287,6 @@ function PromptAuthorCard({
         </div>
       </div>
     </AuthorCard>
-  );
-}
-
-function RelatedPromptCard({ prompt }: { prompt: PromptItem }) {
-  return (
-    <article className={styles.relatedCard}>
-      <PromptCardMedia
-        alt={prompt.image ? getImageAlt(prompt.image.title, prompt.title) : prompt.title}
-        autoPlay={prompt.autoplay}
-        className={styles.relatedImage}
-        href={prompt.href}
-        image={prompt.image}
-        images={prompt.images}
-        sizes="(max-width: 768px) 100vw, 386px"
-      >
-        <span>{prompt.contentKind?.title || prompt.types[0]?.title || "Фото"}</span>
-      </PromptCardMedia>
-      <Link className={styles.relatedCardContent} href={prompt.href}>
-        <span className={styles.relatedBadges}>
-          {(prompt.contentKind || prompt.types[0]) && (
-            <small>{(prompt.contentKind || prompt.types[0])?.title}</small>
-          )}
-          {prompt.neuralNetwork && <small>{prompt.neuralNetwork.title}</small>}
-        </span>
-        <strong>{prompt.title}</strong>
-      </Link>
-    </article>
   );
 }
 

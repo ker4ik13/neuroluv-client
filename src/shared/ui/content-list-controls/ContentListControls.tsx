@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef } from "react";
 import { AiOutlineSearch } from "react-icons/ai";
-import { FaArrowDown, FaArrowRight, FaChevronDown } from "react-icons/fa";
+import { FaArrowDown, FaChevronDown } from "react-icons/fa";
 
 import { Noindex } from "@/shared/ui/noindex";
 
@@ -33,6 +33,7 @@ type ContentListControlsProps = {
     icon?: ReactNode;
     label: string;
   };
+  mobileFilter?: ReactNode;
   resultLabel?: string;
   resetHref: string;
   searchDefaultValue?: string | null;
@@ -47,6 +48,7 @@ export function ContentListControls({
   hasActiveExternalFilters = false,
   hiddenInputs = {},
   leadingLink,
+  mobileFilter,
   resultLabel,
   resetHref,
   searchDefaultValue,
@@ -92,9 +94,27 @@ export function ContentListControls({
   return (
     <Noindex>
       <section className={styles.controls} data-nosnippet="true">
+        {(leadingLink || mobileFilter) && (
+          <div className={styles.mobileTopActions}>
+            {leadingLink && (
+              <Link
+                className={`${styles.leadingLink} ${styles.mobileLeadingLink}`}
+                href={leadingLink.href}
+              >
+                {leadingLink.icon}
+                {leadingLink.label}
+              </Link>
+            )}
+            {mobileFilter}
+          </div>
+        )}
+
         <div className={styles.searchRow}>
           {leadingLink && (
-            <Link className={styles.leadingLink} href={leadingLink.href}>
+            <Link
+              className={`${styles.leadingLink} ${styles.desktopLeadingLink}`}
+              href={leadingLink.href}
+            >
               {leadingLink.icon}
               {leadingLink.label}
             </Link>
@@ -102,7 +122,6 @@ export function ContentListControls({
 
           <form action={action} className={styles.searchForm}>
             <span className={styles.searchField}>
-              <AiOutlineSearch aria-hidden="true" className={styles.searchIcon} />
               <input
                 aria-label={searchLabel}
                 defaultValue={searchDefaultValue || ""}
@@ -120,7 +139,7 @@ export function ContentListControls({
 
             <button type="submit">
               Найти
-              <FaArrowRight aria-hidden="true" />
+              <AiOutlineSearch aria-hidden="true" />
             </button>
           </form>
         </div>
@@ -145,10 +164,24 @@ export function ContentListControls({
           {resultLabel && <p className={styles.resultLabel}>{resultLabel}</p>}
 
           <div className={styles.actions}>
+            {hasActiveFilters ? (
+              <Link className={styles.resetButton} href={resetHref}>
+                Сбросить
+              </Link>
+            ) : (
+              <button
+                className={styles.resetButton}
+                disabled
+                type="button"
+              >
+                Сбросить
+              </button>
+            )}
+
             <details className={styles.sortSelect} ref={sortSelectRef}>
               <summary>
                 <span>
-                  Сортировка: {activeSort.label}
+                  {activeSort.label}
                   <FaArrowDown
                     aria-hidden="true"
                     className={`${styles.sortDirection} ${
@@ -179,12 +212,6 @@ export function ContentListControls({
                 ))}
               </div>
             </details>
-
-            {hasActiveFilters && (
-              <Link className={styles.resetButton} href={resetHref}>
-                Сбросить фильтры
-              </Link>
-            )}
           </div>
         </div>
       </section>

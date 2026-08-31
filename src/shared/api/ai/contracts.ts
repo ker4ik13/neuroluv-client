@@ -72,6 +72,19 @@ export type AiTelegramRegistrationResult = AiSession & {
 	returnTo: string;
 };
 
+export type AiTelegramMiniAppAuth =
+	| (AiSession & {
+			csrfToken: string;
+			registrationRequired: false;
+			returnTo: string;
+	  })
+	| {
+			authenticated: false;
+			registrationRequired: true;
+			registrationUrl: string;
+			returnTo: string;
+	  };
+
 export type AiModelModality = 'text' | 'image' | 'video' | 'vision';
 
 export type AiModelCapabilities = {
@@ -313,7 +326,11 @@ export type AiPromptCard = {
 	media?: AiPromptMedia[];
 	buttons?: AiPromptButton[];
 	modality: AiModelModality;
+	modelIds?: string[];
 	modelNames: string[];
+	aspectRatio?: string | null;
+	difficulty?: string | null;
+	difficultyLabel?: string | null;
 	category?: string | null;
 	access: 'free' | 'subscription';
 	favorite: boolean;
@@ -580,6 +597,7 @@ export type AiUserProfile = {
 	preferences?: {
 		theme?: 'system' | 'light' | 'dark' | null;
 		browserNotifications?: boolean | null;
+		telegramNotifications?: boolean | null;
 	};
 	authMethods: {
 		emailPassword: boolean;

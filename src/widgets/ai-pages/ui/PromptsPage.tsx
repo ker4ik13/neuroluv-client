@@ -15,9 +15,9 @@ import {
   FiBookmark,
   FiImage,
   FiSearch,
-  FiX,
+  FiSmartphone,
 } from "react-icons/fi";
-
+import { GiBiceps } from "react-icons/gi";
 import { useAiLocale } from "@/features/ai-locale";
 import { useAiSession } from "@/features/ai-session";
 import {
@@ -26,14 +26,14 @@ import {
   type AiPromptCatalog,
   type AiPublicModel,
 } from "@/shared/api/ai";
-import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
+import { MobileFilterSheet } from "@/shared/ui/mobile-filter-sheet";
 import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
-
+import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 import { getAiErrorMessage, toQueryString, useAiResource } from "../model/api";
-import { AiButton, AiPage, AsyncState, FieldMessage } from "./AiUi";
 import { AiModelLogo } from "./AiModelLogo";
-import { AiSelect } from "./AiSelect";
 import styles from "./AiPages.module.scss";
+import { AiSelect } from "./AiSelect";
+import { AiButton, AiPage, AsyncState, FieldMessage } from "./AiUi";
 
 type PromptFilters = {
   search: string;
@@ -65,7 +65,9 @@ export function PromptsPage({
   const { isEnglish, t } = useAiLocale();
   const [filters, setFilters] = useState<PromptFilters>(INITIAL_FILTERS);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
+  const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(
+    null,
+  );
   const [promptCatalog, setPromptCatalog] = useState<AiPromptCatalog | null>(
     initialCatalog,
   );
@@ -86,8 +88,16 @@ export function PromptsPage({
   const models = useAiResource<AiPublicModel[]>("/catalog/models");
   const availableModels = useMemo(() => {
     const modelIds = new Set(promptCatalog?.filters?.modelIds || []);
-    return models.data?.filter((model) => model.available && modelIds.has(model.id)) || [];
+    return (
+      models.data?.filter(
+        (model) => model.available && modelIds.has(model.id),
+      ) || []
+    );
   }, [models.data, promptCatalog?.filters?.modelIds]);
+  const modelById = useMemo(
+    () => new Map((models.data || []).map((model) => [model.id, model])),
+    [models.data],
+  );
 
   function updateFilters(patch: Partial<PromptFilters>) {
     const next = { ...filters, ...patch };
@@ -106,13 +116,17 @@ export function PromptsPage({
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const value = String(new FormData(event.currentTarget).get("search") || "").trim();
+    const value = String(
+      new FormData(event.currentTarget).get("search") || "",
+    ).trim();
     updateFilters({ search: value });
   }
 
   function toggleFavoritesFilter() {
     if (!session.authenticated) {
-      router.push(`/ai/auth?returnTo=${encodeURIComponent("/ai/prompts?favorites=1")}`);
+      router.push(
+        `/ai/auth?returnTo=${encodeURIComponent("/ai/prompts?favorites=1")}`,
+      );
       return;
     }
 
@@ -195,7 +209,9 @@ export function PromptsPage({
       setPromptCatalog((current) => {
         if (!current || current.page >= nextCatalog.page) return current;
 
-        const prompts = new Map(current.data.map((prompt) => [prompt.id, prompt]));
+        const prompts = new Map(
+          current.data.map((prompt) => [prompt.id, prompt]),
+        );
         nextCatalog.data.forEach((prompt) => prompts.set(prompt.id, prompt));
 
         return {
@@ -253,7 +269,9 @@ export function PromptsPage({
           ? {
               ...current,
               data: current.data.map((item) =>
-                item.id === prompt.id ? { ...item, favorite: !item.favorite } : item,
+                item.id === prompt.id
+                  ? { ...item, favorite: !item.favorite }
+                  : item,
               ),
             }
           : current,
@@ -267,10 +285,77 @@ export function PromptsPage({
 
   const hasActiveFilters = Boolean(
     filters.search ||
-      filters.modality ||
-      filters.modelId ||
-      filters.category ||
-      filters.favoritesOnly,
+    filters.modality ||
+    filters.modelId ||
+    filters.category ||
+    filters.favoritesOnly ||
+    filters.sort !== INITIAL_FILTERS.sort,
+  );
+
+  const sidebarContent = (
+    <>
+      <SidebarPanel title={t("Тип контента", "Content type")}>
+        <SidebarOptions
+          activeValue={filters.modality}
+          options={[
+            { value: "", label: t("Все", "All") },
+            { value: "image", label: t("Фото", "Image") },
+            { value: "video", label: t("Видео", "Video") },
+            { value: "text", label: t("Текст", "Text") },
+          ]}
+          onChange={(modality) => updateFilters({ modality })}
+        />
+      </SidebarPanel>
+
+      {promptCatalog?.filters?.categories?.length ? (
+        <SidebarPanel title={t("Цель промпта", "Prompt goal")}>
+          <SidebarOptions
+            activeValue={filters.category}
+            options={[
+              { value: "", label: t("Все цели", "All goals") },
+              ...promptCatalog.filters.categories,
+            ]}
+            onChange={(category) => updateFilters({ category })}
+          />
+        </SidebarPanel>
+      ) : null}
+
+      {availableModels.length ? (
+        <SidebarPanel title={t("Нейросети", "AI models")}>
+          <div className={styles.promptModelCloud}>
+            <button
+              className={!filters.modelId ? styles.promptFilterChipActive : ""}
+              data-mobile-filter-action
+              type='button'
+              onClick={() => updateFilters({ modelId: "" })}
+            >
+              {t("Все", "All")}
+            </button>
+            {availableModels.map((model) => (
+              <button
+                className={
+                  filters.modelId === model.id
+                    ? styles.promptFilterChipActive
+                    : ""
+                }
+                data-mobile-filter-action
+                key={model.id}
+                type='button'
+                onClick={() =>
+                  updateFilters({
+                    modelId: filters.modelId === model.id ? "" : model.id,
+                  })
+                }
+              >
+                <AiModelLogo label={model.name} logoUrl={model.logoUrl} />
+                <span>{model.name}</span>
+              </button>
+            ))}
+          </div>
+        </SidebarPanel>
+      ) : null}
+
+    </>
   );
 
   return (
@@ -287,62 +372,106 @@ export function PromptsPage({
         </div>
         {promptCatalog ? (
           <span>
-            {promptCatalog.total} {promptCountWord(promptCatalog.total, isEnglish)}
+            {promptCatalog.total}{" "}
+            {promptCountWord(promptCatalog.total, isEnglish)}
           </span>
         ) : null}
       </header>
 
       <div className={styles.promptCatalogLayout}>
+        <MobileFilterSheet
+          closeOnActionSelector='[data-mobile-filter-action]'
+          label={t("Фильтры", "Filters")}
+          title={t("Фильтры промптов", "Prompt filters")}
+          tone='ai'
+        >
+          {sidebarContent}
+        </MobileFilterSheet>
+
         <div className={styles.promptCatalogMain}>
           <div className={styles.promptCatalogControls}>
-            <form className={styles.searchForm} onSubmit={handleSearch}>
-              <label className={styles.searchField}>
-                <FiSearch aria-hidden="true" />
+            <form
+              className={`${styles.searchForm} ${styles.promptCatalogSearchForm}`}
+              onSubmit={handleSearch}
+            >
+              <label
+                className={`${styles.searchField} ${styles.promptCatalogSearchField}`}
+              >
                 <span className={styles.visuallyHidden}>
                   {t("Поиск по промптам", "Search prompts")}
                 </span>
                 <input
                   defaultValue={filters.search}
                   key={filters.search}
-                  name="search"
+                  name='search'
                   placeholder={t(
                     "Поиск по промптам, стилям и задачам...",
                     "Search prompts, styles and tasks...",
                   )}
-                  type="search"
+                  type='search'
                 />
               </label>
-              <AiButton type="submit">{t("Найти", "Search")}</AiButton>
+              <AiButton type='submit'>
+                {t("Найти", "Search")}
+                <FiSearch aria-hidden='true' />
+              </AiButton>
             </form>
 
             <div className={styles.promptCatalogControlActions}>
-              <AiSelect
-                className={styles.promptSortSelect}
-                compact
-                id="prompt-sort"
-                options={[
-                  { value: "newest", label: t("Сначала новые", "Newest first") },
-                  { value: "popular", label: t("Популярные", "Popular") },
-                  { value: "title", label: t("По названию", "By title") },
-                ]}
-                value={filters.sort}
-                onChange={(sort) => updateFilters({ sort: normalizePromptSort(sort) })}
-              />
+              <AiButton
+                className={styles.promptToolbarReset}
+                disabled={!hasActiveFilters}
+                type='button'
+                variant='secondary'
+                onClick={() => updateFilters(INITIAL_FILTERS)}
+              >
+                {t("Сбросить", "Reset")}
+              </AiButton>
               <AiButton
                 aria-pressed={filters.favoritesOnly}
                 className={`${styles.promptFavoritesFilter} ${
-                  filters.favoritesOnly ? styles.promptFavoritesFilterActive : ""
+                  filters.favoritesOnly
+                    ? styles.promptFavoritesFilterActive
+                    : ""
                 }`}
-                type="button"
-                variant="secondary"
+                type='button'
+                variant='secondary'
                 onClick={toggleFavoritesFilter}
               >
                 <FiBookmark
-                  aria-hidden="true"
+                  aria-hidden='true'
                   fill={filters.favoritesOnly ? "currentColor" : "none"}
                 />
-                {t("Избранные", "Favorites")}
+                <span className={styles.promptFavoritesLabel}>
+                  {t("Избранные", "Favorites")}
+                </span>
               </AiButton>
+              <AiSelect
+                className={styles.promptSortSelect}
+                compact
+                id='prompt-sort'
+                options={[
+                  {
+                    value: "newest",
+                    label: t("Сначала новые", "Newest first"),
+                    selectedLabel: t("Новые", "Newest"),
+                  },
+                  {
+                    value: "popular",
+                    label: t("Популярные", "Popular"),
+                    selectedLabel: t("Популярные", "Popular"),
+                  },
+                  {
+                    value: "title",
+                    label: t("По названию", "By title"),
+                    selectedLabel: t("По названию", "By title"),
+                  },
+                ]}
+                value={filters.sort}
+                onChange={(sort) =>
+                  updateFilters({ sort: normalizePromptSort(sort) })
+                }
+              />
             </div>
           </div>
 
@@ -367,6 +496,7 @@ export function PromptsPage({
                   isEnglish={isEnglish}
                   isFavoritePending={pendingFavoriteId === prompt.id}
                   key={prompt.id}
+                  model={modelById.get(prompt.modelIds?.[0] || "") || null}
                   priority={index < 3}
                   prompt={prompt}
                   t={t}
@@ -376,9 +506,11 @@ export function PromptsPage({
             </div>
 
             <div
-              aria-live="polite"
+              aria-live='polite'
               className={`${styles.promptPaginationSentinel} ${
-                isPaginationPending ? styles.promptPaginationSentinelVisible : ""
+                isPaginationPending
+                  ? styles.promptPaginationSentinelVisible
+                  : ""
               }`}
               ref={sentinelRef}
             >
@@ -386,13 +518,17 @@ export function PromptsPage({
                 <span
                   aria-label={t("Загрузка промптов", "Loading prompts")}
                   className={styles.promptPaginationSpinner}
-                  role="status"
+                  role='status'
                 />
               ) : null}
               {paginationError ? (
                 <div className={styles.promptPaginationError}>
                   <FieldMessage>{paginationError}</FieldMessage>
-                  <AiButton type="button" variant="secondary" onClick={() => void loadNextPage()}>
+                  <AiButton
+                    type='button'
+                    variant='secondary'
+                    onClick={() => void loadNextPage()}
+                  >
                     {t("Повторить", "Retry")}
                   </AiButton>
                 </div>
@@ -402,74 +538,7 @@ export function PromptsPage({
         </div>
 
         <SmartStickySidebar className={styles.promptCatalogSidebar}>
-          <SidebarPanel title={t("Тип контента", "Content type")}>
-            <SidebarOptions
-              activeValue={filters.modality}
-              options={[
-                { value: "", label: t("Все", "All") },
-                { value: "image", label: t("Фото", "Image") },
-                { value: "video", label: t("Видео", "Video") },
-                { value: "text", label: t("Текст", "Text") },
-              ]}
-              onChange={(modality) => updateFilters({ modality })}
-            />
-          </SidebarPanel>
-
-          {promptCatalog?.filters?.categories?.length ? (
-            <SidebarPanel title={t("Цель промпта", "Prompt goal")}>
-              <SidebarOptions
-                activeValue={filters.category}
-                options={[
-                  { value: "", label: t("Все цели", "All goals") },
-                  ...promptCatalog.filters.categories,
-                ]}
-                onChange={(category) => updateFilters({ category })}
-              />
-            </SidebarPanel>
-          ) : null}
-
-          {availableModels.length ? (
-            <SidebarPanel title={t("Нейросети", "AI models")}>
-              <div className={styles.promptModelCloud}>
-                <button
-                  className={!filters.modelId ? styles.promptFilterChipActive : ""}
-                  type="button"
-                  onClick={() => updateFilters({ modelId: "" })}
-                >
-                  {t("Все", "All")}
-                </button>
-                {availableModels.map((model) => (
-                  <button
-                    className={
-                      filters.modelId === model.id ? styles.promptFilterChipActive : ""
-                    }
-                    key={model.id}
-                    type="button"
-                    onClick={() =>
-                      updateFilters({
-                        modelId: filters.modelId === model.id ? "" : model.id,
-                      })
-                    }
-                  >
-                    <AiModelLogo label={model.name} logoUrl={model.logoUrl} />
-                    <span>{model.name}</span>
-                  </button>
-                ))}
-              </div>
-            </SidebarPanel>
-          ) : null}
-
-          {hasActiveFilters ? (
-            <AiButton
-              className={styles.promptResetButton}
-              type="button"
-              variant="secondary"
-              onClick={() => updateFilters(INITIAL_FILTERS)}
-            >
-              <FiX aria-hidden="true" />
-              {t("Сбросить фильтры", "Reset filters")}
-            </AiButton>
-          ) : null}
+          {sidebarContent}
         </SmartStickySidebar>
       </div>
     </AiPage>
@@ -479,6 +548,7 @@ export function PromptsPage({
 function PromptCard({
   isEnglish,
   isFavoritePending,
+  model,
   priority,
   prompt,
   t,
@@ -486,6 +556,7 @@ function PromptCard({
 }: {
   isEnglish: boolean;
   isFavoritePending: boolean;
+  model: AiPublicModel | null;
   priority: boolean;
   prompt: AiPromptCard;
   t: (russian: string, english: string) => string;
@@ -503,24 +574,49 @@ function PromptCard({
         image={prompt.imageUrl ? { id: "legacy", url: prompt.imageUrl } : null}
         images={prompt.media || []}
         priority={priority}
-        sizes="(max-width: 700px) calc(100vw - 32px), (max-width: 1080px) calc(50vw - 36px), 300px"
+        sizes='(max-width: 1080px) calc(50vw - 24px), 300px'
       >
         {!prompt.imageUrl ? (
           <span className={styles.promptCardPlaceholder}>
-            <FiImage aria-hidden="true" />
+            <FiImage aria-hidden='true' />
           </span>
         ) : null}
       </PromptCardMedia>
 
       <div className={styles.promptCardBody}>
         <div className={styles.promptCardBadges}>
-          <span className={styles.promptCardBadgePrimary}>
-            {getModalityLabel(prompt.modality, isEnglish)}
-          </span>
-          {prompt.modelNames[0] ? <span>{prompt.modelNames[0]}</span> : null}
-          {prompt.category ? <span>{prompt.category}</span> : null}
+          {prompt.modelNames[0] ? (
+            <span>
+              <AiModelLogo
+                label={prompt.modelNames[0]}
+                logoUrl={model?.logoUrl}
+              />
+              {prompt.modelNames[0]}
+            </span>
+          ) : (
+            <span className={styles.promptCardBadgePrimary}>
+              {getModalityLabel(prompt.modality, isEnglish)}
+            </span>
+          )}
+          {prompt.aspectRatio ? (
+            <span>
+              <FiSmartphone aria-hidden='true' />
+              {prompt.aspectRatio}
+            </span>
+          ) : null}
+          {prompt.difficultyLabel ? (
+            <span>
+              <GiBiceps aria-hidden='true' />
+              {isEnglish
+                ? getDifficultyLabel(prompt.difficulty)
+                : prompt.difficultyLabel}
+            </span>
+          ) : null}
         </div>
-        <Link className={styles.promptCardTitle} href={`/ai/prompts/${prompt.slug}`}>
+        <Link
+          className={styles.promptCardTitle}
+          href={`/ai/prompts/${prompt.slug}`}
+        >
           {prompt.title}
         </Link>
         <div className={styles.promptCardActions}>
@@ -546,12 +642,12 @@ function PromptCard({
             }
             className={styles.promptFavoriteButton}
             disabled={isFavoritePending}
-            type="button"
-            variant="ghost"
+            type='button'
+            variant='ghost'
             onClick={onToggleFavorite}
           >
             <FiBookmark
-              aria-hidden="true"
+              aria-hidden='true'
               fill={prompt.favorite ? "currentColor" : "none"}
             />
           </AiButton>
@@ -561,7 +657,13 @@ function PromptCard({
   );
 }
 
-function SidebarPanel({ children, title }: { children: ReactNode; title: string }) {
+function SidebarPanel({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
   return (
     <section className={styles.promptSidebarPanel}>
       <h2>{title}</h2>
@@ -584,9 +686,12 @@ function SidebarOptions({
       {options.map((option) => (
         <button
           aria-pressed={activeValue === option.value}
-          className={activeValue === option.value ? styles.promptSidebarOptionActive : ""}
+          className={
+            activeValue === option.value ? styles.promptSidebarOptionActive : ""
+          }
           key={option.value || "all"}
-          type="button"
+          data-mobile-filter-action
+          type='button'
           onClick={() => onChange(option.value)}
         >
           {option.label}
@@ -594,6 +699,13 @@ function SidebarOptions({
       ))}
     </div>
   );
+}
+
+function getDifficultyLabel(value?: string | null): string {
+  if (value === "easy") return "Easy";
+  if (value === "medium") return "Medium";
+  if (value === "hard") return "Hard";
+  return "";
 }
 
 function normalizePromptSort(value?: string): PromptSort {
@@ -628,7 +740,6 @@ function arePromptFiltersEqual(
     first.favoritesOnly === second.favoritesOnly
   );
 }
-
 
 function buildPromptCatalogPath(filters: PromptFilters, page: number): string {
   return `/catalog/prompts${toQueryString({

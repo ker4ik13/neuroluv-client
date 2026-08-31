@@ -21,9 +21,9 @@ import {
 	FiUsers,
 } from 'react-icons/fi';
 import {
-	browserPushSubscriptionActive,
 	broadcastBrowserNotificationsPreference,
 	browserNotificationsSupported,
+	browserPushSubscriptionActive,
 	disableBrowserPushOnDevice,
 	enableBrowserPushOnDevice,
 } from '@/features/ai-browser-notifications';
@@ -64,7 +64,7 @@ export function ProfilePage() {
 	const [language, setLanguage] = useState<AiLocale>('ru-RU');
 	const [themePreference, setThemePreference] = useState<AiTheme>('system');
 	const [marketingConsent, setMarketingConsent] = useState(false);
-	const [productUpdates, setProductUpdates] = useState(false);
+	const [telegramNotifications, setTelegramNotifications] = useState(false);
 	const [browserNotifications, setBrowserNotifications] = useState(false);
 	const [browserPushActive, setBrowserPushActive] = useState(false);
 	const [browserPushPending, setBrowserPushPending] = useState(false);
@@ -108,7 +108,9 @@ export function ProfilePage() {
 			setThemePreference(nextTheme);
 			setTheme(nextTheme);
 			setMarketingConsent(Boolean(data.marketingConsent));
-			setProductUpdates(Boolean(data.productUpdates));
+			setTelegramNotifications(
+				Boolean(data.preferences?.telegramNotifications),
+			);
 			setBrowserNotifications(Boolean(data.preferences?.browserNotifications));
 		}, 0);
 
@@ -165,7 +167,7 @@ export function ProfilePage() {
 					locale: language,
 					theme: themePreference,
 					marketingConsent,
-					emailProductNews: productUpdates,
+					telegramNotifications,
 					browserNotifications,
 				},
 			});
@@ -624,15 +626,15 @@ export function ProfilePage() {
 																'Этот браузер не поддерживает системные уведомления.',
 																'This browser does not support system notifications.',
 															)
-															: browserNotificationPermission !== 'granted'
-																? t(
-																		'Разрешение ещё не выдано на этом устройстве.',
-																		'Permission has not been granted on this device yet.',
-																	)
-																: t(
-																		'Уведомления ещё не подключены на этом устройстве.',
-																		'Notifications are not connected on this device yet.',
-																	)}
+														: browserNotificationPermission !== 'granted'
+															? t(
+																	'Разрешение ещё не выдано на этом устройстве.',
+																	'Permission has not been granted on this device yet.',
+																)
+															: t(
+																	'Уведомления ещё не подключены на этом устройстве.',
+																	'Notifications are not connected on this device yet.',
+																)}
 												</FieldMessage>
 												{browserNotificationPermission !== 'unsupported' ? (
 													<AiButton
@@ -654,10 +656,11 @@ export function ProfilePage() {
 										) : null}
 										<label className={styles.toggleField}>
 											<input
-												checked={productUpdates}
+												checked={telegramNotifications}
+												disabled={!profile.data.authMethods.telegram}
 												type='checkbox'
 												onChange={(event) =>
-													setProductUpdates(event.target.checked)
+													setTelegramNotifications(event.target.checked)
 												}
 											/>
 											<span aria-hidden='true' />
@@ -668,6 +671,14 @@ export function ProfilePage() {
 												)}
 											</strong>
 										</label>
+										{!profile.data.authMethods.telegram ? (
+											<FieldMessage tone='notice'>
+												{t(
+													'Сначала привяжите Telegram и запустите бота Нейролюба.',
+													'Link Telegram and start the Neuroluv bot first.',
+												)}
+											</FieldMessage>
+										) : null}
 										<label className={styles.toggleField}>
 											<input
 												checked={marketingConsent}

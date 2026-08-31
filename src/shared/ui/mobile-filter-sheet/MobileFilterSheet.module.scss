@@ -8,7 +8,7 @@
 	@media (max-width: em($breakpoint-tablet)) {
 		display: block;
 		width: 100%;
-		order: -1;
+		min-width: 0;
 	}
 }
 
@@ -41,6 +41,18 @@
 	}
 }
 
+.triggerAi {
+	color: #142b3b;
+	font-family: inherit;
+	background: #fff;
+	border-color: #d8e3eb;
+	box-shadow: 0 rem(10) rem(30) rgba(19, 40, 56, 0.06);
+
+	svg {
+		color: #087fdb;
+	}
+}
+
 .portal {
 	position: fixed;
 	inset: 0;
@@ -54,6 +66,60 @@
 	pointer-events: auto;
 	visibility: visible;
 	transition-delay: 0s;
+}
+
+.portalAi {
+	--ai-bg: #f3f7fa;
+	--ai-surface: #fff;
+	--ai-surface-soft: #eaf2f7;
+	--ai-surface-muted: #f9fbfc;
+	--ai-field-bg: #f9fbfc;
+	--ai-border: #dce7ed;
+	--ai-text: #132838;
+	--ai-muted: #607484;
+	--ai-primary: #087fdb;
+	--ai-primary-hover: #006fc5;
+	--ai-primary-soft: #e7f4ff;
+	--ai-success: #148957;
+	--ai-warning: #b7650b;
+	--ai-error: #c43b4d;
+	--ai-danger: #c43b4d;
+	--mobile-sheet-background: var(--ai-surface);
+	--mobile-sheet-border: var(--ai-border);
+	--mobile-sheet-close: var(--ai-surface-soft);
+	--mobile-sheet-handle: rgba(103, 127, 145, 0.34);
+	--mobile-sheet-text: var(--ai-text);
+
+	color: var(--ai-text);
+}
+
+:global(html[data-ai-theme='dark']) .portalAi {
+	--ai-bg: #0b1218;
+	--ai-surface: #111c25;
+	--ai-surface-soft: #182630;
+	--ai-surface-muted: #14212a;
+	--ai-field-bg: #0f1921;
+	--ai-border: #2a3d49;
+	--ai-text: #eaf3f8;
+	--ai-muted: #9bb0bd;
+	--ai-primary: #42a8ef;
+	--ai-primary-hover: #6dbbf2;
+	--ai-primary-soft: #142f43;
+	--ai-success: #45c58c;
+	--ai-warning: #e7a14d;
+	--ai-error: #ef7180;
+	--ai-danger: #ef7180;
+	--mobile-sheet-background: var(--ai-surface);
+	--mobile-sheet-border: var(--ai-border);
+	--mobile-sheet-close: var(--ai-surface-soft);
+	--mobile-sheet-handle: rgba(173, 195, 209, 0.38);
+	--mobile-sheet-text: var(--ai-text);
+}
+
+:global(html[data-ai-theme='dark']) .triggerAi {
+	color: #edf6fb;
+	background: #10212d;
+	border-color: #294252;
 }
 
 .backdrop {
@@ -90,6 +156,12 @@
 	will-change: transform;
 }
 
+.portalAi .sheet {
+	background: var(--mobile-sheet-background);
+	border: rem(1) solid var(--mobile-sheet-border);
+	border-bottom: 0;
+}
+
 .sheetOpen {
 	transform: translate3d(0, var(--mobile-filter-sheet-drag, 0), 0);
 }
@@ -120,6 +192,10 @@
 	}
 }
 
+.portalAi .sheetHeader h2 {
+	color: var(--mobile-sheet-text);
+}
+
 .dragHandle {
 	position: absolute;
 	top: rem(9);
@@ -129,6 +205,10 @@
 	background: rgba($color-ink-muted, 0.34);
 	border-radius: rem(100);
 	transform: translateX(-50%);
+}
+
+.portalAi .dragHandle {
+	background: var(--mobile-sheet-handle);
 }
 
 .closeButton {
@@ -152,6 +232,12 @@
 	&:focus-visible {
 		@include focus-ring;
 	}
+}
+
+.portalAi .closeButton {
+	color: var(--mobile-sheet-text);
+	background: var(--mobile-sheet-close);
+	border-color: var(--mobile-sheet-border);
 }
 
 .sheetContent {

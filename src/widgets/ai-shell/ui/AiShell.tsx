@@ -3,6 +3,7 @@
 import * as NavigationMenu from '@radix-ui/react-navigation-menu';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Script from 'next/script';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -88,16 +89,26 @@ export function AiShell({
 	navigation,
 }: AiShellProps) {
 	return (
-		<AiThemeProvider>
-			<AiSessionProvider>
-				<AiLocaleProvider>
-					<AiBrowserNotificationMonitor />
-					<AiShellContent footer={footer} logo={logo} navigation={navigation}>
-						{children}
-					</AiShellContent>
-				</AiLocaleProvider>
-			</AiSessionProvider>
-		</AiThemeProvider>
+		<>
+			<Script
+				id='telegram-mini-app-sdk'
+				src='https://telegram.org/js/telegram-web-app.js?59'
+				strategy='afterInteractive'
+				onLoad={() =>
+					window.dispatchEvent(new Event('neuroluv:telegram-sdk-ready'))
+				}
+			/>
+			<AiThemeProvider>
+				<AiSessionProvider>
+					<AiLocaleProvider>
+						<AiBrowserNotificationMonitor />
+						<AiShellContent footer={footer} logo={logo} navigation={navigation}>
+							{children}
+						</AiShellContent>
+					</AiLocaleProvider>
+				</AiSessionProvider>
+			</AiThemeProvider>
+		</>
 	);
 }
 

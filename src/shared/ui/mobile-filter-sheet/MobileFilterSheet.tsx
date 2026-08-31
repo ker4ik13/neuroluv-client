@@ -1,20 +1,18 @@
 "use client";
 
-import { createPortal } from "react-dom";
 import {
+  type CSSProperties,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
   useEffect,
   useId,
   useRef,
   useState,
   useSyncExternalStore,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { FaFilter, FaTimes } from "react-icons/fa";
-
 import { useBodyScrollLock } from "@/shared/lib/dom/useBodyScrollLock";
-
 import styles from "./MobileFilterSheet.module.scss";
 
 const CLOSE_DRAG_DISTANCE = 96;
@@ -26,8 +24,10 @@ function subscribeToHydration() {
 
 type MobileFilterSheetProps = {
   children: ReactNode;
+  closeOnActionSelector?: string;
   label?: string;
   title?: string;
+  tone?: "site" | "ai";
 };
 
 type SheetStyle = CSSProperties & {
@@ -36,8 +36,10 @@ type SheetStyle = CSSProperties & {
 
 export function MobileFilterSheet({
   children,
+  closeOnActionSelector = "a[href]",
   label = "Фильтры",
   title = "Фильтры",
+  tone = "site",
 }: MobileFilterSheetProps) {
   const titleId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -156,12 +158,12 @@ export function MobileFilterSheet({
     <div className={styles.triggerWrap}>
       <button
         aria-expanded={isOpen}
-        className={styles.trigger}
+        className={`${styles.trigger} ${tone === "ai" ? styles.triggerAi : ""}`}
         ref={triggerRef}
-        type="button"
+        type='button'
         onClick={() => setIsOpen(true)}
       >
-        <FaFilter aria-hidden="true" />
+        <FaFilter aria-hidden='true' />
         <span>{label}</span>
       </button>
 
@@ -169,22 +171,24 @@ export function MobileFilterSheet({
         createPortal(
           <div
             aria-hidden={!isOpen}
-            className={`${styles.portal} ${isOpen ? styles.portalOpen : ""}`}
+            className={`${styles.portal} ${tone === "ai" ? styles.portalAi : ""} ${
+              isOpen ? styles.portalOpen : ""
+            }`}
           >
             <button
-              aria-label="Закрыть фильтры"
+              aria-label='Закрыть фильтры'
               className={styles.backdrop}
               tabIndex={isOpen ? 0 : -1}
-              type="button"
+              type='button'
               onClick={closeSheet}
             />
             <section
               aria-labelledby={titleId}
-              aria-modal="true"
+              aria-modal='true'
               className={`${styles.sheet} ${isOpen ? styles.sheetOpen : ""} ${
                 isDragging ? styles.sheetDragging : ""
               }`}
-              role="dialog"
+              role='dialog'
               style={sheetStyle}
             >
               <div
@@ -194,16 +198,16 @@ export function MobileFilterSheet({
                 onPointerMove={handlePointerMove}
                 onPointerUp={finishDrag}
               >
-                <span aria-hidden="true" className={styles.dragHandle} />
+                <span aria-hidden='true' className={styles.dragHandle} />
                 <h2 id={titleId}>{title}</h2>
                 <button
-                  aria-label="Закрыть фильтры"
+                  aria-label='Закрыть фильтры'
                   className={styles.closeButton}
                   ref={closeButtonRef}
-                  type="button"
+                  type='button'
                   onClick={closeSheet}
                 >
-                  <FaTimes aria-hidden="true" />
+                  <FaTimes aria-hidden='true' />
                 </button>
               </div>
               <div
@@ -211,7 +215,7 @@ export function MobileFilterSheet({
                 onClickCapture={(event) => {
                   if (
                     event.target instanceof Element &&
-                    event.target.closest("a")
+                    event.target.closest(closeOnActionSelector)
                   ) {
                     closeSheet();
                   }

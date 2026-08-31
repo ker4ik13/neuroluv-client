@@ -5,14 +5,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaArrowRight, FaBars, FaMagic, FaTelegram } from "react-icons/fa";
-import { FiSmartphone } from "react-icons/fi";
-import { GiBiceps } from "react-icons/gi";
 
 import type {
-  PromptItem,
   PromptsPageData,
   PromptSortOrder,
 } from "@/entities/prompt";
+import { PromptCard } from "@/entities/prompt";
 import {
   ContentListControls,
   type ContentListFilter,
@@ -24,7 +22,6 @@ import {
 } from "@/shared/lib/url/pagination";
 import { Noindex } from "@/shared/ui/noindex";
 import { MobileFilterSheet } from "@/shared/ui/mobile-filter-sheet";
-import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
 import { ScrollTopButton } from "@/shared/ui/scroll-top-button";
 import { SmartStickySidebar } from "@/shared/ui/smart-sticky-sidebar";
 
@@ -359,6 +356,11 @@ function SearchAndFilters({
         icon: <FaBars aria-hidden="true" />,
         label: "Каталог",
       }}
+      mobileFilter={
+        <MobileFilterSheet>
+          <PromptsSidebarContent activeParams={activeParams} data={data} />
+        </MobileFilterSheet>
+      }
       resetHref={resetHref}
       resultLabel={resultLabel}
       searchDefaultValue={activeParams.q}
@@ -389,62 +391,23 @@ function getPromptsCountWord(count: number): string {
   return "промптов";
 }
 
-function PromptCard({
-  prompt,
+function PromptsSidebar({
+  activeParams,
+  data,
 }: {
-  prompt: PromptItem;
+  activeParams: PromptFilterParams;
+  data: PromptsPageData;
 }) {
-  const type = prompt.contentKind || prompt.types[0];
-
   return (
-    <article className={styles.card}>
-      <PromptCardMedia
-        alt={
-          prompt.image
-            ? getPromptImageAlt(prompt.image.title, prompt.title)
-            : prompt.title
-        }
-        autoPlay={prompt.autoplay}
-        className={styles.cardImage}
-        href={prompt.href}
-        image={prompt.image}
-        images={prompt.images}
-        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 290px"
-      >
-        <span className={styles.cardPlaceholder}>
-          {type?.title || prompt.neuralNetwork?.title || "AI"}
-        </span>
-      </PromptCardMedia>
-
-      <Link className={styles.cardBody} href={prompt.href}>
-        <span className={styles.badges}>
-          {type && <span className={styles.badgePrimary}>{type.title}</span>}
-          {prompt.neuralNetwork && (
-            <span className={styles.badge}>
-              <PromptNetworkLogo network={prompt.neuralNetwork} compact />
-              {prompt.neuralNetwork.title}
-            </span>
-          )}
-          {prompt.format && (
-            <span className={styles.badge}>
-              <FiSmartphone aria-hidden="true" />
-              {prompt.format}
-            </span>
-          )}
-          {prompt.difficultyLabel && (
-            <span className={styles.badge}>
-              <GiBiceps aria-hidden="true" />
-              {prompt.difficultyLabel}
-            </span>
-          )}
-        </span>
-        <span className={styles.cardTitle}>{prompt.title}</span>
-      </Link>
-    </article>
+    <Noindex>
+      <SmartStickySidebar className={styles.sidebar}>
+        <PromptsSidebarContent activeParams={activeParams} data={data} />
+      </SmartStickySidebar>
+    </Noindex>
   );
 }
 
-function PromptsSidebar({
+function PromptsSidebarContent({
   activeParams,
   data,
 }: {
@@ -458,120 +421,107 @@ function PromptsSidebar({
     (tag) => tag.isFilterable === true && (tag.count || 0) > 0,
   );
 
-  function renderSidebarContent() {
-    return (
-      <>
-        {filterableGoals.length > 0 && (
-          <SidebarPanel title="Цель промпта">
-            <div className={styles.categoryList}>
-              {filterableGoals.map((goal) => (
-                <SidebarCountLink
-                  active={activeParams.goal === goal.slug}
-                  count={goal.count || 0}
-                  href={buildPromptsHref({
-                    q: activeParams.q,
-                    sort: activeParams.sort,
-                    goal: activeParams.goal === goal.slug ? null : goal.slug,
-                  })}
-                  key={`sidebar-goal-${goal.id}`}
-                  title={goal.title}
-                />
-              ))}
-            </div>
-          </SidebarPanel>
-        )}
+  return (
+    <>
+      {filterableGoals.length > 0 && (
+        <SidebarPanel title="Цель промпта">
+          <div className={styles.categoryList}>
+            {filterableGoals.map((goal) => (
+              <SidebarCountLink
+                active={activeParams.goal === goal.slug}
+                count={goal.count || 0}
+                href={buildPromptsHref({
+                  q: activeParams.q,
+                  sort: activeParams.sort,
+                  goal: activeParams.goal === goal.slug ? null : goal.slug,
+                })}
+                key={`sidebar-goal-${goal.id}`}
+                title={goal.title}
+              />
+            ))}
+          </div>
+        </SidebarPanel>
+      )}
 
-        <SidebarPanel title="Нейросети">
-          <div className={styles.networkCloud}>
-            {data.neuralNetworks.map((network) => (
+      <SidebarPanel title="Нейросети">
+        <div className={styles.networkCloud}>
+          {data.neuralNetworks.map((network) => (
+            <Link
+              className={`${styles.networkChip} ${
+                activeParams.network === network.slug
+                  ? styles.networkChipActive
+                  : ""
+              }`}
+              href={buildPromptsHref({
+                q: activeParams.q,
+                sort: activeParams.sort,
+                network:
+                  activeParams.network === network.slug ? null : network.slug,
+              })}
+              key={`network-${network.id}`}
+            >
+              <PromptNetworkLogo network={network} />
+              {network.title}
+            </Link>
+          ))}
+        </div>
+      </SidebarPanel>
+
+      {filterableTags.length > 0 && (
+        <SidebarPanel title="Популярные теги">
+          <div className={styles.tagCloud}>
+            {filterableTags.map((tag) => (
               <Link
-                className={`${styles.networkChip} ${
-                  activeParams.network === network.slug
-                    ? styles.networkChipActive
-                    : ""
+                className={`${styles.tagChip} ${
+                  activeParams.tag === tag.slug ? styles.tagChipActive : ""
                 }`}
                 href={buildPromptsHref({
                   q: activeParams.q,
                   sort: activeParams.sort,
-                  network:
-                    activeParams.network === network.slug ? null : network.slug,
+                  tag: activeParams.tag === tag.slug ? null : tag.slug,
                 })}
-                key={`network-${network.id}`}
+                key={`tag-${tag.id}`}
               >
-                <PromptNetworkLogo network={network} />
-                {network.title}
+                #{tag.title}
               </Link>
             ))}
           </div>
         </SidebarPanel>
+      )}
 
-        {filterableTags.length > 0 && (
-          <SidebarPanel title="Популярные теги">
-            <div className={styles.tagCloud}>
-              {filterableTags.map((tag) => (
-                <Link
-                  className={`${styles.tagChip} ${
-                    activeParams.tag === tag.slug ? styles.tagChipActive : ""
-                  }`}
-                  href={buildPromptsHref({
-                    q: activeParams.q,
-                    sort: activeParams.sort,
-                    tag: activeParams.tag === tag.slug ? null : tag.slug,
-                  })}
-                  key={`tag-${tag.id}`}
-                >
-                  #{tag.title}
-                </Link>
-              ))}
-            </div>
-          </SidebarPanel>
-        )}
-
-        <div className={styles.telegramCard}>
-          <div className={styles.telegramHead}>
-            <span>
-              <FaTelegram aria-hidden="true" />
-            </span>
-            <strong>Подпишись на Telegram</strong>
-          </div>
-          <p>6000+ подписчиков. Лучшие промпты каждую неделю.</p>
-          <a href="https://t.me/+uThlnd6M6KwwY2Y6" rel="noreferrer" target="_blank">
-            Подписаться
-            <FaArrowRight aria-hidden="true" />
-          </a>
+      <div className={styles.telegramCard}>
+        <div className={styles.telegramHead}>
+          <span>
+            <FaTelegram aria-hidden="true" />
+          </span>
+          <strong>Подпишись на Telegram</strong>
         </div>
-      </>
-    );
-  }
-
-  return (
-    <Noindex>
-      <SmartStickySidebar className={styles.sidebar}>
-        {renderSidebarContent()}
-      </SmartStickySidebar>
-      <MobileFilterSheet>{renderSidebarContent()}</MobileFilterSheet>
-    </Noindex>
+        <p>6000+ подписчиков. Лучшие промпты каждую неделю.</p>
+        <a href="https://t.me/+uThlnd6M6KwwY2Y6" rel="noreferrer" target="_blank">
+          Подписаться
+          <FaArrowRight aria-hidden="true" />
+        </a>
+      </div>
+    </>
   );
 }
 
 function PromptNetworkLogo({
-  compact = false,
   network,
 }: {
-  compact?: boolean;
   network: PromptsPageData["neuralNetworks"][number];
 }) {
   return (
     <span
       aria-hidden="true"
-      className={`${styles.networkLogo} ${compact ? styles.networkLogoCompact : ""}`}
+      className={styles.networkLogo}
     >
       {network.logo ? (
         <Image
           alt=""
-          height={compact ? 14 : 18}
+          height={18}
           src={network.logo.url}
-          width={compact ? 14 : 18}
+          width={18}
         />
       ) : (
         <FaMagic />
@@ -679,10 +629,6 @@ function getPromptsCatalogPath(params: PromptFilterParams): string {
   }
 
   return "/prompts";
-}
-
-function getPromptImageAlt(imageTitle: string, fallback: string): string {
-  return imageTitle.trim() || fallback;
 }
 
 async function loadNextPromptsPage({

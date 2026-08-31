@@ -1,0 +1,159 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+@use '../../../styles/vars' as *;
+
+.card {
+	display: flex;
+	min-width: 0;
+	overflow: hidden;
+	flex-direction: column;
+	gap: 0;
+	padding: 0;
+	color: $color-ink;
+	background: $color-white;
+	border-radius: rem(24);
+	box-shadow: 0 rem(12) rem(28) rgba(0, 0, 0, 0.07);
+	transition: box-shadow 160ms ease;
+
+	&:hover {
+		box-shadow: 0 rem(16) rem(34) rgba(0, 0, 0, 0.1);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.cardImage {
+	position: relative;
+	display: flex;
+	width: 100%;
+	overflow: hidden;
+	aspect-ratio: 1 / 1.2;
+	align-items: center;
+	justify-content: center;
+	color: $color-white;
+	background: $color-white;
+	border-radius: rem(16);
+
+	img {
+		object-fit: cover;
+	}
+}
+
+.cardPlaceholder {
+	@include heading-font(900);
+
+	position: relative;
+	z-index: 1;
+	display: grid;
+	width: 100%;
+	height: 100%;
+	place-items: center;
+	font-size: rem(28);
+	line-height: 1;
+	text-align: center;
+	background: $color-ink-soft;
+	text-transform: uppercase;
+
+	&::before {
+		position: absolute;
+		inset: rem(-28);
+		z-index: -1;
+		background: radial-gradient(
+			circle,
+			rgba($color-cyan, 0.55),
+			transparent 68%
+		);
+		content: '';
+		filter: blur(rem(16));
+	}
+}
+
+.cardBody {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: rem(12);
+	padding: rem(16);
+
+	@media (max-width: em($breakpoint-mobile)) {
+		padding: rem(12);
+	}
+}
+
+.badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(8);
+}
+
+.badge,
+.badgePrimary {
+	@include body-font(700);
+
+	display: inline-flex;
+	align-items: center;
+	gap: rem(5);
+	padding: rem(6) rem(10);
+	color: $color-ink;
+	font-size: rem(12);
+	line-height: 1;
+	background: $color-surface;
+	border-radius: rem(16);
+
+	> svg {
+		width: rem(13);
+		height: rem(13);
+		flex: 0 0 rem(13);
+	}
+
+	@media (max-width: em($breakpoint-mobile)) {
+		padding: rem(4) rem(8);
+		font-size: rem(10);
+	}
+}
+
+.badgePrimary {
+	color: $color-white;
+	background: $color-cyan;
+}
+
+.cardTitle {
+	@include heading-font(700);
+
+	display: -webkit-box;
+	overflow: hidden;
+	color: #000000;
+	font-size: rem(18);
+	line-height: 1.15;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+
+	@media (max-width: em($breakpoint-tablet)) {
+		font-size: rem(16);
+	}
+}
+
+.networkLogo {
+	display: inline-flex;
+	width: rem(16);
+	height: rem(16);
+	flex: 0 0 rem(16);
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	color: $color-cyan;
+	background: $color-white;
+	border: rem(1) solid rgba($color-ink, 0.1);
+	border-radius: rem(5);
+
+	img,
+	svg {
+		display: block;
+		width: 72%;
+		height: 72%;
+		object-fit: contain;
+	}
+}

@@ -104,7 +104,6 @@ function nextAiResponse(request: NextRequest): NextResponse {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
   response.headers.set(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), payment=()",
@@ -124,7 +123,7 @@ function buildAiContentSecurityPolicy(nonce: string): string {
     process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://mc.yandex.ru https://yastatic.net${developmentScriptPolicy}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://telegram.org https://mc.yandex.ru https://yastatic.net${developmentScriptPolicy}`,
     "style-src 'self' 'unsafe-inline'",
     `connect-src 'self' ${apiOrigin} ${directusOrigin} ${metrikaConnectOrigins}`,
     "img-src 'self' data: blob: https:",
@@ -136,7 +135,7 @@ function buildAiContentSecurityPolicy(nonce: string): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    "frame-ancestors 'self' https://web.telegram.org",
   ];
 
   if (process.env.NODE_ENV === "production") {
@@ -168,9 +167,12 @@ async function getRedirectRules(): Promise<RedirectRule[]> {
 
     params.set("filter[is_active][_eq]", "true");
 
-    const response = await fetch(`${DIRECTUS_URL}/items/redirects?${params.toString()}`, {
-      cache: "no-store",
-    });
+    const response = await fetch(
+      `${DIRECTUS_URL}/items/redirects?${params.toString()}`,
+      {
+        cache: "no-store",
+      },
+    );
 
     if (!response.ok) {
       return redirectsCache?.rules || [];
@@ -226,7 +228,10 @@ function normalizeRedirects(redirects: DirectusRedirect[]): RedirectRule[] {
   return [...rules.values()];
 }
 
-function buildRedirectTarget(request: NextRequest, redirect: RedirectRule): URL {
+function buildRedirectTarget(
+  request: NextRequest,
+  redirect: RedirectRule,
+): URL {
   const target = isAbsoluteUrl(redirect.toUrl)
     ? new URL(redirect.toUrl)
     : new URL(normalizeTargetPath(redirect.toUrl), request.nextUrl.origin);
@@ -251,7 +256,9 @@ function buildRedirectTarget(request: NextRequest, redirect: RedirectRule): URL 
 
 function normalizePath(path: string): string {
   const cleanPath = path.split("?")[0]?.trim() || "/";
-  const withLeadingSlash = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
+  const withLeadingSlash = cleanPath.startsWith("/")
+    ? cleanPath
+    : `/${cleanPath}`;
   const collapsed = withLeadingSlash.replace(/\/{2,}/g, "/");
 
   if (collapsed.length > 1) {
@@ -297,7 +304,9 @@ function buildDuplicateSlashesTarget(request: NextRequest): URL | null {
 }
 
 function isSameUrl(source: URL, target: URL): boolean {
-  return source.origin === target.origin &&
+  return (
+    source.origin === target.origin &&
     normalizePath(source.pathname) === normalizePath(target.pathname) &&
-    source.search === target.search;
+    source.search === target.search
+  );
 }

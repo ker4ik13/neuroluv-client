@@ -153,6 +153,21 @@ export function NewsPage({
             activeTag={activeTag}
             activeTopic={activeTopic}
             basePath={config.basePath}
+            mobileFilter={
+              <MobileFilterSheet>
+                <NewsSidebarContent
+                  activeQuery={activeQuery}
+                  activeTag={activeTag}
+                  activeTopic={activeTopic}
+                  basePath={config.basePath}
+                  latestTitle={config.latestTitle}
+                  news={localData.sidebarNews}
+                  sort={sort}
+                  tags={localData.tags}
+                  topics={localData.topics}
+                />
+              </MobileFilterSheet>
+            }
             sort={sort}
           />
 
@@ -255,12 +270,14 @@ function FilterBar({
   activeTag,
   activeTopic,
   basePath,
+  mobileFilter,
   sort,
 }: {
   activeQuery: string | null;
   activeTag: string | null;
   activeTopic: string | null;
   basePath: string;
+  mobileFilter: ReactNode;
   sort: NewsSortOrder;
 }) {
   const sortOptions: ContentListSortOption[] = [
@@ -299,6 +316,7 @@ function FilterBar({
         tag: activeTag,
         topic: activeTopic,
       }}
+      mobileFilter={mobileFilter}
       resetHref={basePath}
       searchDefaultValue={activeQuery}
       searchLabel="Поиск по материалам"
@@ -443,112 +461,141 @@ function NewsSidebar({
   tags: NewsTaxonomy[];
   topics: NewsTaxonomy[];
 }) {
+  return (
+    <Noindex>
+      <SmartStickySidebar className={styles.sidebar}>
+        <NewsSidebarContent
+          activeQuery={activeQuery}
+          activeTag={activeTag}
+          activeTopic={activeTopic}
+          basePath={basePath}
+          latestTitle={latestTitle}
+          news={news}
+          sort={sort}
+          tags={tags}
+          topics={topics}
+        />
+      </SmartStickySidebar>
+    </Noindex>
+  );
+}
+
+function NewsSidebarContent({
+  activeQuery,
+  activeTag,
+  activeTopic,
+  basePath,
+  latestTitle,
+  news,
+  sort,
+  tags,
+  topics,
+}: {
+  activeQuery: string | null;
+  activeTag: string | null;
+  activeTopic: string | null;
+  basePath: string;
+  latestTitle: string;
+  news: NewsItem[];
+  sort: NewsSortOrder;
+  tags: NewsTaxonomy[];
+  topics: NewsTaxonomy[];
+}) {
   const latestNews = news.slice(0, 4);
   const visibleTopics = topics.slice(0, 8);
   const visibleTags = tags.slice(0, 18);
 
-  function renderSidebarContent() {
-    return (
-      <>
-        {latestNews.length > 0 && (
-          <SidebarPanel title={latestTitle}>
-            <div className={styles.latestList}>
-              {latestNews.map((item, index) => (
-                <Link
-                  className={styles.latestItem}
-                  href={item.href}
-                  key={`latest-${item.id}-${index}`}
-                >
-                  <NewsImage className={styles.latestImage} image={item.image} />
-                  <span className={styles.latestText}>
-                    <span className={styles.latestTitle}>{item.title}</span>
-                    <span className={styles.latestDate}>{item.publishedAtLabel}</span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </SidebarPanel>
-        )}
-
-        {visibleTopics.length > 0 && (
-          <SidebarPanel title="Темы">
-            <div className={styles.categoryList}>
-              {visibleTopics.map((topic) => {
-                const isActive = activeTopic === topic.slug;
-
-                return (
-                  <SidebarTaxonomyLink
-                    active={isActive}
-                    href={buildNewsHref({
-                      basePath,
-                      q: activeQuery,
-                      sort,
-                      tag: null,
-                      topic: isActive ? null : topic.slug,
-                    })}
-                    key={`sidebar-topic-${topic.id}`}
-                    title={topic.title}
-                  />
-                );
-              })}
-            </div>
-          </SidebarPanel>
-        )}
-
-        {visibleTags.length > 0 && (
-          <SidebarPanel title="Теги">
-            <div className={styles.tagCloud}>
-              {visibleTags.map((tag) => {
-                const isActive = activeTag === tag.slug;
-
-                return (
-                  <Link
-                    className={`${styles.tagChip} ${
-                      isActive ? styles.tagChipActive : ""
-                    }`}
-                    href={buildNewsHref({
-                      basePath,
-                      q: activeQuery,
-                      sort,
-                      tag: isActive ? null : tag.slug,
-                      topic: null,
-                    })}
-                    key={`sidebar-tag-${tag.id}`}
-                  >
-                    #{tag.title}
-                  </Link>
-                );
-              })}
-            </div>
-          </SidebarPanel>
-        )}
-
-        <div className={styles.telegramPanel}>
-          <p className={styles.telegramTitle}>Подпишись на наш Telegram</p>
-          <p className={styles.telegramText}>
-            Чтобы не пропустить новости и полезные разборы по AI.
-          </p>
-          <a
-            className={styles.telegramButton}
-            href="https://t.me/+uThlnd6M6KwwY2Y6"
-            rel="noreferrer"
-            target="_blank"
-          >
-            Подписаться
-            <FaTelegram aria-hidden="true" className={styles.telegramIcon} />
-          </a>
-        </div>
-      </>
-    );
-  }
-
   return (
-    <Noindex>
-      <SmartStickySidebar className={styles.sidebar}>
-        {renderSidebarContent()}
-      </SmartStickySidebar>
-      <MobileFilterSheet>{renderSidebarContent()}</MobileFilterSheet>
-    </Noindex>
+    <>
+      {latestNews.length > 0 && (
+        <SidebarPanel title={latestTitle}>
+          <div className={styles.latestList}>
+            {latestNews.map((item, index) => (
+              <Link
+                className={styles.latestItem}
+                href={item.href}
+                key={`latest-${item.id}-${index}`}
+              >
+                <NewsImage className={styles.latestImage} image={item.image} />
+                <span className={styles.latestText}>
+                  <span className={styles.latestTitle}>{item.title}</span>
+                  <span className={styles.latestDate}>{item.publishedAtLabel}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </SidebarPanel>
+      )}
+
+      {visibleTopics.length > 0 && (
+        <SidebarPanel title="Темы">
+          <div className={styles.categoryList}>
+            {visibleTopics.map((topic) => {
+              const isActive = activeTopic === topic.slug;
+
+              return (
+                <SidebarTaxonomyLink
+                  active={isActive}
+                  href={buildNewsHref({
+                    basePath,
+                    q: activeQuery,
+                    sort,
+                    tag: null,
+                    topic: isActive ? null : topic.slug,
+                  })}
+                  key={`sidebar-topic-${topic.id}`}
+                  title={topic.title}
+                />
+              );
+            })}
+          </div>
+        </SidebarPanel>
+      )}
+
+      {visibleTags.length > 0 && (
+        <SidebarPanel title="Теги">
+          <div className={styles.tagCloud}>
+            {visibleTags.map((tag) => {
+              const isActive = activeTag === tag.slug;
+
+              return (
+                <Link
+                  className={`${styles.tagChip} ${
+                    isActive ? styles.tagChipActive : ""
+                  }`}
+                  href={buildNewsHref({
+                    basePath,
+                    q: activeQuery,
+                    sort,
+                    tag: isActive ? null : tag.slug,
+                    topic: null,
+                  })}
+                  key={`sidebar-tag-${tag.id}`}
+                >
+                  #{tag.title}
+                </Link>
+              );
+            })}
+          </div>
+        </SidebarPanel>
+      )}
+
+      <div className={styles.telegramPanel}>
+        <p className={styles.telegramTitle}>Подпишись на наш Telegram</p>
+        <p className={styles.telegramText}>
+          Чтобы не пропустить новости и полезные разборы по AI.
+        </p>
+        <a
+          className={styles.telegramButton}
+          href="https://t.me/+uThlnd6M6KwwY2Y6"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Подписаться
+          <FaTelegram aria-hidden="true" className={styles.telegramIcon} />
+        </a>
+      </div>
+    </>
   );
 }
 

@@ -17,3 +17,5 @@ export type {
   PromptTagGroup,
   PromptTaxonomy,
 } from "./model";
+
+export { PromptCard } from "./ui";

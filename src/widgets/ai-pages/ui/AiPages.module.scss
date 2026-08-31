@@ -1114,7 +1114,7 @@
 
 .promptCatalogControls {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(rem(330), rem(390));
+	grid-template-columns: minmax(0, 1fr) minmax(rem(440), rem(520));
 	gap: rem(12);
 	align-items: end;
 	margin-bottom: rem(20);
@@ -1137,11 +1137,12 @@
 .promptCatalogControlActions {
 	display: grid;
 	min-width: 0;
-	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-columns: auto auto minmax(rem(140), 1fr);
 	gap: rem(8);
 	align-items: end;
 }
 
+.promptToolbarReset,
 .promptFavoritesFilter {
 	height: rem(48);
 	min-height: rem(48);
@@ -1321,6 +1322,10 @@
 	}
 }
 
+.promptCatalogSearchField input {
+	padding-inline: rem(15);
+}
+
 .filterGrid {
 	display: flex;
 	flex-wrap: wrap;
@@ -1446,7 +1451,9 @@
 
 	span {
 		display: inline-flex;
+		min-width: 0;
 		align-items: center;
+		gap: rem(5);
 		padding: rem(5) rem(8);
 		color: var(--ai-text);
 		font-size: rem(10);
@@ -1454,6 +1461,18 @@
 		line-height: 1;
 		background: var(--ai-surface-soft);
 		border-radius: rem(999);
+
+		> :first-child:not(svg) {
+			width: rem(16);
+			height: rem(16);
+			flex: 0 0 rem(16);
+		}
+
+		svg {
+			width: rem(13);
+			height: rem(13);
+			flex: 0 0 rem(13);
+		}
 	}
 }
 
@@ -2202,7 +2221,10 @@
 	border: rem(1) solid var(--ai-border);
 	border-radius: rem(10);
 	cursor: pointer;
-	transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+	transition:
+		color 160ms ease,
+		background-color 160ms ease,
+		transform 160ms ease;
 
 	&:hover {
 		color: #fff;
@@ -3669,6 +3691,24 @@ a.receiptState {
 	}
 }
 
+@media (max-width: em(768)) {
+	.promptCatalogHeader {
+		margin-bottom: rem(12);
+	}
+	.promptCatalogLayout {
+		gap: rem(10);
+	}
+	.promptCatalogControls {
+		gap: rem(8);
+		margin-bottom: rem(14);
+		padding: rem(10);
+		border-radius: rem(16);
+	}
+	.promptCatalogSidebar {
+		display: none;
+	}
+}
+
 @media (max-width: em(700)) {
 	.promptCatalogHeader {
 		align-items: flex-start;
@@ -3678,30 +3718,12 @@ a.receiptState {
 	.promptCatalogControls {
 		grid-template-columns: 1fr;
 	}
+	.promptCatalogControlActions {
+		grid-template-columns: auto auto minmax(0, 1fr);
+		gap: rem(6);
+	}
 	.promptCatalogSidebar {
-		display: flex;
-		width: 100%;
-		max-width: 100%;
-		min-width: 0;
-		flex-flow: row nowrap;
-		overflow-x: auto;
-		overflow-y: hidden;
-		padding-bottom: rem(8);
-		overscroll-behavior-x: contain;
-		scrollbar-width: none;
-		scroll-snap-type: x proximity;
-		-webkit-overflow-scrolling: touch;
-
-		&::-webkit-scrollbar {
-			display: none;
-		}
-
-		> * {
-			width: min(rem(300), calc(100vw - rem(48)));
-			min-width: 0;
-			flex: 0 0 min(rem(300), calc(100vw - rem(48)));
-			scroll-snap-align: start;
-		}
+		display: none;
 	}
 	.inlineSecurityForm,
 	.securityPasswordGrid {
@@ -3822,6 +3844,43 @@ a.receiptState {
 	.inlineForm .button {
 		width: 100%;
 	}
+	.promptCatalogSearchForm {
+		flex-direction: row;
+		gap: rem(6);
+	}
+	.promptCatalogSearchForm .button {
+		width: auto;
+		height: rem(42);
+		min-height: rem(42);
+		padding: rem(8) rem(12);
+		font-size: rem(13);
+	}
+	.promptCatalogSearchField input {
+		height: rem(42);
+		min-height: rem(42);
+		padding: rem(9) rem(11);
+		font-size: rem(13);
+	}
+	.promptToolbarReset,
+	.promptFavoritesFilter {
+		height: rem(42);
+		min-height: rem(42);
+		gap: rem(5);
+		padding: rem(7) rem(9);
+		font-size: rem(12);
+	}
+	.promptToolbarReset {
+		min-width: 0;
+	}
+	.promptSortSelect button {
+		height: rem(42);
+		min-height: rem(42);
+		gap: rem(4);
+		padding: rem(6) rem(7);
+	}
+	.promptSortSelect span {
+		font-size: rem(12);
+	}
 	.filterGrid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -3833,9 +3892,43 @@ a.receiptState {
 	.filterHint {
 		margin-left: 0;
 	}
-	.promptGrid,
 	.worksGrid {
 		grid-template-columns: 1fr;
+	}
+	.promptGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: rem(10);
+	}
+	.promptCardBody {
+		gap: rem(9);
+		padding: rem(10);
+	}
+	.promptCardBadges {
+		gap: rem(4);
+
+		span {
+			max-width: 100%;
+			padding: rem(4) rem(6);
+			font-size: rem(9);
+		}
+	}
+	.promptCardTitle {
+		font-size: rem(14);
+		line-height: 1.2;
+	}
+	.promptCardActions {
+		grid-template-columns: minmax(0, 1fr) rem(36);
+		gap: rem(5);
+	}
+	.promptUseLink {
+		min-height: rem(36);
+		padding: rem(7) rem(8);
+		font-size: rem(11);
+	}
+	.promptFavoriteButton {
+		width: rem(36);
+		min-width: rem(36);
+		height: rem(36);
 	}
 	.worksList .workCard {
 		grid-template-columns: rem(110) minmax(0, 1fr);
@@ -3919,6 +4012,12 @@ a.receiptState {
 	.resultCard,
 	.shareResult {
 		padding: rem(8);
+	}
+}
+
+@media (max-width: em(360)) {
+	.promptFavoritesLabel {
+		display: none;
 	}
 }
 
