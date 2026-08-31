@@ -617,17 +617,11 @@ export function GenerationChatPage({
       return;
     }
 
-    const normalizedSlug = requestedModelSlug.toLocaleLowerCase("en-US");
-    const requestedFamily = createModelFamilies(models.data).find(
-      (family) =>
-        getModelFamilyRouteSlug(family.label, kind) === normalizedSlug,
+    const requestedModel = resolveRequestedModel(
+      models.data,
+      requestedModelSlug,
+      kind,
     );
-    const requestedModel = models.data.find(
-      (model) =>
-        model.id === requestedModelSlug ||
-        model.slug.toLocaleLowerCase("en-US") === normalizedSlug,
-    ) || requestedFamily?.entries.find(({ model }) => model.available)?.model ||
-      requestedFamily?.entries[0]?.model;
     const timer = window.setTimeout(() => {
       if (!requestedModel) {
         setConversationError(
@@ -640,18 +634,6 @@ export function GenerationChatPage({
         return;
       }
 
-      if (!requestedModel.available) {
-        setConversationError(
-          t(
-            `Модель «${requestedModel.name}» временно недоступна. Выберите другую модель.`,
-            `Model “${requestedModel.name}” is temporarily unavailable. Choose another model.`,
-          ),
-        );
-        setInitialModelResolved(true);
-        return;
-      }
-
-      setConversationError(null);
       setDraft((current) =>
         selectDraftModel(
           {
@@ -663,6 +645,17 @@ export function GenerationChatPage({
         ),
       );
       setInitialModelResolved(true);
+
+      if (requestedModel.available) {
+        setConversationError(null);
+      } else {
+        setConversationError(
+          t(
+            `Модель «${requestedModel.name}» временно недоступна. Выберите другую модель.`,
+            `Model “${requestedModel.name}” is temporarily unavailable. Choose another model.`,
+          ),
+        );
+      }
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -680,8 +673,14 @@ export function GenerationChatPage({
     if (!draftReady || !availableModels.length) return;
     if (!initialModelResolved) return;
     const current = availableModels.find((model) => model.id === draft.modelId);
+    const requestedModel = requestedModelSlug
+      ? resolveRequestedModel(availableModels, requestedModelSlug, kind)
+      : null;
+    const currentMatchesRoute = Boolean(
+      current && requestedModel?.id === current.id,
+    );
     const selected =
-      (current?.available ? current : null) ||
+      (current && (current.available || currentMatchesRoute) ? current : null) ||
       availableModels.find((model) => model.available) ||
       current ||
       availableModels[0];
@@ -734,7 +733,14 @@ export function GenerationChatPage({
       }));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [availableModels, draft.modelId, draftReady, initialModelResolved, kind]);
+  }, [
+    availableModels,
+    draft.modelId,
+    draftReady,
+    initialModelResolved,
+    kind,
+    requestedModelSlug,
+  ]);
 
   useEffect(() => {
     if (!draftReady || kind !== "image" || !selectedModel) return;
@@ -3987,6 +3993,29 @@ function createModelFamilies(models: AiPublicModel[]): ModelFamily[] {
           left.sourceIndex - right.sourceIndex,
       ),
     }));
+}
+
+function resolveRequestedModel(
+  models: AiPublicModel[],
+  requestedSlug: string,
+  kind: GenerationChatKind,
+): AiPublicModel | undefined {
+  const normalizedSlug = requestedSlug.toLocaleLowerCase("en-US");
+  const exactModel = models.find(
+    (model) =>
+      model.id === requestedSlug ||
+      model.slug.toLocaleLowerCase("en-US") === normalizedSlug,
+  );
+  if (exactModel) return exactModel;
+
+  const family = createModelFamilies(models).find(
+    (candidate) =>
+      getModelFamilyRouteSlug(candidate.label, kind) === normalizedSlug,
+  );
+  return (
+    family?.entries.find(({ model }) => model.available)?.model ||
+    family?.entries[0]?.model
+  );
 }
 
 function getCreatePathKind(kind: GenerationChatKind): "photo" | "text" | "video" {
