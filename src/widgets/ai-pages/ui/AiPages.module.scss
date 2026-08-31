@@ -431,7 +431,8 @@
 }
 
 .authIntro {
-	position: relative;
+	position: sticky;
+	top: rem(104);
 	min-height: rem(540);
 	padding: rem(42);
 	overflow: hidden;
@@ -3672,6 +3673,8 @@ a.receiptState {
 		grid-template-columns: 1fr;
 	}
 	.authIntro {
+		position: relative;
+		top: auto;
 		min-height: rem(340);
 	}
 	.balanceHeroGrid {
