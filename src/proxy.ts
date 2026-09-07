@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { YANDEX_METRIKA_ID } from "@/shared/config/analytics";
 import { shouldPreserveAnalyticsQueryParameter } from "@/shared/lib/analytics/tracking-query";
+import { buildYandexMetrikaBootstrap } from "@/shared/lib/analytics/yandex-metrika";
 
 const DEFAULT_DIRECTUS_URL = "https://dev.cms.neuroluv.ru";
 const DIRECTUS_URL = (
@@ -12,6 +14,10 @@ const AI_API_URL = (
     : "http://localhost:4000/v1")
 ).replace(/\/$/, "");
 const REDIRECTS_CACHE_TTL_MS = 60_000;
+const YANDEX_METRIKA_BOOTSTRAP = buildYandexMetrikaBootstrap(
+  YANDEX_METRIKA_ID,
+  true,
+);
 const YANDEX_METRIKA_HOSTS = [
   "mc.yandex.ru",
   "mc.yandex.az",
@@ -87,12 +93,12 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return isAiPath ? nextAiResponse(request) : NextResponse.next();
+  return isAiPath ? await nextAiResponse(request) : NextResponse.next();
 }
 
-function nextAiResponse(request: NextRequest): NextResponse {
+async function nextAiResponse(request: NextRequest): Promise<NextResponse> {
   const nonce = crypto.randomUUID().replaceAll("-", "");
-  const contentSecurityPolicy = buildAiContentSecurityPolicy(nonce);
+  const contentSecurityPolicy = await buildAiContentSecurityPolicy(nonce);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("Content-Security-Policy", contentSecurityPolicy);
   requestHeaders.set("x-nonce", nonce);
@@ -111,9 +117,10 @@ function nextAiResponse(request: NextRequest): NextResponse {
   return response;
 }
 
-function buildAiContentSecurityPolicy(nonce: string): string {
+async function buildAiContentSecurityPolicy(nonce: string): Promise<string> {
   const directusOrigin = new URL(DIRECTUS_URL).origin;
   const apiOrigin = new URL(AI_API_URL).origin;
+  const metrikaBootstrapHash = await getYandexMetrikaBootstrapHash();
   const metrikaHttpsOrigins = YANDEX_METRIKA_HTTPS_ORIGINS.join(" ");
   const metrikaConnectOrigins = [
     ...YANDEX_METRIKA_HTTPS_ORIGINS,
@@ -123,7 +130,7 @@ function buildAiContentSecurityPolicy(nonce: string): string {
     process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://telegram.org https://mc.yandex.ru https://yastatic.net${developmentScriptPolicy}`,
+    `script-src 'self' 'nonce-${nonce}' '${metrikaBootstrapHash}' 'strict-dynamic' https://telegram.org https://mc.yandex.ru https://yastatic.net${developmentScriptPolicy}`,
     "style-src 'self' 'unsafe-inline'",
     `connect-src 'self' ${apiOrigin} ${directusOrigin} ${metrikaConnectOrigins}`,
     "img-src 'self' data: blob: https:",
@@ -143,6 +150,26 @@ function buildAiContentSecurityPolicy(nonce: string): string {
   }
 
   return directives.join("; ");
+}
+
+let yandexMetrikaBootstrapHash: Promise<string> | null = null;
+
+function getYandexMetrikaBootstrapHash(): Promise<string> {
+  // The parser-executed inline counter needs an exact CSP hash on /ai. The hash
+  // keeps strict-dynamic intact, so the trusted bootstrap may load tag.js.
+  yandexMetrikaBootstrapHash ??= crypto.subtle
+    .digest("SHA-256", new TextEncoder().encode(YANDEX_METRIKA_BOOTSTRAP))
+    .then((digest) => {
+      let binary = "";
+
+      for (const byte of new Uint8Array(digest)) {
+        binary += String.fromCharCode(byte);
+      }
+
+      return `sha256-${btoa(binary)}`;
+    });
+
+  return yandexMetrikaBootstrapHash;
 }
 
 export const config = {

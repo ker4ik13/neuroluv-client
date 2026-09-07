@@ -1,4 +1,3 @@
-import Script from "next/script";
 import { Suspense } from "react";
 
 import {
@@ -7,10 +6,6 @@ import {
 } from "@/shared/lib/analytics/yandex-metrika";
 
 import { YandexMetrikaRouteTracker } from "./YandexMetrikaRouteTracker";
-
-// This component is rendered only from the App Router root layout. The rule
-// cannot infer that through the shared component boundary.
-/* eslint-disable @next/next/no-before-interactive-script-outside-document */
 
 type YandexMetrikaProps = {
   counterId: string;
@@ -23,13 +18,14 @@ export function YandexMetrikaHead({ counterId }: YandexMetrikaProps) {
     return null;
   }
 
+  // Keep this native: next/script serializes beforeInteractive content into
+  // Next's client queue, delaying analytics until the runtime starts.
   return (
-    <Script
+    <script
       dangerouslySetInnerHTML={{
         __html: buildYandexMetrikaBootstrap(normalizedCounterId, true),
       }}
       id={`yandex-metrika-${normalizedCounterId}`}
-      strategy="beforeInteractive"
     />
   );
 }
