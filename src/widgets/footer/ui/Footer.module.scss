@@ -223,14 +223,11 @@
 	gap: rem(20);
 
 	@media (max-width: em($breakpoint-laptop)) {
-		grid-template-columns: minmax(0, 1fr) auto;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
+		align-items: center;
 		gap: rem(18);
+		text-align: center;
 	}
 }
 
@@ -242,18 +239,38 @@
 	font-size: rem(15);
 	line-height: rem(18);
 
-	@media (max-width: em($breakpoint-tablet)) {
+	@media (max-width: em($breakpoint-laptop)) {
 		order: 3;
 	}
 }
 
-.developer {
-	display: inline-flex;
+.credits {
+	display: flex;
+	min-width: 0;
+	flex-wrap: wrap;
 	align-items: center;
+	justify-content: center;
+	justify-self: center;
+	gap: rem(12);
+
+	@media (max-width: em($breakpoint-laptop)) {
+		order: 1;
+		width: 100%;
+	}
+}
+
+.credit {
+	display: inline-flex;
+	min-width: 0;
+	max-width: 100%;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
 	justify-self: center;
 	gap: rem(8);
 	overflow: hidden;
 	padding: rem(10) rem(16);
+	text-align: center;
 	color: #c7dbe5;
 	background:
 		radial-gradient(
@@ -269,14 +286,6 @@
 		@include focus-ring;
 	}
 
-	@media (max-width: em($breakpoint-laptop)) {
-		justify-self: end;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		order: 1;
-		justify-self: auto;
-	}
 }
 
 .contactLink {
@@ -297,16 +306,12 @@
 	}
 
 	@media (max-width: em($breakpoint-laptop)) {
-		grid-column: 2;
-		grid-row: 2;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
 		order: 2;
+		justify-self: auto;
 	}
 }
 
-.developerText {
+.creditLabel {
 	@include body-font(500);
 
 	position: relative;
@@ -316,7 +321,7 @@
 	white-space: nowrap;
 }
 
-.developerName {
+.creditName {
 	@include body-font(600);
 
 	position: relative;

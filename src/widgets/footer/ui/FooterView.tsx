@@ -9,6 +9,12 @@ type FooterViewProps = {
 	footer: FooterData;
 };
 
+const FOUNDER_CREDIT = {
+	label: 'Основатель:',
+	name: 'Видяшкина Ирина',
+	url: 'https://t.me/imishka0',
+} as const;
+
 export function FooterView({ footer }: FooterViewProps) {
 	return (
 		<footer className={styles.footer}>
@@ -69,12 +75,16 @@ export function FooterView({ footer }: FooterViewProps) {
 				<div className={styles.bottom}>
 					<p className={styles.copyright}>{footer.copyrightText}</p>
 
-					{footer.developerLabel && (
-						<DeveloperCredit
-							label={footer.developerLabel}
-							url={footer.developerUrl}
-						/>
-					)}
+					<div className={styles.credits}>
+						<CreditBadge {...FOUNDER_CREDIT} />
+						{footer.developerLabel && (
+							<CreditBadge
+								label='Разработка и продвижение:'
+								name={footer.developerLabel}
+								url={footer.developerUrl}
+							/>
+						)}
+					</div>
 
 					{footer.contactLink && (
 						<FooterLinkItem
@@ -122,26 +132,28 @@ function SocialLinkItem({ link }: { link: SocialLink }) {
 	);
 }
 
-function DeveloperCredit({
+function CreditBadge({
 	label,
+	name,
 	url,
 }: {
 	label: string;
+	name: string;
 	url: string | null;
 }) {
 	const content = (
 		<>
-			<span className={styles.developerText}>Разработчик:</span>
-			<span className={styles.developerName}>{label}</span>
+			<span className={styles.creditLabel}>{label}</span>
+			<span className={styles.creditName}>{name}</span>
 		</>
 	);
 
 	if (!url) {
-		return <span className={styles.developer}>{content}</span>;
+		return <span className={styles.credit}>{content}</span>;
 	}
 
 	return (
-		<a className={styles.developer} href={url} rel='noreferrer' target='_blank'>
+		<a className={styles.credit} href={url} rel='noreferrer' target='_blank'>
 			{content}
 		</a>
 	);

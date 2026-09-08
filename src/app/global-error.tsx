@@ -23,8 +23,8 @@ const GLOBAL_ERROR_FOOTER: FooterData = {
 	socialLinks: [],
 	columns: [],
 	copyrightText: '© 2026 Нейролюб. Все права защищены',
-	developerLabel: null,
-	developerUrl: null,
+	developerLabel: 'Кирилл Киреев',
+	developerUrl: 'https://t.me/ker4ik13',
 	legalLinks: [],
 	contactLink: {
 		id: 'contacts',

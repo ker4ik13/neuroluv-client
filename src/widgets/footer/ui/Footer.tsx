@@ -21,7 +21,7 @@ const FALLBACK_FOOTER: FooterData = {
 		},
 	],
 	copyrightText: '© 2026 Нейролюб. Все права защищены',
-	developerLabel: '@ker4ik13',
+	developerLabel: 'Кирилл Киреев',
 	developerUrl: 'https://t.me/ker4ik13',
 	contactLink: {
 		id: 'contacts',
