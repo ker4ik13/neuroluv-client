@@ -129,6 +129,7 @@ type Draft = {
 
 type ChatTurn = {
   id: string;
+  sequence?: number | null;
   run: AiRunSummary | null;
   prompt: string;
   outputs: AiRunOutput[];
@@ -208,7 +209,7 @@ const SAFE_TEXT_REFERENCE_MIME_TYPES = new Set([
   ...SAFE_IMAGE_REFERENCE_MIME_TYPES,
   "application/pdf",
 ]);
-const PLATFORM_REFERENCE_FILE_LIMIT = 14;
+const PLATFORM_REFERENCE_FILE_LIMIT = 30;
 const PLATFORM_REFERENCE_TOTAL_BYTES_LIMIT = 160 * 1024 * 1024;
 const COLLAPSIBLE_USER_MESSAGE_LENGTH = 420;
 const COLLAPSIBLE_USER_MESSAGE_LINES = 7;
@@ -1521,6 +1522,7 @@ export function GenerationChatPage({
         turn.run?.id === run.id
           ? {
               ...turn,
+              sequence: run.sequence ?? turn.sequence,
               run,
               outputs:
                 outputs === undefined
@@ -1578,6 +1580,7 @@ export function GenerationChatPage({
           ...current,
           {
             id: nextRun.id,
+            sequence: nextRun.sequence,
             run: nextRun,
             prompt: turn.prompt,
             outputs: [],
@@ -1884,6 +1887,7 @@ export function GenerationChatPage({
               submittedOperation,
               submittedFiles,
               submittedUseConversationReference,
+              submittedModel.capabilities,
             ),
             inputFileIds,
           },
@@ -1897,6 +1901,7 @@ export function GenerationChatPage({
             turn.id === clientId
               ? {
                   ...turn,
+                  sequence: nextRun.sequence ?? turn.sequence,
                   run: nextRun,
                   createdAt: nextRun.createdAt,
                   modelName: nextRun.modelName,
@@ -4794,6 +4799,7 @@ function buildQuotePayload({
       operation,
       references,
       useConversationReference,
+      model.capabilities,
       assumedReferenceCount,
     ),
   };
@@ -4827,6 +4833,7 @@ function buildParameters(
   operation: string,
   references: readonly File[],
   useConversationReference: boolean,
+  capabilities: AiPublicModel["capabilities"],
   assumedReferenceCount = 0,
 ) {
   const hasReference = Boolean(
@@ -4843,16 +4850,34 @@ function buildParameters(
     ...(draft.promptId && draft.catalogPromptOverride
       ? { promptOverride: true }
       : {}),
-    ...(draft.negativePrompt ? { negativePrompt: draft.negativePrompt } : {}),
-    ...(draft.aspectRatio ? { aspectRatio: draft.aspectRatio } : {}),
-    ...(draft.outputCount ? { count: Number(draft.outputCount) } : {}),
-    ...(draft.duration ? { duration: Number(draft.duration) } : {}),
-    ...(draft.resolution ? { resolution: draft.resolution } : {}),
-    ...(draft.quality ? { quality: draft.quality } : {}),
-    ...(draft.background ? { background: draft.background } : {}),
-    ...(draft.sound ? { sound: true } : {}),
-    ...(draft.reasoningMode ? { reasoningMode: draft.reasoningMode } : {}),
-    ...(draft.videoMode ? { videoMode: draft.videoMode } : {}),
+    ...(draft.negativePrompt && capabilities.acceptsNegativePrompt
+      ? { negativePrompt: draft.negativePrompt }
+      : {}),
+    ...(draft.aspectRatio && capabilities.aspectRatios?.includes(draft.aspectRatio)
+      ? { aspectRatio: draft.aspectRatio }
+      : {}),
+    ...(draft.outputCount && capabilities.outputCounts?.includes(Number(draft.outputCount))
+      ? { count: Number(draft.outputCount) }
+      : {}),
+    ...(draft.duration && capabilities.durations?.includes(Number(draft.duration))
+      ? { duration: Number(draft.duration) }
+      : {}),
+    ...(draft.resolution && capabilities.resolutions?.includes(draft.resolution)
+      ? { resolution: draft.resolution }
+      : {}),
+    ...(draft.quality && capabilities.qualities?.includes(draft.quality)
+      ? { quality: draft.quality }
+      : {}),
+    ...(draft.background && capabilities.backgrounds?.includes(draft.background)
+      ? { background: draft.background }
+      : {}),
+    ...(draft.sound && capabilities.acceptsSound ? { sound: true } : {}),
+    ...(draft.reasoningMode && capabilities.reasoning?.modes.includes(draft.reasoningMode)
+      ? { reasoningMode: draft.reasoningMode }
+      : {}),
+    ...(draft.videoMode && capabilities.videoModes?.some((mode) => mode.code === draft.videoMode)
+      ? { videoMode: draft.videoMode }
+      : {}),
     ...(hasReference
       ? {
           hasReference: true,
@@ -5073,6 +5098,7 @@ function getToolMessage(
 function toChatTurn(turn: NonNullable<AiConversation["turns"]>[number]): ChatTurn {
   return {
     id: turn.run.id,
+    sequence: turn.sequence ?? turn.run.sequence,
     run: turn.run,
     prompt: turn.userText,
     outputs: turn.outputs,
@@ -5111,6 +5137,7 @@ function mergeConversationTurns(
       prompt: turn.prompt.trim() ? turn.prompt : existing.prompt,
       outputs: mergeRunOutputs(existing.outputs, turn.outputs),
       inputFiles: mergeMessageAttachments(existing.inputFiles, turn.inputFiles),
+      sequence: turn.sequence ?? turn.run.sequence ?? existing.sequence,
       modelId: turn.modelId || existing.modelId,
       modelName: turn.modelName || existing.modelName,
       submitError: turn.submitError ?? existing.submitError,
@@ -5120,7 +5147,24 @@ function mergeConversationTurns(
     (turn) => !turn.run || !synchronizedRunIds.has(turn.run.id),
   );
 
-  return [...merged, ...localOnlyTurns];
+  return [...merged, ...localOnlyTurns].sort(compareChatTurns);
+}
+
+function compareChatTurns(left: ChatTurn, right: ChatTurn): number {
+  const leftSequence = left.sequence ?? left.run?.sequence ?? null;
+  const rightSequence = right.sequence ?? right.run?.sequence ?? null;
+  if (leftSequence !== null && rightSequence !== null && leftSequence !== rightSequence) {
+    return leftSequence - rightSequence;
+  }
+
+  const leftTime = Date.parse(left.createdAt);
+  const rightTime = Date.parse(right.createdAt);
+  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+    return leftTime - rightTime;
+  }
+  if (leftSequence !== null && rightSequence === null) return -1;
+  if (leftSequence === null && rightSequence !== null) return 1;
+  return left.id.localeCompare(right.id);
 }
 
 function mergeRunOutputs(

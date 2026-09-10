@@ -247,6 +247,7 @@ export type AiRunDetail = AiRunSummary & {
 export type AiConversationKind = 'text' | 'image' | 'video';
 
 export type AiConversationTurn = {
+	sequence?: number | null;
 	run: AiRunSummary;
 	userText: string;
 	inputFiles: AiMessageAttachment[];
