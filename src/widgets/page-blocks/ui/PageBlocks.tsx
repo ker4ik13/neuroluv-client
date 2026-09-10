@@ -18,6 +18,7 @@ import { ZeroBlock } from "@/widgets/page-blocks/ui/zero-block/ZeroBlock";
 
 type PageBlocksProps = {
   blocks: PageBlock[];
+  nonce?: string;
 };
 
 const blockRenderers = {
@@ -59,10 +60,10 @@ const blockRenderers = {
   zero: (block: Extract<PageBlock, { type: "zero" }>) => <ZeroBlock block={block} />,
 };
 
-export function PageBlocks({ blocks }: PageBlocksProps) {
+export function PageBlocks({ blocks, nonce }: PageBlocksProps) {
   return (
     <>
-      <JsonLd data={buildFaqPageJsonLd(blocks)} />
+      <JsonLd data={buildFaqPageJsonLd(blocks)} nonce={nonce} />
       {blocks.map((block) => {
         return (
           <PageBlockItem block={block} key={`${block.type}-${block.id}`} />

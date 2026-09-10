@@ -37,33 +37,8 @@ export type AiPageMetadata = {
 	seoTitle?: string | null;
 	seoDescription?: string | null;
 	noindex: boolean;
-	blocks?: AiPageContentBlock[];
 	imageUrl?: string | null;
 };
-
-export type AiPageContentBlock =
-	| {
-			type: 'text';
-			title?: string | null;
-			paragraphs: string[];
-	  }
-	| {
-			type: 'list';
-			title?: string | null;
-			intro?: string | null;
-			outro?: string | null;
-			items: string[];
-	  }
-	| {
-			type: 'steps';
-			title?: string | null;
-			items: Array<{ title: string; description: string }>;
-	  }
-	| {
-			type: 'faq';
-			title?: string | null;
-			items: Array<{ question: string; answer: string }>;
-	  };
 
 export type AiUser = {
 	id: string;
