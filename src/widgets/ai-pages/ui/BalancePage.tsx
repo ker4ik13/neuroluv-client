@@ -280,7 +280,9 @@ export function BalancePage() {
 			>('/billing/checkout', {
 				method: 'POST',
 				headers: { 'idempotency-key': checkoutIntent.current.key },
-				timeoutMs: 40_000,
+				// The backend may safely retry an idempotent YooKassa request three
+				// times during a transient network stall.
+				timeoutMs: 70_000,
 				body: {
 					productType: checkoutProduct.type,
 					productId: checkoutProduct.value.id,

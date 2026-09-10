@@ -1,5 +1,6 @@
 import type { FooterData } from '@/entities/footer';
 import { getFooterData } from '@/shared/api/directus/footer';
+import { AI_SUPPORT_URL } from '@/shared/config/ai';
 import { FooterView } from './FooterView';
 
 const FALLBACK_FOOTER: FooterData = {
@@ -59,6 +60,12 @@ const FALLBACK_FOOTER: FooterData = {
 			label: 'Согласие на рассылки',
 			href: '/legal/marketing-consent',
 			target: '_self',
+		},
+		{
+			id: 'support',
+			label: 'Поддержка',
+			href: AI_SUPPORT_URL,
+			target: '_blank',
 		},
 	],
 };

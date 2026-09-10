@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import type { FooterData } from '@/entities/footer';
 import type { HeaderNavigation } from '@/entities/navigation';
+import { AI_SUPPORT_URL } from '@/shared/config/ai';
 import { AiShell } from '@/widgets/ai-shell';
 import { ErrorPage } from '@/widgets/error-page';
 import { FooterView } from '@/widgets/footer';
@@ -25,7 +26,14 @@ const GLOBAL_ERROR_FOOTER: FooterData = {
 	copyrightText: '© 2026 Нейролюб. Все права защищены',
 	developerLabel: 'Кирилл Киреев',
 	developerUrl: 'https://t.me/ker4ik13',
-	legalLinks: [],
+	legalLinks: [
+		{
+			id: 'support',
+			label: 'Поддержка',
+			href: AI_SUPPORT_URL,
+			target: '_blank',
+		},
+	],
 	contactLink: {
 		id: 'contacts',
 		label: 'Контакты',

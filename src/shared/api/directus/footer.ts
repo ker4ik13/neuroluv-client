@@ -5,6 +5,7 @@ import type {
 	SocialLink,
 } from '@/entities/navigation';
 import { directusRequest } from '@/shared/api/directus/client';
+import { AI_SUPPORT_URL } from '@/shared/config/ai';
 import { DIRECTUS_URL } from '@/shared/config/directus';
 
 type DirectusIcon = {
@@ -39,6 +40,10 @@ type DirectusSocialLink = {
 	platform: string | null;
 	url: string | null;
 	icon: DirectusIcon | null;
+};
+
+type DirectusAiSettingsFooter = {
+	support_telegram: string | null;
 };
 
 type DirectusNavigationItem = {
@@ -156,7 +161,7 @@ const CONTACT_LINK: FooterLink = {
 };
 
 export async function getFooterData(): Promise<FooterData> {
-	const [settings, socialLinks] = await Promise.all([
+	const [settings, socialLinks, aiSettings] = await Promise.all([
 		directusRequest<DirectusSiteSettingsFooter>(
 			'/items/site_settings?fields=' + FOOTER_SETTINGS_FIELDS,
 			{ next: { revalidate: 60 } },
@@ -164,6 +169,10 @@ export async function getFooterData(): Promise<FooterData> {
 		directusRequest<DirectusSocialLink[]>(
 			'/items/social_links?filter[is_active][_eq]=true&filter[show_in_footer][_eq]=true&sort=sort&fields=' +
 				SOCIAL_FIELDS,
+			{ next: { revalidate: 60 } },
+		),
+		directusRequest<DirectusAiSettingsFooter>(
+			'/items/ai_settings?fields=support_telegram',
 			{ next: { revalidate: 60 } },
 		),
 	]);
@@ -181,9 +190,34 @@ export async function getFooterData(): Promise<FooterData> {
 			'© ' + new Date().getFullYear() + ' ' + siteName + '. Все права защищены',
 		developerLabel: settings.developer_label,
 		developerUrl: settings.developer_url,
-		legalLinks: LEGAL_LINKS,
+		legalLinks: withSupportLink(
+			LEGAL_LINKS,
+			normalizeSupportHref(aiSettings.support_telegram) || AI_SUPPORT_URL,
+		),
 		contactLink: CONTACT_LINK,
 	};
+}
+
+function withSupportLink(links: FooterLink[], href: string): FooterLink[] {
+	return [
+		...links,
+		{
+			id: 'support',
+			label: 'Поддержка',
+			href,
+			target: '_blank',
+		},
+	];
+}
+
+function normalizeSupportHref(value: string | null): string | null {
+	if (!value || value.length > 2_048) return null;
+	try {
+		const url = new URL(value);
+		return url.protocol === 'https:' ? url.toString() : null;
+	} catch {
+		return null;
+	}
 }
 
 function normalizeFooterColumns(assignments: DirectusFooterMenuAssignment[]) {
