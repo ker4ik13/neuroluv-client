@@ -64,13 +64,15 @@ export default async function Page() {
 				]}
 				nonce={nonceHeaders.get('x-nonce') || undefined}
 			/>
-			<CreateStudioPage
-				kind='photo-to-prompt'
-				pageTitle={
-					page?.heading ||
-					'Промпт по фото — создать готовый промт для нейросети онлайн'
-				}
-			/>
+			<section className={styles.workspace}>
+				<CreateStudioPage
+					kind='photo-to-prompt'
+					pageTitle={
+						page?.heading ||
+						'Промпт по фото — создать готовый промт для нейросети онлайн'
+					}
+				/>
+			</section>
 			{blocks.length ? <ManagedContent blocks={blocks} /> : null}
 		</>
 	);

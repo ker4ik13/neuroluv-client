@@ -218,8 +218,8 @@ function AiShellContent({
 		return sortNavigation(source);
 	}, [apiNavigation, isEnglish, navigation, normalizedProvidedNavigation]);
 	const brandName = useMemo(() => splitProjectName(projectName), [projectName]);
-	const isChatWorkspace = isGenerationChatPath(pathname);
 	const isGenerationPage = isGenerationSeoPagePath(pathname);
+	const isChatWorkspace = isGenerationChatPath(pathname) && !isGenerationPage;
 
 	function closeNavigation() {
 		setDesktopValue('');
@@ -805,8 +805,11 @@ function isGenerationChatPath(pathname: string): boolean {
 }
 
 function isGenerationSeoPagePath(pathname: string): boolean {
-	return /^\/ai\/create\/(?:photo|text|video)(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/.test(
-		pathname,
+	return (
+		pathname === '/ai/tools/photo-to-prompt' ||
+		/^\/ai\/create\/(?:photo|text|video)(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/.test(
+			pathname,
+		)
 	);
 }
 
