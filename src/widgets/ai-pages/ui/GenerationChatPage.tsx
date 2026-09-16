@@ -3108,7 +3108,7 @@ export function GenerationChatPage({
 												</span>
 											</button>
 										) : null}
-										{referenceInputVisible && (acceptsVideo || acceptsAudio) ? (
+											{referenceInputVisible && attachmentSupportKinds.length > 0 ? (
 											<div
 												aria-label={t(
 													'Поддерживаемые вложения',
@@ -5890,10 +5890,7 @@ function getComposerPlaceholder(
 	isEnglish = false,
 ): string {
 	const placeholders: Record<GenerationChatKind, [string, string]> = {
-		image: [
-			'Опишите изображение, стиль, свет и важные детали…',
-			'Describe the image, style, light and key details…',
-		],
+		image: ['Напишите сообщение…', 'Write a message…'],
 		video: [
 			'Опишите сцену, движение камеры и атмосферу…',
 			'Describe the scene, camera movement and atmosphere…',
