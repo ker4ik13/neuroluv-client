@@ -103,11 +103,13 @@ export type AiModelCapabilities = {
 	maxReferenceFiles?: number;
 	acceptedMimeTypes?: string[];
 	requiredFileKinds?: Array<{
-		kind: 'image' | 'video';
+		kind: 'audio' | 'document' | 'image' | 'video';
 		min: number;
 		max: number;
+		maxBytes?: number;
 	}>;
 	referencePromptTag?: string;
+	referencePromptTags?: Partial<Record<'audio' | 'image' | 'video', string>>;
 	reasoning?: {
 		modes: string[];
 		defaultMode: string;

@@ -866,7 +866,8 @@
 	}
 
 	img,
-	.messageAttachmentIcon {
+	.messageAttachmentIcon,
+	.messageAttachmentMediaIcon {
 		display: inline-flex;
 		width: rem(42);
 		height: rem(42);
@@ -877,6 +878,26 @@
 		background: rgba(255, 255, 255, 0.16);
 		border-radius: rem(9);
 	}
+}
+
+.messageAttachmentMediaIcon {
+	color: #fff;
+	font-size: rem(20);
+	background: linear-gradient(
+		135deg,
+		rgba(111, 84, 223, 0.84),
+		rgba(47, 128, 237, 0.88)
+	);
+}
+
+.messageAttachmentAudioIcon {
+	color: #fff;
+	font-size: rem(20);
+	background: linear-gradient(
+		135deg,
+		rgba(208, 74, 138, 0.88),
+		rgba(111, 84, 223, 0.88)
+	);
 }
 
 .messageAttachmentItem {
@@ -1401,6 +1422,77 @@
 	}
 }
 
+.attachmentSupportBar {
+	display: flex;
+	max-width: 100%;
+	align-items: stretch;
+	gap: rem(7);
+	overflow-x: auto;
+	padding: rem(2) 0;
+	overscroll-behavior-x: contain;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
+.attachmentSupportItem {
+	display: grid;
+	min-width: max-content;
+	grid-template-columns: rem(30) auto;
+	align-items: center;
+	gap: rem(7);
+	padding: rem(7) rem(10) rem(7) rem(7);
+	color: var(--ai-text);
+	background: linear-gradient(
+		135deg,
+		rgba(8, 127, 219, 0.055),
+		rgba(56, 111, 242, 0.08)
+	);
+	border: rem(1) solid rgba(8, 127, 219, 0.13);
+	border-radius: rem(11);
+
+	> i {
+		display: grid;
+		width: rem(30);
+		height: rem(30);
+		place-items: center;
+		color: var(--ai-primary);
+		font-size: rem(15);
+		font-style: normal;
+		background: var(--ai-surface);
+		border-radius: rem(9);
+		box-shadow: 0 rem(3) rem(10) rgba(16, 77, 126, 0.08);
+	}
+
+	> span {
+		display: grid;
+		gap: rem(1);
+	}
+
+	strong {
+		font-size: rem(11);
+		font-weight: 800;
+	}
+
+	small {
+		color: var(--ai-muted);
+		font-size: rem(9);
+		font-weight: 650;
+	}
+
+	&[data-kind='video'] > i {
+		color: #6f54df;
+		background: rgba(111, 84, 223, 0.1);
+	}
+
+	&[data-kind='audio'] > i {
+		color: #d04a8a;
+		background: rgba(208, 74, 138, 0.1);
+	}
+}
+
 .toolReferencePicker {
 	display: grid;
 	width: 100%;
@@ -1586,9 +1678,37 @@
 		object-fit: cover;
 	}
 
+	video {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
 	&:focus-visible {
 		@include focus-ring;
 	}
+}
+
+.composerAttachmentMedia {
+	position: relative;
+	color: #fff;
+	background: #13283d;
+
+	> svg {
+		position: absolute;
+		z-index: 1;
+		filter: drop-shadow(0 rem(2) rem(5) rgba(0, 0, 0, 0.45));
+	}
+}
+
+.composerAttachmentAudio {
+	color: #d04a8a;
+	background: linear-gradient(
+		145deg,
+		rgba(208, 74, 138, 0.12),
+		rgba(111, 84, 223, 0.12)
+	);
 }
 
 .composerAttachmentSize {
