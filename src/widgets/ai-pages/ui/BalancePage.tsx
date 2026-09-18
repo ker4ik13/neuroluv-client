@@ -21,6 +21,7 @@ import {
 import { useAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
 import {
+	type AiActivePromo,
 	type AiApiEnvelope,
 	AiApiError,
 	aiApiFetch,
@@ -29,6 +30,7 @@ import {
 	type AiPaymentProvider,
 	type AiPaymentSummary,
 	type AiPlan,
+	type AiPromoActivationResult,
 	type AiPromoQuote,
 	type AiReferralStats,
 	type AiTopupPackage,
@@ -91,6 +93,11 @@ export function BalancePage() {
 	const [promoCode, setPromoCode] = useState('');
 	const [promoQuote, setPromoQuote] = useState<AiPromoQuote | null>(null);
 	const [promoError, setPromoError] = useState<string | null>(null);
+	const [activationPromoCode, setActivationPromoCode] = useState('');
+	const [activationPromoPending, setActivationPromoPending] = useState(false);
+	const [activationPromoError, setActivationPromoError] = useState<
+		string | null
+	>(null);
 	const checkoutIntent = useRef<{ signature: string; key: string } | null>(
 		null,
 	);
@@ -233,11 +240,15 @@ export function BalancePage() {
 		setActivationMode(
 			product.type === 'subscription' && !activePlanId ? 'immediate' : null,
 		);
-		setPromoCode('');
+		const activePromoCode = products.data?.activePromo?.code ?? '';
+		setPromoCode(activePromoCode);
 		setPromoQuote(null);
 		setPromoError(null);
 		setError(null);
 		setCheckoutProduct(product);
+		if (activePromoCode) {
+			void requestPromoQuote(activePromoCode, product);
+		}
 	}
 
 	async function startCheckout() {
@@ -341,6 +352,10 @@ export function BalancePage() {
 			return;
 		}
 
+		await requestPromoQuote(code, checkoutProduct);
+	}
+
+	async function requestPromoQuote(code: string, product: CheckoutProduct) {
 		setIsPromoPending(true);
 		setPromoError(null);
 		setPromoQuote(null);
@@ -351,8 +366,8 @@ export function BalancePage() {
 				method: 'POST',
 				body: {
 					code,
-					productType: checkoutProduct.type,
-					productId: checkoutProduct.value.id,
+					productType: product.type,
+					productId: product.value.id,
 				},
 			});
 			const quote = unwrapAiData(payload);
@@ -363,6 +378,50 @@ export function BalancePage() {
 			setPromoError(getAiErrorMessage(requestError));
 		} finally {
 			setIsPromoPending(false);
+		}
+	}
+
+	async function activatePromo(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		const code = activationPromoCode.trim();
+		if (!code) {
+			setActivationPromoError(t('Введите промокод', 'Enter a promo code'));
+			return;
+		}
+		setActivationPromoPending(true);
+		setActivationPromoError(null);
+		setNotice(null);
+		try {
+			const payload = await aiApiFetch<
+				AiPromoActivationResult | AiApiEnvelope<AiPromoActivationResult>
+			>('/billing/promo/activate', {
+				method: 'POST',
+				headers: { 'idempotency-key': crypto.randomUUID() },
+				body: { code },
+			});
+			const result = unwrapAiData(payload);
+			setActivationPromoCode('');
+			await Promise.all([refreshWallet(), refreshProducts(), refreshSession()]);
+			setNotice(
+				result.status === 'credited'
+					? t(
+							`Промокод применён: начислено ${formatCredits(result.bonusCredits, locale)}.`,
+							`Promo code applied: ${formatCredits(result.bonusCredits, locale)} added.`,
+						)
+					: result.status === 'used'
+						? t(
+								'Этот промокод уже был использован.',
+								'This promo code has already been used.',
+							)
+						: t(
+								'Промокод активирован и автоматически применится к подходящей покупке.',
+								'The promo code is active and will be applied to an eligible purchase automatically.',
+							),
+			);
+		} catch (requestError) {
+			setActivationPromoError(getAiErrorMessage(requestError));
+		} finally {
+			setActivationPromoPending(false);
 		}
 	}
 
@@ -406,97 +465,162 @@ export function BalancePage() {
 				{products.data && (!session.authenticated || wallet.data) ? (
 					<>
 						{session.authenticated && wallet.data ? (
-							<div className={styles.balanceHeroGrid}>
-								<AiCard className={styles.balanceMainCard}>
-									<span className={styles.balanceIcon}>
-										<FiZap aria-hidden='true' />
-									</span>
-									<p>{t('Доступно сейчас', 'Available now')}</p>
-									<strong>
-										{formatCredits(wallet.data.availableCredits, locale)}
-									</strong>
-									{wallet.data.reservedCredits > 0 ||
-									wallet.data.lockedCredits > 0 ? (
-										<div className={styles.balanceBreakdown}>
-											{wallet.data.reservedCredits > 0 ? (
-												<span>
-													<small>{t('Зарезервировано', 'Reserved')}</small>
-													{formatCredits(wallet.data.reservedCredits, locale)}
-												</span>
-											) : null}
-											{wallet.data.lockedCredits > 0 ? (
-												<span>
-													<small>
-														{t('Временно заблокировано', 'Temporarily locked')}
-													</small>
-													{formatCredits(wallet.data.lockedCredits, locale)}
-												</span>
-											) : null}
+							<>
+								<div className={styles.balanceHeroGrid}>
+									<AiCard className={styles.balanceMainCard}>
+										<span className={styles.balanceIcon}>
+											<FiZap aria-hidden='true' />
+										</span>
+										<p>{t('Доступно сейчас', 'Available now')}</p>
+										<strong>
+											{formatCredits(wallet.data.availableCredits, locale)}
+										</strong>
+										{wallet.data.reservedCredits > 0 ||
+										wallet.data.lockedCredits > 0 ? (
+											<div className={styles.balanceBreakdown}>
+												{wallet.data.reservedCredits > 0 ? (
+													<span>
+														<small>{t('Зарезервировано', 'Reserved')}</small>
+														{formatCredits(wallet.data.reservedCredits, locale)}
+													</span>
+												) : null}
+												{wallet.data.lockedCredits > 0 ? (
+													<span>
+														<small>
+															{t(
+																'Временно заблокировано',
+																'Temporarily locked',
+															)}
+														</small>
+														{formatCredits(wallet.data.lockedCredits, locale)}
+													</span>
+												) : null}
+											</div>
+										) : null}
+									</AiCard>
+
+									<AiCard className={styles.subscriptionCard}>
+										<div className={styles.subscriptionHeading}>
+											<span className={styles.balanceIcon}>
+												<FiShield aria-hidden='true' />
+											</span>
+											<StatusBadge
+												status={
+													products.data.subscription.active
+														? 'active'
+														: 'inactive'
+												}
+											/>
+										</div>
+										<h2>
+											{products.data.subscription.planName ||
+												t('Нет активной подписки', 'No active subscription')}
+										</h2>
+										{products.data.subscription.active ? (
+											<>
+												<p>
+													{t('Активна до', 'Active until')}{' '}
+													{products.data.subscription.periodEndsAt
+														? formatDate(
+																products.data.subscription.periodEndsAt,
+																false,
+																locale,
+															)
+														: t(
+																'конца оплаченного периода',
+																'the end of the paid period',
+															)}
+												</p>
+												<div className={styles.subscriptionFooter}>
+													<span>
+														{t('Продление вручную', 'Manual renewal')}
+													</span>
+												</div>
+												{scheduledSubscription ? (
+													<p>
+														{t('Следующий тариф', 'Next plan')}:{' '}
+														<strong>
+															{scheduledSubscription.planName ||
+																t('Выбранный тариф', 'Selected plan')}
+														</strong>{' '}
+														· {t('с', 'from')}{' '}
+														{formatDate(
+															scheduledSubscription.startsAt,
+															false,
+															locale,
+														)}
+													</p>
+												) : null}
+											</>
+										) : (
+											<p>
+												{t(
+													'Запуски и использование ранее купленных разовых кредитов станут доступны после подключения подписки.',
+													'Runs and previously purchased top-up credits become available after subscribing.',
+												)}
+											</p>
+										)}
+									</AiCard>
+								</div>
+								<AiCard className={styles.promoActivationCard}>
+									<div>
+										<span className={styles.balanceIcon}>
+											<FiGift aria-hidden='true' />
+										</span>
+										<div>
+											<h2>{t('Промокод', 'Promo code')}</h2>
+											<p>
+												{t(
+													'Введите код отдельно: бонусные кредиты начислятся сразу, а скидка сохранится до следующей подходящей покупки.',
+													'Enter a code separately: bonus credits are added immediately, while a discount is saved for the next eligible purchase.',
+												)}
+											</p>
+										</div>
+									</div>
+									<form
+										className={styles.checkoutPromo}
+										onSubmit={(event) => void activatePromo(event)}
+									>
+										<div>
+											<input
+												aria-label={t('Промокод', 'Promo code')}
+												maxLength={64}
+												placeholder={t('Введите промокод', 'Enter promo code')}
+												value={activationPromoCode}
+												onChange={(event) => {
+													setActivationPromoCode(event.target.value);
+													setActivationPromoError(null);
+												}}
+											/>
+											<AiButton
+												disabled={
+													activationPromoPending || !activationPromoCode.trim()
+												}
+												type='submit'
+												variant='secondary'
+											>
+												{activationPromoPending
+													? t('Применяем…', 'Applying…')
+													: t('Применить', 'Apply')}
+											</AiButton>
+										</div>
+										{activationPromoError ? (
+											<FieldMessage>{activationPromoError}</FieldMessage>
+										) : null}
+									</form>
+									{products.data.activePromo ? (
+										<div className={styles.activePromoBadge}>
+											<FiCheck aria-hidden='true' />
+											<span>
+												{t('Активен', 'Active')}:{' '}
+												<b>{products.data.activePromo.code}</b>
+												{' · '}
+												{formatActivePromo(products.data.activePromo, locale)}
+											</span>
 										</div>
 									) : null}
 								</AiCard>
-
-								<AiCard className={styles.subscriptionCard}>
-									<div className={styles.subscriptionHeading}>
-										<span className={styles.balanceIcon}>
-											<FiShield aria-hidden='true' />
-										</span>
-										<StatusBadge
-											status={
-												products.data.subscription.active
-													? 'active'
-													: 'inactive'
-											}
-										/>
-									</div>
-									<h2>
-										{products.data.subscription.planName ||
-											t('Нет активной подписки', 'No active subscription')}
-									</h2>
-									{products.data.subscription.active ? (
-										<>
-											<p>
-												{t('Активна до', 'Active until')}{' '}
-												{products.data.subscription.periodEndsAt
-													? formatDate(
-															products.data.subscription.periodEndsAt,
-															false,
-															locale,
-														)
-													: t(
-															'конца оплаченного периода',
-															'the end of the paid period',
-														)}
-											</p>
-											<div className={styles.subscriptionFooter}>
-												<span>{t('Продление вручную', 'Manual renewal')}</span>
-											</div>
-											{scheduledSubscription ? (
-												<p>
-													{t('Следующий тариф', 'Next plan')}:{' '}
-													<strong>
-														{scheduledSubscription.planName ||
-															t('Выбранный тариф', 'Selected plan')}
-													</strong>{' '}
-													· {t('с', 'from')}{' '}
-													{formatDate(
-														scheduledSubscription.startsAt,
-														false,
-														locale,
-													)}
-												</p>
-											) : null}
-										</>
-									) : (
-										<p>
-											{t(
-												'Запуски и использование ранее купленных разовых кредитов станут доступны после подключения подписки.',
-												'Runs and previously purchased top-up credits become available after subscribing.',
-											)}
-										</p>
-									)}
-								</AiCard>
-							</div>
+							</>
 						) : null}
 
 						<section className={styles.productSection}>
@@ -1051,4 +1175,12 @@ function ProviderChoice({
 
 function isCreditCountName(value: string): boolean {
 	return /^[\d\s.,]+(?:кредит(?:а|ов)?|credits?)$/iu.test(value.trim());
+}
+
+function formatActivePromo(promo: AiActivePromo, locale: string): string {
+	if (promo.discountType === 'percent') return `−${promo.discountValue}%`;
+	if (promo.discountType === 'fixed_amount') {
+		return `−${formatMoney(promo.discountValue, promo.currency || 'RUB', locale)}`;
+	}
+	return `+${formatCredits(promo.bonusCredits || promo.discountValue, locale)}`;
 }

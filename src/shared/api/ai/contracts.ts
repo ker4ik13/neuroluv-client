@@ -404,6 +404,21 @@ export type AiPromoQuote = {
 	currency: string;
 };
 
+export type AiActivePromo = {
+	code: string;
+	discountType: 'percent' | 'fixed_amount' | 'bonus_credits';
+	discountValue: number;
+	bonusCredits: number;
+	currency: string | null;
+	expiresAt: string | null;
+	redemptionMode: 'future_purchase' | 'balance';
+};
+
+export type AiPromoActivationResult = AiActivePromo & {
+	status: 'active' | 'credited' | 'used';
+	balanceAfter?: number;
+};
+
 export type AiBalancePage = {
 	wallet: AiWalletSummary;
 	subscription: AiSubscriptionState;
@@ -570,6 +585,7 @@ export type AiBillingProducts = {
 	plans: AiPlan[];
 	topups: AiTopupPackage[];
 	paymentProviders: AiPaymentProvider[];
+	activePromo: AiActivePromo | null;
 };
 
 export type AiPaymentSummary = {

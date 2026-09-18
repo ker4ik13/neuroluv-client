@@ -665,19 +665,27 @@ export function ProfilePage() {
 											/>
 											<span aria-hidden='true' />
 											<strong>
-												{t(
-													'Статусы генераций и важные обновления сервиса',
-													'Generation statuses and important service updates',
-												)}
+												{t('Уведомления в Telegram', 'Telegram notifications')}
 											</strong>
 										</label>
 										{!profile.data.authMethods.telegram ? (
-											<FieldMessage tone='notice'>
-												{t(
-													'Сначала привяжите Telegram и запустите бота Нейролюба.',
-													'Link Telegram and start the Neuroluv bot first.',
-												)}
-											</FieldMessage>
+											<div className={styles.preferenceConnectAction}>
+												<FieldMessage tone='notice'>
+													{t(
+														'Подключите Telegram здесь, чтобы получать результаты с фото и видео, ошибки, списания и пополнения.',
+														'Connect Telegram here to receive photo and video results, failures, debits, and balance top-ups.',
+													)}
+												</FieldMessage>
+												<AiButton
+													disabled={identityPending}
+													type='button'
+													variant='secondary'
+													onClick={() => void linkTelegram()}
+												>
+													<FiSend aria-hidden='true' />
+													{t('Подключить Telegram', 'Connect Telegram')}
+												</AiButton>
+											</div>
 										) : null}
 										<label className={styles.toggleField}>
 											<input

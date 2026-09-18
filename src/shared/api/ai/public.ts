@@ -1,32 +1,34 @@
 import 'server-only';
-
 import { AI_API_URL } from '@/shared/config/ai';
 import type {
 	AiApiEnvelope,
 	AiFaqItem,
+	AiPageMetadata,
 	AiPromptCatalog,
 	AiPromptDetail,
-	AiPageMetadata,
 	AiPublicShare,
 } from './contracts';
 
 const PUBLIC_FETCH_TIMEOUT_MS = 3_000;
 
 type PublicFetchOptions = {
+	revalidateSeconds?: number;
 	throwOnError?: boolean;
 };
 
 export async function getAiPublicPromptCatalog(): Promise<AiPromptCatalog | null> {
 	return fetchAiPublic<AiPromptCatalog>(
 		'/catalog/prompts?page=1&pageSize=12&sort=newest',
-		{ throwOnError: true },
+		{ revalidateSeconds: 300, throwOnError: true },
 	);
 }
 
-export async function getAiPublicPrompt(slug: string): Promise<AiPromptDetail | null> {
+export async function getAiPublicPrompt(
+	slug: string,
+): Promise<AiPromptDetail | null> {
 	const payload = await fetchAiPublic<AiApiEnvelope<AiPromptDetail>>(
 		`/catalog/prompts/${encodeURIComponent(slug)}`,
-		{ throwOnError: true },
+		{ revalidateSeconds: 300, throwOnError: true },
 	);
 
 	return payload?.data ?? null;
@@ -43,7 +45,9 @@ export async function getAiPageMetadata(
 }
 
 export async function hasAiPublicPrompts(): Promise<boolean> {
-	const catalog = await fetchAiPublic<AiPromptCatalog>('/catalog/prompts?page=1&pageSize=1');
+	const catalog = await fetchAiPublic<AiPromptCatalog>(
+		'/catalog/prompts?page=1&pageSize=1',
+	);
 	return Boolean(catalog && catalog.total > 0);
 }
 
@@ -58,6 +62,7 @@ export async function getAiIndexablePromptSlugs(): Promise<string[]> {
 	for (let page = 1; page <= 100; page += 1) {
 		const catalog = await fetchAiPublic<AiPromptCatalog>(
 			`/catalog/prompts?page=${page}&pageSize=100&sort=newest`,
+			{ revalidateSeconds: 300 },
 		);
 
 		if (!catalog) break;
@@ -86,7 +91,9 @@ export async function getAiPublicShare(
 		);
 
 		if (!response.ok) return { data: null, status: response.status };
-		const payload = (await response.json()) as AiPublicShare | AiApiEnvelope<AiPublicShare>;
+		const payload = (await response.json()) as
+			| AiPublicShare
+			| AiApiEnvelope<AiPublicShare>;
 		return {
 			data:
 				'data' in payload && Object.keys(payload).length === 1
@@ -106,13 +113,15 @@ async function fetchAiPublic<T>(
 	try {
 		const response = await fetch(`${AI_API_URL}${path}`, {
 			headers: { accept: 'application/json' },
-			next: { revalidate: 60 },
+			next: { revalidate: options.revalidateSeconds ?? 60 },
 			signal: AbortSignal.timeout(PUBLIC_FETCH_TIMEOUT_MS),
 		});
 
 		if (!response.ok) {
 			if (options.throwOnError && response.status !== 404) {
-				throw new Error(`AI public request failed with status ${response.status}`);
+				throw new Error(
+					`AI public request failed with status ${response.status}`,
+				);
 			}
 
 			return null;

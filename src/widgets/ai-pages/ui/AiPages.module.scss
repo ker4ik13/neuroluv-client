@@ -2979,6 +2979,47 @@ a.receiptState {
 	}
 }
 
+.promoActivationCard {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(rem(300), 0.8fr);
+	align-items: center;
+	gap: rem(18) rem(28);
+	margin-top: rem(18);
+	padding: rem(22);
+}
+
+.promoActivationCard > div:first-child {
+	display: flex;
+	align-items: flex-start;
+	gap: rem(14);
+}
+
+.promoActivationCard h2 {
+	margin: 0 0 rem(5);
+}
+
+.promoActivationCard p {
+	margin: 0;
+	color: var(--ai-muted);
+}
+
+.activePromoBadge {
+	display: flex;
+	grid-column: 1 / -1;
+	align-items: center;
+	gap: rem(8);
+	padding: rem(10) rem(12);
+	color: var(--ai-success);
+	background: rgba(28, 165, 100, 0.08);
+	border-radius: rem(11);
+}
+
+@media (max-width: 760px) {
+	.promoActivationCard {
+		grid-template-columns: 1fr;
+	}
+}
+
 /* Profile */
 .profileGrid {
 	display: grid;
@@ -2994,6 +3035,11 @@ a.receiptState {
 	display: grid;
 	gap: rem(20);
 	min-width: 0;
+}
+.preferenceConnectAction {
+	display: grid;
+	justify-items: start;
+	gap: rem(10);
 }
 .profileSummary {
 	display: flex;
