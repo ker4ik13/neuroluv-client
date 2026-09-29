@@ -93,6 +93,7 @@ export type AiModelCapabilities = {
 	outputCounts?: number[];
 	durations?: number[];
 	resolutions?: string[];
+	referenceResolutions?: string[];
 	qualities?: string[];
 	backgrounds?: string[];
 	acceptsReference?: boolean;

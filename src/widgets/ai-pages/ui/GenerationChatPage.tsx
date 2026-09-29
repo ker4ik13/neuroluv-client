@@ -72,6 +72,7 @@ import {
 	resolveGenerationOperation,
 	resolvePromptVideoModeCode,
 } from '../model/generationOperation';
+import { resolveGenerationResolution } from '../model/generationResolution';
 import {
 	formatMediaCharacteristics,
 	type MediaSize,
@@ -3644,6 +3645,16 @@ export function GenerationChatPage({
 										{!isTool ? (
 											<CapabilityFields
 												draft={draft}
+												hasReference={
+													hasReferenceIntent ||
+													useConversationReference ||
+													Boolean(
+														resolvedOperation &&
+														REFERENCE_REQUIRED_OPERATIONS.has(
+															resolvedOperation,
+														),
+													)
+												}
 												model={selectedModel}
 												onChange={(patch) => {
 													if (patch.outputCount !== undefined) {
@@ -4970,15 +4981,22 @@ function shouldShowVideoModeSelector(
 function CapabilityFields({
 	draft,
 	model,
+	hasReference,
 	onChange,
 }: {
 	draft: Draft;
 	model: AiPublicModel | null;
+	hasReference: boolean;
 	onChange: (patch: Partial<Draft>) => void;
 }) {
 	const { t } = useAiLocale();
 	if (!model) return null;
 	const { capabilities } = model;
+	const resolution = resolveGenerationResolution(
+		capabilities,
+		hasReference,
+		draft.resolution,
+	);
 	const fields: React.ReactNode[] = [];
 	const videoModes = capabilities.videoModes;
 	if (videoModes && shouldShowVideoModeSelector(videoModes)) {
@@ -5064,20 +5082,29 @@ function CapabilityFields({
 			),
 		);
 	}
-	if (capabilities.resolutions?.length) {
+	if (resolution.values.length) {
 		fields.push(
-			<OptionField
-				disabled={
-					model.modality === 'image' &&
-					new Set(capabilities.resolutions).size === 1
-				}
-				id='resolution'
-				key='resolution'
-				label={t('Разрешение', 'Resolution')}
-				value={draft.resolution}
-				values={capabilities.resolutions}
-				onChange={(resolution) => onChange({ resolution })}
-			/>,
+			<div className={styles.capabilityFieldGroup} key='resolution'>
+				<OptionField
+					disabled={
+						model.modality === 'image' && new Set(resolution.values).size === 1
+					}
+					id='resolution'
+					key='resolution'
+					label={t('Разрешение', 'Resolution')}
+					value={resolution.value}
+					values={resolution.values}
+					onChange={(resolution) => onChange({ resolution })}
+				/>
+				{resolution.referenceLimited ? (
+					<p className={styles.videoReferenceHint}>
+						{t(
+							`С референсом доступны: ${resolution.values.join(', ')}`,
+							`With references: ${resolution.values.join(', ')}`,
+						)}
+					</p>
+				) : null}
+			</div>,
 		);
 	}
 	if (capabilities.qualities?.length) {
@@ -5632,6 +5659,11 @@ function buildParameters(
 			REFERENCE_REQUIRED_OPERATIONS.has(operation)) ||
 		useConversationReference,
 	);
+	const resolution = resolveGenerationResolution(
+		capabilities,
+		hasReference,
+		draft.resolution,
+	);
 	return {
 		prompt: draft.prompt,
 		...(draft.promptId && draft.catalogPromptOverride
@@ -5652,9 +5684,7 @@ function buildParameters(
 		capabilities.durations?.includes(Number(draft.duration))
 			? { duration: Number(draft.duration) }
 			: {}),
-		...(draft.resolution && capabilities.resolutions?.includes(draft.resolution)
-			? { resolution: draft.resolution }
-			: {}),
+		...(resolution.value ? { resolution: resolution.value } : {}),
 		...(draft.quality && capabilities.qualities?.includes(draft.quality)
 			? { quality: draft.quality }
 			: {}),
