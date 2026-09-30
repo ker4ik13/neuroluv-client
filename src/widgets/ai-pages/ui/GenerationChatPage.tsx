@@ -4199,6 +4199,7 @@ function ChatMessageAttachmentItem({
 				// eslint-disable-next-line @next/next/no-img-element -- signed or local private URL
 				<img
 					alt=''
+					loading='lazy'
 					src={file.previewUrl || undefined}
 					onLoad={(event) =>
 						setMeasuredPortrait(
@@ -6056,11 +6057,11 @@ function mergeRunOutputs(
 			// Signed media URLs can be regenerated on every polling response. Keeping
 			// the already rendered URL prevents the browser from reloading the same
 			// image or video on every background synchronization.
-			outputUrl: existing.outputUrl ?? output.outputUrl,
-			previewUrl: existing.previewUrl ?? output.previewUrl,
+			outputUrl: output.type === 'image' ? output.outputUrl ?? existing.outputUrl : existing.outputUrl ?? output.outputUrl,
+			previewUrl: output.type === 'image' ? output.previewUrl ?? existing.previewUrl : existing.previewUrl ?? output.previewUrl,
 			downloadUrl: output.downloadUrl ?? existing.downloadUrl,
 			copyUrl: existing.copyUrl ?? output.copyUrl,
-			url: existing.url ?? output.url,
+			url: output.type === 'image' ? output.url ?? existing.url : existing.url ?? output.url,
 		};
 	});
 	const missingCurrent = current.filter(
@@ -6091,7 +6092,7 @@ function mergeMessageAttachments(
 			width: file.width ?? existing.width,
 			height: file.height ?? existing.height,
 			durationMs: file.durationMs ?? existing.durationMs,
-			previewUrl: existing.previewUrl ?? file.previewUrl,
+			previewUrl: file.mimeType?.startsWith('image/') ? file.previewUrl ?? existing.previewUrl : existing.previewUrl ?? file.previewUrl,
 			downloadUrl: file.downloadUrl ?? existing.downloadUrl,
 		};
 	});

@@ -176,6 +176,7 @@ export function SharePage({
                     <ImageLightbox
                       alt={t(`Референс ${index + 1}`, `Reference ${index + 1}`)}
                       fullUrl={reference.previewUrl}
+                      downloadUrl={reference.downloadUrl}
                       galleryId={`share-reference-${index}`}
                       key={`${reference.previewUrl}-${index}`}
                       previewUrl={reference.previewUrl}

@@ -796,6 +796,7 @@ export function ChatImageOutput({
         <img
           alt={resolvedAlt}
           className={styles.image}
+          loading="lazy"
           src={imageSource}
         />
       </ImageLightbox>

@@ -1,19 +1,19 @@
 import { AI_API_URL } from '@/shared/config/ai';
 import { saveMediaBlob } from '@/shared/lib/dom/saveMediaBlob';
+import { resolveMediaDownloadUrl } from '@/shared/lib/media/downloadUrl';
 import { AiApiError, aiApiFetch } from './client';
 
 export function resolveAiMediaUrl(href: string): string {
-	if (href.startsWith('blob:')) return href;
-	try {
-		const url = new URL(href.startsWith('/') ? `${AI_API_URL}${href}` : href);
-		const base = new URL(AI_API_URL);
-		return url.origin === base.origin &&
-			url.pathname.startsWith(`${base.pathname}/media/`)
-			? url.toString()
-			: '#';
-	} catch {
-		return '#';
-	}
+	const publicAssetOrigins = [
+		'https://admin.neuroluv.ru',
+		'https://cms.neuroluv.ru',
+		'https://dev.cms.neuroluv.ru',
+	];
+	if (process.env.NEXT_PUBLIC_DIRECTUS_URL)
+		publicAssetOrigins.push(
+			new URL(process.env.NEXT_PUBLIC_DIRECTUS_URL).origin,
+		);
+	return resolveMediaDownloadUrl(href, AI_API_URL, publicAssetOrigins);
 }
 
 export async function downloadAiMedia(

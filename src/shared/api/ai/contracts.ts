@@ -700,6 +700,7 @@ export type AiPublicShare = {
 	sourceReferenceCount?: number;
 	sourceReferences?: Array<{
 		previewUrl: string;
+		downloadUrl?: string | null;
 		mimeType: string;
 		width?: number | null;
 		height?: number | null;
