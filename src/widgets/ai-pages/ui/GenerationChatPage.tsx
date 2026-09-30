@@ -86,6 +86,7 @@ import {
 import { useAdaptivePolling } from '../model/useAdaptivePolling';
 import { useAiLiveSync } from '../model/useAiLiveSync';
 import { AiMarkdown } from './AiMarkdown';
+import { MediaDownloadLink } from './MediaDownloadLink';
 import { AiModelLogo } from './AiModelLogo';
 import { AiSelect, type AiSelectOption } from './AiSelect';
 import { AiCard, AiPage, AsyncState, FieldMessage } from './AiUi';
@@ -4240,7 +4241,7 @@ function ChatMessageAttachmentItem({
 					characteristics={details}
 					downloadUrl={downloadHref}
 					fileName={label}
-					fullUrl={isImage ? downloadHref || file.previewUrl : file.previewUrl}
+					fullUrl={file.previewUrl}
 					kind='image'
 					previewUrl={file.previewUrl}
 					triggerClassName={styles.messageAttachmentPreview}
@@ -4248,14 +4249,13 @@ function ChatMessageAttachmentItem({
 					{content}
 				</ImageLightbox>
 			) : file.assetAvailable !== false && downloadHref ? (
-				<a
+				<MediaDownloadLink
 					className={styles.messageAttachmentPreview}
 					href={downloadHref}
-					rel='noreferrer'
-					target='_blank'
+					fileName={label}
 				>
 					{content}
-				</a>
+				</MediaDownloadLink>
 			) : (
 				<div className={styles.messageAttachmentPreview}>{content}</div>
 			)}
@@ -4287,15 +4287,15 @@ function ChatMessageAttachmentItem({
 			downloadHref &&
 			uploadState !== 'uploading' &&
 			uploadState !== 'failed' ? (
-				<a
+				<MediaDownloadLink
 					aria-label={`${t('Скачать файл', 'Download file')} ${label}`}
 					className={styles.messageAttachmentDownload}
-					download={label}
+					fileName={label}
 					href={downloadHref}
 					title={t('Скачать файл', 'Download file')}
 				>
 					<FiDownload aria-hidden='true' />
-				</a>
+				</MediaDownloadLink>
 			) : null}
 		</li>
 	);
@@ -6058,7 +6058,7 @@ function mergeRunOutputs(
 			// image or video on every background synchronization.
 			outputUrl: existing.outputUrl ?? output.outputUrl,
 			previewUrl: existing.previewUrl ?? output.previewUrl,
-			downloadUrl: existing.downloadUrl ?? output.downloadUrl,
+			downloadUrl: output.downloadUrl ?? existing.downloadUrl,
 			copyUrl: existing.copyUrl ?? output.copyUrl,
 			url: existing.url ?? output.url,
 		};
@@ -6092,7 +6092,7 @@ function mergeMessageAttachments(
 			height: file.height ?? existing.height,
 			durationMs: file.durationMs ?? existing.durationMs,
 			previewUrl: existing.previewUrl ?? file.previewUrl,
-			downloadUrl: existing.downloadUrl ?? file.downloadUrl,
+			downloadUrl: file.downloadUrl ?? existing.downloadUrl,
 		};
 	});
 	return [

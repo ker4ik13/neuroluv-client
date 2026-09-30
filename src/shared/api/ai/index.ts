@@ -7,3 +7,4 @@ export {
 	readAiApiCache,
 } from './client';
 export type * from './contracts';
+export { downloadAiMedia, resolveAiMediaUrl } from './download';

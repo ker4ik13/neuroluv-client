@@ -6,6 +6,7 @@ type AiFetchOptions = Omit<RequestInit, 'body'> & {
 	body?: unknown;
 	timeoutMs?: number | null;
 	csrf?: boolean;
+	responseType?: 'json' | 'blob';
 };
 
 type AiApiCacheEntry = {
@@ -39,6 +40,7 @@ export async function aiApiFetch<T>(
 		body,
 		timeoutMs = 15_000,
 		csrf = true,
+		responseType = 'json',
 		signal: externalSignal,
 		...requestOptions
 	} = options;
@@ -102,7 +104,9 @@ export async function aiApiFetch<T>(
 			return undefined as T;
 		}
 
-		return (await response.json()) as T;
+		return (
+			responseType === 'blob' ? await response.blob() : await response.json()
+		) as T;
 	} catch (error) {
 		if (error instanceof AiApiError) {
 			throw error;
@@ -250,7 +254,10 @@ function normalizePath(path: string): string {
 
 function setAiApiCache(path: string, data: unknown, ttlMs: number): void {
 	const cacheKey = normalizePath(path);
-	if (!aiApiCache.has(cacheKey) && aiApiCache.size >= MAX_AI_API_CACHE_ENTRIES) {
+	if (
+		!aiApiCache.has(cacheKey) &&
+		aiApiCache.size >= MAX_AI_API_CACHE_ENTRIES
+	) {
 		const oldestKey = aiApiCache.keys().next().value;
 		if (typeof oldestKey === 'string') aiApiCache.delete(oldestKey);
 	}

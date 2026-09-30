@@ -38,6 +38,7 @@ import {
 } from "../model/mediaCharacteristics";
 
 import styles from "./ChatImageOutput.module.scss";
+import { MediaDownloadLink } from "./MediaDownloadLink";
 
 export type ChatImageOutputProps = {
   galleryId?: string;
@@ -447,15 +448,15 @@ function ImageGalleryDialog({
               ) : null}
             </span>
           </div>
-          <a
+          <MediaDownloadLink
             aria-label={t("Скачать изображение", "Download image")}
-            download={activeItem.fileName}
+            fileName={activeItem.fileName}
             data-gallery-control
             href={activeItem.downloadUrl || activeItem.fullUrl}
             title={t("Скачать изображение", "Download image")}
           >
             <FiDownload aria-hidden="true" />
-          </a>
+          </MediaDownloadLink>
         </div>
 
         <div
@@ -813,15 +814,15 @@ export function ChatImageOutput({
             >
               {copyState === "copied" ? <FiCheck aria-hidden="true" /> : <FiCopy aria-hidden="true" />}
             </button>
-            <a
+            <MediaDownloadLink
               aria-label={t("Скачать изображение", "Download image")}
               className={styles.iconButton}
-              download={fileName}
+              fileName={fileName}
               href={downloadSource}
               title={t("Скачать изображение", "Download image")}
             >
               <FiDownload aria-hidden="true" />
-            </a>
+            </MediaDownloadLink>
           </span>
 
           {createdAt ? (

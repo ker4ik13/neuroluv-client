@@ -46,6 +46,7 @@ import {
   StatusBadge,
 } from "./AiUi";
 import { ImageLightbox } from "./ChatImageOutput";
+import { MediaDownloadLink } from "./MediaDownloadLink";
 import styles from "./AiPages.module.scss";
 
 export function WorkDetailPage({ id }: { id: string }) {
@@ -330,13 +331,12 @@ export function WorkDetailPage({ id }: { id: string }) {
                     ) : null}
                     {(selectedOutput?.downloadUrl || work.data.downloadUrl) &&
                     work.data.status !== "expired" ? (
-                      <a
+                      <MediaDownloadLink
                         className={`${styles.button} ${styles.button_primary}`}
-                        download
-                        href={selectedOutput?.downloadUrl || work.data.downloadUrl || undefined}
+                        href={selectedOutput?.downloadUrl || work.data.downloadUrl || ''}
                       >
                         <FiDownload aria-hidden="true" /> {t("Скачать", "Download")}
-                      </a>
+                      </MediaDownloadLink>
                     ) : null}
                     <AiButton disabled={isPending} variant="secondary" onClick={repeat}>
                       <FiRefreshCw aria-hidden="true" /> {t("Повторить", "Repeat")}

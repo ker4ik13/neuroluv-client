@@ -1,0 +1,12 @@
+.error {
+	color: var(--ai-danger, #b42318);
+	font-size: 0.75rem;
+	font-weight: 650;
+	line-height: 1.4;
+	max-width: 20rem;
+}
+
+.downloading {
+	cursor: wait;
+	opacity: 0.65;
+}

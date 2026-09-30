@@ -20,7 +20,8 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "eslint",
-		"typecheck": "tsc --noEmit -p tsconfig.json"
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"test:media-download": "node --experimental-strip-types --test test/media-download.test.mjs"
 	},
 	"dependencies": {
 		"@radix-ui/react-navigation-menu": "^1.2.22",
