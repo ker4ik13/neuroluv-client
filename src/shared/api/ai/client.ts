@@ -1,12 +1,18 @@
 import { AI_API_URL } from '@/shared/config/ai';
 import type { AiApiProblem } from './contracts';
 import { getAiDeviceFingerprint } from './deviceFingerprint';
+import {
+	AiRequestTimeoutError,
+	allowsRequestRetry,
+	executeAiRequest,
+} from './requestTransport';
 
 type AiFetchOptions = Omit<RequestInit, 'body'> & {
 	body?: unknown;
 	timeoutMs?: number | null;
 	csrf?: boolean;
 	responseType?: 'json' | 'blob';
+	retry?: boolean;
 };
 
 type AiApiCacheEntry = {
@@ -41,21 +47,15 @@ export async function aiApiFetch<T>(
 		timeoutMs = 15_000,
 		csrf = true,
 		responseType = 'json',
+		retry = false,
 		signal: externalSignal,
 		...requestOptions
 	} = options;
-	const controller = new AbortController();
-	const timeoutId =
-		timeoutMs === null ? null : setTimeout(() => controller.abort(), timeoutMs);
 	const headers = new Headers(options.headers);
 	const method = (options.method || 'GET').toUpperCase();
 
 	if (!headers.has('x-request-id')) {
 		headers.set('x-request-id', crypto.randomUUID());
-	}
-	if (!headers.has('x-neuroluv-device-id')) {
-		const fingerprint = await getAiDeviceFingerprint();
-		if (fingerprint) headers.set('x-neuroluv-device-id', fingerprint);
 	}
 
 	if (isJsonBody(body) && !headers.has('content-type')) {
@@ -63,58 +63,84 @@ export async function aiApiFetch<T>(
 	}
 
 	try {
+		if (!headers.has('x-neuroluv-device-id')) {
+			const fingerprint = await getAiDeviceFingerprint();
+			if (fingerprint) headers.set('x-neuroluv-device-id', fingerprint);
+		}
 		if (isMutatingMethod(method) && csrf && !headers.has('x-csrf-token')) {
 			headers.set('x-csrf-token', await getCsrfToken());
 		}
 
 		const requestUrl = `${AI_API_URL}${normalizePath(path)}`;
 		const requestBody = serializeBody(body, headers);
-		const requestSignal = externalSignal
-			? AbortSignal.any([externalSignal, controller.signal])
-			: controller.signal;
-		let response = await fetch(requestUrl, {
-			...requestOptions,
-			body: requestBody,
-			credentials: 'include',
-			headers,
-			signal: requestSignal,
-		});
+		return await executeAiRequest(
+			async (requestSignal) => {
+				let response = await fetch(requestUrl, {
+					...requestOptions,
+					body: requestBody,
+					credentials: 'include',
+					headers,
+					signal: requestSignal,
+				});
 
-		if (
-			isMutatingMethod(method) &&
-			csrf &&
-			(await isExpiredCsrfResponse(response))
-		) {
-			clearAiCsrfToken();
-			headers.set('x-csrf-token', await getCsrfToken());
-			response = await fetch(requestUrl, {
-				...requestOptions,
-				body: requestBody,
-				credentials: 'include',
-				headers,
-				signal: requestSignal,
-			});
-		}
+				if (
+					isMutatingMethod(method) &&
+					csrf &&
+					(await isExpiredCsrfResponse(response))
+				) {
+					clearAiCsrfToken();
+					headers.set('x-csrf-token', await getCsrfToken());
+					response = await fetch(requestUrl, {
+						...requestOptions,
+						body: requestBody,
+						credentials: 'include',
+						headers,
+						signal: requestSignal,
+					});
+				}
 
-		if (!response.ok) {
-			throw new AiApiError(await readProblem(response));
-		}
+				if (!response.ok) {
+					throw new AiApiError(await readProblem(response));
+				}
 
-		if (response.status === 204) {
-			return undefined as T;
-		}
+				if (response.status === 204) {
+					return undefined as T;
+				}
 
-		return (
-			responseType === 'blob' ? await response.blob() : await response.json()
-		) as T;
+				try {
+					return (
+						responseType === 'blob'
+							? await response.blob()
+							: await response.json()
+					) as T;
+				} catch (error) {
+					if (!(error instanceof SyntaxError)) throw error;
+					throw new AiApiError({
+						title: 'Сервис вернул некорректный ответ',
+						status: 502,
+						code: 'invalid_response',
+					});
+				}
+			},
+			{
+				timeoutMs,
+				signal: externalSignal ?? undefined,
+				retries:
+					retry && allowsRequestRetry(normalizePath(path), method, body)
+						? 1
+						: 0,
+				isRetryable: isTransientAiError,
+			},
+		);
 	} catch (error) {
 		if (error instanceof AiApiError) {
 			throw error;
 		}
 
 		if (
-			error instanceof DOMException &&
-			(error.name === 'AbortError' || error.name === 'TimeoutError')
+			error instanceof AiRequestTimeoutError ||
+			(error instanceof DOMException &&
+				(error.name === 'AbortError' || error.name === 'TimeoutError'))
 		) {
 			throw new AiApiError({
 				title: 'Сервер не ответил вовремя',
@@ -129,9 +155,23 @@ export async function aiApiFetch<T>(
 			status: 503,
 			code: 'service_unavailable',
 		});
-	} finally {
-		if (timeoutId !== null) clearTimeout(timeoutId);
 	}
+}
+
+function isTransientAiError(error: unknown): boolean {
+	return (
+		error instanceof TypeError ||
+		error instanceof AiRequestTimeoutError ||
+		(error instanceof AiApiError &&
+			([502, 504].includes(error.problem.status) ||
+				(error.problem.status === 503 && !error.problem.code) ||
+				[
+					'service_unavailable',
+					'request_timeout',
+					'invalid_response',
+					'bad_gateway',
+				].includes(error.problem.code || '')))
+	);
 }
 
 export function readAiApiCache<T>(path: string): T | undefined {
@@ -191,12 +231,13 @@ async function getCsrfToken(): Promise<string> {
 	}
 
 	if (!csrfRequest) {
-		csrfRequest = fetch(`${AI_API_URL}/auth/csrf`, {
-			credentials: 'include',
-			headers: { accept: 'application/json' },
-			signal: AbortSignal.timeout(CSRF_REQUEST_TIMEOUT_MS),
-		})
-			.then(async (response) => {
+		csrfRequest = executeAiRequest(
+			async (signal) => {
+				const response = await fetch(`${AI_API_URL}/auth/csrf`, {
+					credentials: 'include',
+					headers: { accept: 'application/json' },
+					signal,
+				});
 				if (!response.ok) {
 					throw new AiApiError(await readProblem(response));
 				}
@@ -222,10 +263,15 @@ async function getCsrfToken(): Promise<string> {
 					: 3_600;
 				csrfExpiresAt = Date.now() + ttlSeconds * 1_000;
 				return token;
-			})
-			.finally(() => {
-				csrfRequest = null;
-			});
+			},
+			{
+				timeoutMs: CSRF_REQUEST_TIMEOUT_MS,
+				retries: 1,
+				isRetryable: isTransientAiError,
+			},
+		).finally(() => {
+			csrfRequest = null;
+		});
 	}
 
 	return csrfRequest;

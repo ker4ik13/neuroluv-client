@@ -46,6 +46,7 @@ import {
 	type AiApiEnvelope,
 	AiApiError,
 	aiApiFetch,
+	submitAiRun,
 	type AiCitation,
 	type AiConversation,
 	type AiConversationKind,
@@ -1745,6 +1746,9 @@ export function GenerationChatPage({
 		});
 		void aiApiFetch<AiQuote | AiApiEnvelope<AiQuote>>('/quote', {
 			method: 'POST',
+			csrf: false,
+			retry: true,
+			timeoutMs: 30_000,
 			body: JSON.parse(debouncedQuoteFingerprint) as QuotePayload,
 			signal: controller.signal,
 		})
@@ -1928,6 +1932,9 @@ export function GenerationChatPage({
 				{
 					method: 'POST',
 					body: payload,
+					csrf: false,
+					retry: true,
+					timeoutMs: 30_000,
 				},
 			);
 			const nextQuote = unwrapAiData(response);
@@ -2021,9 +2028,7 @@ export function GenerationChatPage({
 		const idempotencyKey = crypto.randomUUID();
 		const submittedAt = new Date().toISOString();
 		const inputFiles = submittedReferences.map(toLocalMessageAttachment);
-		const uploadStates = Object.fromEntries(
-			inputFiles.map((file) => [file.id, 'uploading' as const]),
-		);
+		const uploadStates: Record<string, AttachmentUploadState> = {};
 
 		submitLock.current = true;
 		initialThreadScrollPending.current = false;
@@ -2063,6 +2068,8 @@ export function GenerationChatPage({
 			replaceReference: false,
 		}));
 
+		let runSubmitted = false;
+		let acceptedConversationId = submittedDraft.conversationId;
 		try {
 			const conversationId = await ensureConversation(
 				submittedDraft,
@@ -2070,6 +2077,7 @@ export function GenerationChatPage({
 				submissionEpoch,
 			);
 			const freshQuote = await requestFreshQuote({
+				// This is a read-only price check, not a provider generation.
 				conversationId,
 				draft: submittedDraft,
 				model: submittedModel,
@@ -2090,6 +2098,15 @@ export function GenerationChatPage({
 				);
 			}
 
+			acceptedConversationId = conversationId;
+			if (viewEpoch.current === submissionEpoch) {
+				setTurns((current) => current.map((turn) =>
+					turn.id === clientId ? {
+						...turn,
+						uploadStates: Object.fromEntries(inputFiles.map((file) => [file.id, 'uploading' as const])),
+					} : turn,
+				));
+			}
 			const uploadedFiles = await Promise.all(
 				submittedReferences.map(async (reference) => {
 					const upload = new FormData();
@@ -2145,11 +2162,8 @@ export function GenerationChatPage({
 				);
 			}
 
-			const runPayload = await aiApiFetch<
-				AiRunSummary | AiApiEnvelope<AiRunSummary>
-			>('/runs', {
-				method: 'POST',
-				body: {
+			runSubmitted = true;
+			const runPayload = await submitAiRun({
 					idempotencyKey,
 					quoteId: freshQuote.quoteId,
 					operation: submittedOperation,
@@ -2183,8 +2197,6 @@ export function GenerationChatPage({
 						submittedModel.capabilities,
 					),
 					inputFileIds,
-				},
-				timeoutMs: 30_000,
 			});
 			const nextRun = unwrapAiData(runPayload);
 			if (viewEpoch.current === submissionEpoch) {
@@ -2212,6 +2224,23 @@ export function GenerationChatPage({
 		} catch (error) {
 			const message = getAiErrorMessage(error);
 			if (viewEpoch.current === submissionEpoch) {
+				const safeToRestore = !runSubmitted || (
+					error instanceof AiApiError && error.problem.status >= 400 && error.problem.status < 500
+				);
+				if (safeToRestore) {
+					setDraft((current) =>
+						current.prompt.trim() || current.modelId !== submittedDraft.modelId ? current
+							: { ...submittedDraft, conversationId: acceptedConversationId || current.conversationId },
+					);
+					if (referencesRef.current.length === 0) {
+						const restored = submittedReferences.map((reference) => ({
+							...reference,
+							previewUrl: URL.createObjectURL(reference.file),
+						}));
+						referencesRef.current = restored;
+						setReferences(restored);
+					}
+				}
 				setTurns((current) =>
 					current.map((turn) =>
 						turn.id === clientId
