@@ -68,6 +68,7 @@ import { writeClipboardText } from '@/shared/lib/dom/writeClipboardText';
 import { formatCreditNumber, formatCredits } from '@/shared/lib/formatCredits';
 import { useDebouncedValue } from '@/shared/lib/react';
 import { getAiErrorMessage, unwrapAiData, useAiResource } from '../model/api';
+import { resolveGenerationAspectRatio } from '../model/generationAspectRatio';
 import {
 	resolveGenerationOperation,
 	resolvePromptVideoModeCode,
@@ -723,42 +724,8 @@ export function GenerationChatPage({
 			availableModels[0];
 		const capability = selected.capabilities;
 		const timer = window.setTimeout(() => {
-			setDraft((value) => ({
-				...value,
-				modelId: selected.id,
-				aspectRatio:
-					capability.aspectRatios?.includes(value.aspectRatio) &&
-					value.aspectRatio
-						? value.aspectRatio
-						: String(capability.aspectRatios?.[0] || ''),
-				outputCount:
-					capability.outputCounts?.includes(Number(value.outputCount)) &&
-					value.outputCount
-						? value.outputCount
-						: String(capability.outputCounts?.[0] || ''),
-				duration:
-					capability.durations?.includes(Number(value.duration)) &&
-					value.duration
-						? value.duration
-						: String(capability.durations?.[0] || ''),
-				resolution:
-					capability.resolutions?.includes(value.resolution) && value.resolution
-						? value.resolution
-						: String(capability.resolutions?.[0] || ''),
-				quality:
-					capability.qualities?.includes(value.quality) && value.quality
-						? value.quality
-						: String(capability.qualities?.[0] || ''),
-				background:
-					capability.backgrounds?.includes(value.background) && value.background
-						? value.background
-						: String(capability.backgrounds?.[0] || ''),
-				reasoningMode:
-					capability.reasoning?.modes.includes(value.reasoningMode) &&
-					value.reasoningMode
-						? value.reasoningMode
-						: String(capability.reasoning?.defaultMode || ''),
-				videoMode:
+			setDraft((value) => {
+				const videoMode =
 					(value.promptId || value.publicPromptUseToken
 						? resolvePromptVideoModeCode({
 								maximumReferenceFiles: value.promptMaximumReferenceFiles,
@@ -766,13 +733,50 @@ export function GenerationChatPage({
 								modes: capability.videoModes,
 							})
 						: null) ||
-					(capability.videoModes?.some(
-						(mode) => mode.code === value.videoMode,
-					) && value.videoMode
+					(capability.videoModes?.some((mode) => mode.code === value.videoMode)
 						? value.videoMode
-						: String(capability.videoModes?.[0]?.code || '')),
-				contextEnabled: kind === 'text' ? value.contextEnabled : false,
-			}));
+						: String(capability.videoModes?.[0]?.code || ''));
+				return {
+					...value,
+					modelId: selected.id,
+					aspectRatio: resolveGenerationAspectRatio(
+						selected,
+						videoMode,
+						value.aspectRatio,
+					).value,
+					outputCount:
+						capability.outputCounts?.includes(Number(value.outputCount)) &&
+						value.outputCount
+							? value.outputCount
+							: String(capability.outputCounts?.[0] || ''),
+					duration:
+						capability.durations?.includes(Number(value.duration)) &&
+						value.duration
+							? value.duration
+							: String(capability.durations?.[0] || ''),
+					resolution:
+						capability.resolutions?.includes(value.resolution) &&
+						value.resolution
+							? value.resolution
+							: String(capability.resolutions?.[0] || ''),
+					quality:
+						capability.qualities?.includes(value.quality) && value.quality
+							? value.quality
+							: String(capability.qualities?.[0] || ''),
+					background:
+						capability.backgrounds?.includes(value.background) &&
+						value.background
+							? value.background
+							: String(capability.backgrounds?.[0] || ''),
+					reasoningMode:
+						capability.reasoning?.modes.includes(value.reasoningMode) &&
+						value.reasoningMode
+							? value.reasoningMode
+							: String(capability.reasoning?.defaultMode || ''),
+					videoMode,
+					contextEnabled: kind === 'text' ? value.contextEnabled : false,
+				};
+			});
 		}, 0);
 		return () => window.clearTimeout(timer);
 	}, [
@@ -2210,7 +2214,7 @@ export function GenerationChatPage({
 					submittedOperation,
 					submittedFiles,
 					submittedUseConversationReference,
-					submittedModel.capabilities,
+					submittedModel,
 				),
 				inputFileIds,
 			});
@@ -5080,6 +5084,11 @@ function CapabilityFields({
 	const { t } = useAiLocale();
 	if (!model) return null;
 	const { capabilities } = model;
+	const aspectRatio = resolveGenerationAspectRatio(
+		model,
+		draft.videoMode,
+		draft.aspectRatio,
+	);
 	const resolution = resolveGenerationResolution(
 		capabilities,
 		hasReference,
@@ -5111,7 +5120,16 @@ function CapabilityFields({
 					optionLabel={(value) => getVideoModeLabel(String(value), t)}
 					value={draft.videoMode}
 					values={videoModes.map((mode) => mode.code)}
-					onChange={(videoMode) => onChange({ videoMode })}
+					onChange={(videoMode) =>
+						onChange({
+							videoMode,
+							aspectRatio: resolveGenerationAspectRatio(
+								model,
+								videoMode,
+								draft.aspectRatio,
+							).value,
+						})
+					}
 				/>
 				{referenceHint ? (
 					<p className={styles.videoReferenceHint}>{referenceHint}</p>
@@ -5133,19 +5151,28 @@ function CapabilityFields({
 			/>,
 		);
 	}
-	if (capabilities.aspectRatios?.length) {
+	if (aspectRatio.values.length) {
 		fields.push(
-			<OptionField
-				id='aspect-ratio'
-				key='aspect'
-				label={t('Формат кадра', 'Aspect ratio')}
-				optionLabel={(value) => getAspectRatioLabel(value, t)}
-				optionDescription={(value) => getAspectRatioDescription(value, t)}
-				optionVisual={(value) => <AspectRatioVisual ratio={String(value)} />}
-				value={draft.aspectRatio}
-				values={capabilities.aspectRatios}
-				onChange={(aspectRatio) => onChange({ aspectRatio })}
-			/>,
+			<div className={styles.capabilityFieldGroup} key='aspect'>
+				<OptionField
+					id='aspect-ratio'
+					label={t('Формат кадра', 'Aspect ratio')}
+					optionLabel={(value) => getAspectRatioLabel(value, t)}
+					optionDescription={(value) => getAspectRatioDescription(value, t)}
+					optionVisual={(value) => <AspectRatioVisual ratio={String(value)} />}
+					value={aspectRatio.value}
+					values={aspectRatio.values}
+					onChange={(aspectRatio) => onChange({ aspectRatio })}
+				/>
+				{aspectRatio.frameLimited ? (
+					<p className={styles.videoReferenceHint}>
+						{t(
+							'Формат видео определяется исходным кадром.',
+							'The video ratio follows the source frame.',
+						)}
+					</p>
+				) : null}
+			</div>,
 		);
 	}
 
@@ -5706,7 +5733,7 @@ function buildQuotePayload({
 			operation,
 			references,
 			useConversationReference,
-			model.capabilities,
+			model,
 			assumedReferenceCount,
 		),
 	};
@@ -5740,9 +5767,15 @@ function buildParameters(
 	operation: string,
 	references: readonly File[],
 	useConversationReference: boolean,
-	capabilities: AiPublicModel['capabilities'],
+	model: AiPublicModel,
 	assumedReferenceCount = 0,
 ) {
+	const { capabilities } = model;
+	const aspectRatio = resolveGenerationAspectRatio(
+		model,
+		draft.videoMode,
+		draft.aspectRatio,
+	);
 	const hasReference = Boolean(
 		references.length ||
 		assumedReferenceCount > 0 ||
@@ -5765,10 +5798,7 @@ function buildParameters(
 		...(draft.negativePrompt && capabilities.acceptsNegativePrompt
 			? { negativePrompt: draft.negativePrompt }
 			: {}),
-		...(draft.aspectRatio &&
-		capabilities.aspectRatios?.includes(draft.aspectRatio)
-			? { aspectRatio: draft.aspectRatio }
-			: {}),
+		...(aspectRatio.value ? { aspectRatio: aspectRatio.value } : {}),
 		...(draft.outputCount &&
 		capabilities.outputCounts?.includes(Number(draft.outputCount))
 			? { count: Number(draft.outputCount) }
