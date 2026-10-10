@@ -1,9 +1,14 @@
 @use '../../../styles/functions' as *;
 @use '../../../styles/vars' as *;
-
 .content {
 	display: grid;
-	width: min(100%, rem($container));
-	gap: rem(30);
-	margin: rem(56) auto 0;
+	gap: rem(8);
+	width: calc(100% + #{rem(40)});
+	margin: rem(48) rem(-20) 0;
+}
+@media (max-width: em($breakpoint-tablet)) {
+	.content {
+		width: calc(100% + #{rem(32)});
+		margin-inline: rem(-16);
+	}
 }

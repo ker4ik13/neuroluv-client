@@ -1,88 +1,104 @@
-import Link from "next/link";
-import { FaTelegram } from "react-icons/fa";
-
-import type { PageHeroBlock, PageHeroButton } from "@/entities/page";
-import { AppIcon } from "@/shared/ui/app-icon";
-
-import styles from "./HeroBlock.module.scss";
+import type { CSSProperties } from 'react';
+import { FaTelegram } from 'react-icons/fa';
+import type { PageHeroBlock, PageImage } from '@/entities/page';
+import { PromptCardMedia } from '@/shared/ui/prompt-card-media';
+import { BlockActions } from '../block-actions/BlockActions';
+import styles from './HeroBlock.module.scss';
 
 type HeroBlockProps = {
-  block: PageHeroBlock;
+	block: PageHeroBlock;
+	examples?: HeroGalleryItem[];
 };
 
-export function HeroBlock({ block }: HeroBlockProps) {
-  return (
-    <section className={styles.hero}>
-      <div className={styles.inner}>
-        <div className={styles.content}>
-          {block.eyebrow && <p className={styles.eyebrow}>{block.eyebrow}</p>}
-          <h1 className={styles.title}>{block.title}</h1>
+export type HeroGalleryItem = {
+	id: string;
+	href: string;
+	url: string;
+	alt: string;
+	type?: string | null;
+	images?: PageImage[];
+	autoplay?: boolean;
+};
 
-          {block.description && (
-            <p className={styles.description}>{block.description}</p>
-          )}
+export function HeroBlock({ block, examples = [] }: HeroBlockProps) {
+	const gallery = block.galleryId
+		? (block.galleryPrompts || []).flatMap((prompt): HeroGalleryItem[] =>
+				prompt.image
+					? [
+							{
+								id: String(prompt.id),
+								href: prompt.href,
+								url: prompt.image.url,
+								alt: prompt.title,
+								type: prompt.image.type,
+								images: prompt.images,
+								autoplay: prompt.autoplay,
+							},
+						]
+					: [],
+			)
+		: examples;
+	const items = gallery.slice(0, 4);
+	const image = block.galleryId ? null : block.image;
+	return (
+		<section className={styles.hero}>
+			<div
+				className={`${styles.inner} ${!image && !items.length ? styles.innerWithoutMedia : ''}`}
+				data-layout={block.layout || 'split'}
+			>
+				<div className={styles.content}>
+					<h1 className={styles.title}>{block.title}</h1>
+					<BlockActions buttons={block.buttons} />
+					{block.description && (
+						<p className={styles.description}>{block.description}</p>
+					)}
+					{block.link && (
+						<a
+							className={styles.telegram}
+							href={normalizeExternalLink(block.link)}
+							rel='noreferrer'
+							target='_blank'
+						>
+							<FaTelegram aria-hidden='true' className={styles.telegramIcon} />
+							<span>{block.link}</span>
+						</a>
+					)}
+				</div>
 
-          {block.link && (
-            <a
-              className={styles.telegram}
-              href={normalizeExternalLink(block.link)}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <FaTelegram aria-hidden="true" className={styles.telegramIcon} />
-              <span>{block.link}</span>
-            </a>
-          )}
-
-          {block.buttons.length > 0 && (
-            <div className={styles.actions}>
-              {block.buttons.map((button, index) => (
-                <HeroButton button={button} key={`hero-button-${button.id}-${index}`} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {block.image && (
-          <div className={styles.imageWrap}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt={block.image.title}
-              className={styles.image}
-              src={block.image.url}
-            />
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function HeroButton({ button }: { button: PageHeroButton }) {
-  const variantClassNames = {
-    outline: styles.buttonOutline,
-    primary: styles.buttonPrimary,
-    secondary: styles.buttonSecondary,
-  };
-  const className = `${styles.button} ${variantClassNames[button.variant]}`;
-
-  return (
-    <Link
-      className={className}
-      href={button.href}
-      rel={button.target === "_blank" ? "noreferrer" : undefined}
-      target={button.target}
-    >
-      <span>{button.label}</span>
-      <AppIcon className={styles.buttonIcon} icon={button.icon} />
-    </Link>
-  );
+				{items.length ? (
+					<div
+						className={styles.gallery}
+						style={{ '--hero-examples-count': items.length } as CSSProperties}
+					>
+						{items.map((example, index) => (
+							<PromptCardMedia
+								className={styles.galleryItem}
+								alt={example.alt}
+								href={example.href}
+								key={example.id}
+								image={{ id: example.id, url: example.url, type: example.type }}
+								images={example.images}
+								autoPlay={example.autoplay}
+								priority={index === 0}
+								sizes='(max-width: 768px) 45vw, 310px'
+							/>
+						))}
+					</div>
+				) : image ? (
+					<div className={styles.imageWrap}>
+						{/* eslint-disable-next-line @next/next/no-img-element */}
+						<img alt={image.title} className={styles.image} src={image.url} />
+					</div>
+				) : null}
+			</div>
+		</section>
+	);
 }
 
 function normalizeExternalLink(link: string): string {
-  if (/^https?:\/\//.test(link)) {
-    return link;
-  }
+	if (/^https?:\/\//.test(link)) {
+		return link;
+	}
 
-  return `https://${link}`;
+	return `https://${link}`;
 }

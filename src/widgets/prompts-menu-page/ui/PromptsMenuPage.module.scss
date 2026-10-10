@@ -41,7 +41,7 @@
 		color: #0d1a26;
 		font-size: rem(40);
 		line-height: 1;
-		text-transform: uppercase;
+		text-transform: none;
 
 		@media (max-width: em($breakpoint-tablet)) {
 			font-size: rem(30);
@@ -75,7 +75,7 @@
 	background: $color-white;
 	border: rem(1) solid $color-border;
 	border-radius: rem(12);
-	box-shadow: 0 rem(8) rem(18) rgba(0, 0, 0, 0.04);
+	box-shadow: none;
 	transition:
 		color 160ms ease,
 		background-color 160ms ease,
@@ -161,14 +161,14 @@
 	padding: rem(20);
 	color: $color-white;
 	background: $color-ink-soft;
-	border-radius: rem(18);
-	box-shadow: 0 rem(14) rem(30) rgba(0, 0, 0, 0.12);
+	border-radius: rem(14);
+	box-shadow: none;
 	transition:
 		box-shadow 160ms ease,
 		transform 160ms ease;
 
 	&:hover {
-		box-shadow: 0 rem(18) rem(34) rgba(0, 0, 0, 0.16);
+		box-shadow: none;
 		transform: translateY(rem(-2));
 	}
 
@@ -269,7 +269,7 @@
 	color: $color-ink;
 	background: $color-white;
 	border: rem(1) solid $color-border;
-	border-radius: rem(24);
+	border-radius: rem(14);
 	transition:
 		border-color 160ms ease,
 		box-shadow 160ms ease,
@@ -277,7 +277,7 @@
 
 	&:hover {
 		border-color: rgba($color-cyan, 0.55);
-		box-shadow: 0 rem(16) rem(34) rgba(0, 0, 0, 0.09);
+		box-shadow: none;
 		transform: translateY(rem(-2));
 	}
 
@@ -315,7 +315,7 @@
 		min-height: 0;
 		gap: rem(12);
 		padding: rem(22);
-		border-radius: rem(20);
+		border-radius: rem(14);
 
 		strong {
 			font-size: rem(21);
@@ -386,7 +386,7 @@
 	background: $color-white;
 	border: rem(1) solid $color-border;
 	border-radius: rem(12);
-	box-shadow: 0 rem(8) rem(18) rgba(0, 0, 0, 0.04);
+	box-shadow: none;
 	transition:
 		color 160ms ease,
 		background-color 160ms ease,
@@ -467,9 +467,9 @@
 	flex-direction: column;
 	color: $color-ink;
 	background: $color-white;
-	border: rem(1) solid #e4e9ed;
-	border-radius: rem(24);
-	box-shadow: 0 rem(12) rem(30) rgba(0, 0, 0, 0.07);
+	border: rem(1) solid var(--ui-border);
+	border-radius: rem(14);
+	box-shadow: none;
 	transition:
 		border-color 160ms ease,
 		box-shadow 160ms ease,
@@ -477,7 +477,7 @@
 
 	&:hover {
 		border-color: rgba($color-cyan, 0.55);
-		box-shadow: 0 rem(16) rem(34) rgba(0, 0, 0, 0.1);
+		box-shadow: none;
 		transform: translateY(rem(-2));
 	}
 
@@ -487,15 +487,8 @@
 
 	@media (max-width: em($breakpoint-tablet)) {
 		min-height: 0;
-		border-radius: rem(20);
+		border-radius: rem(14);
 	}
-}
-
-.accent {
-	display: block;
-	width: 100%;
-	height: rem(6);
-	background: $color-cyan;
 }
 
 .cardBody {
@@ -509,6 +502,19 @@
 
 	@media (max-width: em($breakpoint-tablet)) {
 		padding: rem(18);
+	}
+}
+.kindIcon {
+	display: inline-grid;
+	width: rem(44);
+	height: rem(44);
+	place-items: center;
+	background: var(--ui-surface-soft);
+	color: var(--ui-text);
+	border-radius: var(--ui-control-radius);
+	svg {
+		width: rem(22);
+		height: rem(22);
 	}
 }
 

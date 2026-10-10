@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import {
 	FiArrowLeft,
-	FiArrowRight,
 	FiKey,
 	FiLock,
 	FiMail,
@@ -22,6 +21,7 @@ import {
 	type AiTwoFactorRequired,
 	clearAiCsrfToken,
 } from '@/shared/api/ai';
+import { SectionTabs } from '@/shared/ui/section-tabs';
 import { getAiErrorMessage, unwrapAiData, useAiResource } from '../model/api';
 import styles from './AiPages.module.scss';
 import { AiButton, AiCard, AiPage, FieldMessage } from './AiUi';
@@ -29,18 +29,20 @@ import { AiButton, AiCard, AiPage, FieldMessage } from './AiUi';
 type AuthMode = 'login' | 'register';
 
 type AuthPageProps = {
+	initialMode?: AuthMode;
 	initialAuthError?: string;
 	initialReturnTo?: string;
 };
 
 export function AuthPage({
+	initialMode = 'login',
 	initialAuthError,
 	initialReturnTo = '/ai',
 }: AuthPageProps = {}) {
 	const router = useRouter();
 	const { isEnglish, t } = useAiLocale();
 	const { session, refresh } = useAiSession();
-	const [mode, setMode] = useState<AuthMode>('login');
+	const [mode, setMode] = useState<AuthMode>(initialMode);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isTelegramRedirecting, setIsTelegramRedirecting] = useState(false);
 	const [twoFactor, setTwoFactor] = useState<AiTwoFactorRequired | null>(null);
@@ -253,7 +255,6 @@ export function AuthPage({
 								{isSubmitting
 									? t('Проверяем…', 'Checking…')
 									: t('Продолжить', 'Continue')}
-								{!isSubmitting ? <FiArrowRight aria-hidden='true' /> : null}
 							</AiButton>
 						</form>
 					</AiCard>
@@ -268,36 +269,18 @@ export function AuthPage({
 				<AuthIntro />
 
 				<AiCard className={styles.authCard}>
-					<div
-						className={styles.segmented}
-						role='tablist'
-						aria-label={t('Тип формы', 'Form type')}
-					>
-						<button
-							aria-selected={mode === 'login'}
-							className={mode === 'login' ? styles.segmentActive : ''}
-							role='tab'
-							type='button'
-							onClick={() => {
-								setMode('login');
-								setError(null);
-							}}
-						>
-							{t('Вход', 'Sign in')}
-						</button>
-						<button
-							aria-selected={mode === 'register'}
-							className={mode === 'register' ? styles.segmentActive : ''}
-							role='tab'
-							type='button'
-							onClick={() => {
-								setMode('register');
-								setError(null);
-							}}
-						>
-							{t('Регистрация', 'Register')}
-						</button>
-					</div>
+					<SectionTabs<AuthMode>
+						label={t('Тип формы', 'Form type')}
+						value={mode}
+						onChange={(value) => {
+							setMode(value);
+							setError(null);
+						}}
+						items={[
+							{ value: 'login', label: t('Вход', 'Sign in') },
+							{ value: 'register', label: t('Регистрация', 'Register') },
+						]}
+					/>
 
 					<div className={styles.authTitle}>
 						<h2>
@@ -498,7 +481,6 @@ export function AuthPage({
 									: mode === 'login'
 										? t('Войти', 'Sign in')
 										: t('Зарегистрироваться', 'Register')}
-								{!isSubmitting ? <FiArrowRight aria-hidden='true' /> : null}
 							</AiButton>
 						) : null}
 					</form>
@@ -517,10 +499,7 @@ export function AuthPage({
 								<FiSend aria-hidden='true' />
 								{isTelegramRedirecting
 									? t('Переходим…', 'Redirecting…')
-									: t(
-											'Продолжить через Telegram',
-											'Continue with Telegram',
-										)}
+									: t('Продолжить через Telegram', 'Continue with Telegram')}
 							</button>
 						</>
 					) : null}
@@ -561,29 +540,30 @@ export function AuthIntro() {
 
 	return (
 		<section className={styles.authIntro}>
-			<span className={styles.eyebrow}>
-				{t(
-					'Один аккаунт для всей AI-студии',
-					'One account for the entire AI studio',
-				)}
-			</span>
-			<h1>
-				{t(
-					'Создавайте, сохраняйте и продолжайте с любого устройства',
-					'Create, save and continue on any device',
-				)}
-			</h1>
+			<h1>{t('Ваши идеи в одной студии', 'Your ideas in one studio')}</h1>
 			<p>
 				{t(
 					'Ваши черновики останутся в браузере, а история запусков, работы и кредиты будут доступны после входа.',
 					'Your drafts stay in the browser, while runs, works and credits become available after sign-in.',
 				)}
 			</p>
-			<div className={styles.authVisual} aria-hidden='true'>
-				<span />
-				<span />
-				<span />
-			</div>
+			<ul className={styles.authBenefits}>
+				<li>
+					<FiUser aria-hidden='true' />
+					{t('Один аккаунт для всех моделей', 'One account for every model')}
+				</li>
+				<li>
+					<FiLock aria-hidden='true' />
+					{t('Личная библиотека работ', 'Your personal work library')}
+				</li>
+				<li>
+					<FiMail aria-hidden='true' />
+					{t(
+						'Вход по email или через Telegram',
+						'Sign in by email or Telegram',
+					)}
+				</li>
+			</ul>
 		</section>
 	);
 }

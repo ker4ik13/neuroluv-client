@@ -1,95 +1,39 @@
 @use '../../../../styles/functions' as *;
 @use '../../../../styles/mixins' as *;
 @use '../../../../styles/vars' as *;
-
 .about {
-	width: 100%;
-	max-width: rem($container + 40);
-	margin: 0 auto;
-	padding: rem(40) rem(20);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(24) rem(16);
-	}
+	@include content-section;
 }
-
 .inner {
-	display: flex;
-	justify-content: space-between;
-	gap: rem(30);
-	padding: rem(30);
-	background: $color-white;
-	border-radius: rem(24);
-	box-shadow: 0 rem(28) rem(70) rgba($color-ink, 0.2);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex-direction: column;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(22);
-		border-radius: rem(20);
-		gap: rem(20);
-	}
+	display: grid;
+	grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+	align-items: start;
+	gap: rem(64);
 }
-
-.textColumn {
-	display: flex;
-	max-width: rem(450);
-	width: 100%;
-	flex-direction: column;
-
-	@media (max-width: em($breakpoint-laptop)) {
-		max-width: 100%;
-	}
-}
-
+.textColumn,
 .content {
 	display: flex;
+	min-width: 0;
 	flex-direction: column;
-	width: 100%;
 }
 .title {
-	@include heading-font(800);
-
-	color: $color-ink-soft;
-	font-size: rem(42);
-	line-height: 1;
-	text-transform: uppercase;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(32);
-	}
+	@include section-title;
 }
-
+.textColumn {
+	@include sticky-section-heading;
+}
 .description {
-	@include body-font(500);
-
-	margin-top: rem(28);
-	color: $color-ink-muted;
-	font-size: rem(22);
-	line-height: 1.45;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		margin-top: rem(20);
-		font-size: rem(18);
-	}
+	@include section-copy;
+	margin-top: rem(20);
 }
-
 .promptCard {
 	position: relative;
-	margin-top: auto;
+	margin-top: rem(28);
 	overflow: hidden;
-	color: $color-white;
-	background: $color-ink;
-	border-radius: rem(14);
-	margin-top: rem(14);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		margin-top: rem(28);
-	}
+	color: var(--ui-text);
+	background: var(--ui-surface-soft);
+	border-radius: rem($radius-sm);
 }
-
 .promptImage {
 	position: absolute;
 	inset: 0;
@@ -97,98 +41,45 @@
 	height: 100%;
 	object-fit: cover;
 }
-
 .promptOverlay {
 	position: relative;
 	z-index: 1;
 	display: flex;
-	min-height: rem(170);
+	min-height: rem(190);
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: rem(22);
+	padding: rem(28);
 	text-align: center;
-	background: rgba($color-ink, 0.2);
 }
-
+.promptCard:has(img) .promptOverlay {
+	color: #fff;
+	background: rgba(0, 0, 0, 0.45);
+}
 .promptNumber {
-	@include heading-font(800);
-
-	display: block;
-	font-size: rem(54);
-	line-height: 1;
+	font-size: clamp(rem(44), 6vw, rem(64));
+	font-weight: 600;
+	line-height: 1.15;
 }
-
 .promptText {
-	@include body-font(700);
-
-	max-width: rem(320);
-	margin-top: rem(20);
-	font-size: rem(24);
-	line-height: 1.18;
-	text-transform: uppercase;
+	max-width: rem(360);
+	margin-top: rem(14);
+	font-size: rem(17);
+	line-height: 1.5;
 }
-
-.cards {
-	display: grid;
-	max-width: rem(660);
-	width: 100%;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	grid-auto-rows: minmax(0, 1fr);
-	gap: rem(24);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		max-width: 100%;
+.inner[data-layout='cards'] {
+	grid-template-columns: 1fr;
+	gap: rem(32);
+	.textColumn {
+		position: static;
+		max-width: rem(760);
+		margin: 0 auto;
+		text-align: center;
 	}
-
-	@media (max-width: em($breakpoint-tablet)) {
+}
+@media (max-width: em($breakpoint-laptop)) {
+	.inner {
 		grid-template-columns: 1fr;
+		gap: rem(32);
 	}
-}
-
-.card {
-	min-width: 0;
-	padding: rem(24);
-	color: $color-white;
-	background: $color-ink;
-	border-radius: rem(12);
-}
-
-.cardHeader {
-	display: flex;
-	align-items: center;
-	gap: rem(14);
-}
-
-.iconBox {
-	display: inline-flex;
-	width: rem(40);
-	height: rem(40);
-	flex: 0 0 rem(40);
-	align-items: center;
-	justify-content: center;
-	color: $color-white;
-	background: rgba($color-blue, 0.18);
-	border-radius: rem(12);
-}
-
-.cardIcon {
-	width: rem(20);
-	height: rem(20);
-}
-
-.cardTitle {
-	@include heading-font(800);
-
-	font-size: rem(26);
-	line-height: 1.05;
-}
-
-.cardDescription {
-	@include body-font(500);
-
-	margin-top: rem(24);
-	color: rgba($color-white, 0.75);
-	font-size: rem(18);
-	line-height: 1.35;
 }

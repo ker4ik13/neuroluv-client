@@ -1,7 +1,8 @@
 "use client";
 
+import { FiChevronDown } from 'react-icons/fi';
 import { useMemo, useState } from "react";
-import { FaChevronDown } from "react-icons/fa";
+
 
 import { CopyContentBox } from "@/shared/ui/copy-content-box";
 
@@ -93,7 +94,7 @@ export function PromptComposer({
             type="button"
           >
             {isPromptExpanded ? "Свернуть промпт" : "Показать весь промпт"}
-            <FaChevronDown aria-hidden="true" />
+            <FiChevronDown aria-hidden="true" />
           </button>
         )}
       </CopyContentBox>

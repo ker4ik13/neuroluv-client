@@ -1,220 +1,169 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { type ReactNode, useEffect, useRef } from "react";
-import { AiOutlineSearch } from "react-icons/ai";
-import { FaArrowDown, FaChevronDown } from "react-icons/fa";
-
-import { Noindex } from "@/shared/ui/noindex";
-
-import styles from "./ContentListControls.module.scss";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { type ReactNode, useId } from 'react';
+import { FiSearch } from 'react-icons/fi';
+import { Noindex } from '@/shared/ui/noindex';
+import { Select } from '@/shared/ui/select';
+import styles from './ContentListControls.module.scss';
 
 export type ContentListFilter = {
-  id: string;
-  label: string;
-  href: string;
-  isActive: boolean;
+	id: string;
+	label: string;
+	href: string;
+	isActive: boolean;
 };
 
 export type ContentListSortOption = {
-  label: string;
-  href: string;
-  isActive: boolean;
-  value: "fresh" | "old";
+	label: string;
+	href: string;
+	isActive: boolean;
+	value: 'fresh' | 'old';
 };
 
 type ContentListControlsProps = {
-  action: string;
-  filters: ContentListFilter[];
-  hasActiveExternalFilters?: boolean;
-  hiddenInputs?: Record<string, string | null | undefined>;
-  leadingLink?: {
-    href: string;
-    icon?: ReactNode;
-    label: string;
-  };
-  mobileFilter?: ReactNode;
-  resultLabel?: string;
-  resetHref: string;
-  searchDefaultValue?: string | null;
-  searchLabel: string;
-  searchPlaceholder: string;
-  sortOptions: ContentListSortOption[];
+	action: string;
+	filters: ContentListFilter[];
+	hasActiveExternalFilters?: boolean;
+	hiddenInputs?: Record<string, string | null | undefined>;
+	leadingLink?: {
+		href: string;
+		icon?: ReactNode;
+		label: string;
+	};
+	mobileFilter?: ReactNode;
+	resultLabel?: string;
+	resetHref: string;
+	searchDefaultValue?: string | null;
+	searchLabel: string;
+	searchPlaceholder: string;
+	sortOptions: ContentListSortOption[];
 };
 
 export function ContentListControls({
-  action,
-  filters,
-  hasActiveExternalFilters = false,
-  hiddenInputs = {},
-  leadingLink,
-  mobileFilter,
-  resultLabel,
-  resetHref,
-  searchDefaultValue,
-  searchLabel,
-  searchPlaceholder,
-  sortOptions,
+	action,
+	filters,
+	hasActiveExternalFilters = false,
+	hiddenInputs = {},
+	leadingLink,
+	mobileFilter,
+	resultLabel,
+	resetHref,
+	searchDefaultValue,
+	searchLabel,
+	searchPlaceholder,
+	sortOptions,
 }: ContentListControlsProps) {
-  const sortSelectRef = useRef<HTMLDetailsElement>(null);
-  const activeSort =
-    sortOptions.find((option) => option.isActive) || sortOptions[0];
-  const hasFilters = filters.length > 0;
-  const hasActiveFilters =
-    hasActiveExternalFilters ||
-    Boolean(searchDefaultValue) ||
-    Object.values(hiddenInputs).some(Boolean) ||
-    filters.some((filter) => filter.isActive && filter.id !== "all");
+	const sortId = useId();
+	const router = useRouter();
+	const activeSort =
+		sortOptions.find((option) => option.isActive) || sortOptions[0];
+	const hasFilters = filters.length > 0;
+	const hasActiveFilters =
+		hasActiveExternalFilters ||
+		Boolean(searchDefaultValue) ||
+		Object.values(hiddenInputs).some(Boolean) ||
+		filters.some((filter) => filter.isActive && filter.id !== 'all');
 
-  useEffect(() => {
-    const closeSortSelect = () => {
-      if (sortSelectRef.current) sortSelectRef.current.open = false;
-    };
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        sortSelectRef.current?.open &&
-        event.target instanceof Node &&
-        !sortSelectRef.current.contains(event.target)
-      ) {
-        closeSortSelect();
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeSortSelect();
-    };
+	return (
+		<Noindex>
+			<section className={styles.controls} data-nosnippet='true'>
+				{(leadingLink || mobileFilter) && (
+					<div className={styles.mobileTopActions}>
+						{leadingLink && (
+							<Link
+								className={`${styles.leadingLink} ${styles.mobileLeadingLink}`}
+								href={leadingLink.href}
+							>
+								{leadingLink.icon}
+								{leadingLink.label}
+							</Link>
+						)}
+						{mobileFilter}
+					</div>
+				)}
 
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
+				<div className={styles.searchRow}>
+					{leadingLink && (
+						<Link
+							className={`${styles.leadingLink} ${styles.desktopLeadingLink}`}
+							href={leadingLink.href}
+						>
+							{leadingLink.icon}
+							{leadingLink.label}
+						</Link>
+					)}
 
-  return (
-    <Noindex>
-      <section className={styles.controls} data-nosnippet="true">
-        {(leadingLink || mobileFilter) && (
-          <div className={styles.mobileTopActions}>
-            {leadingLink && (
-              <Link
-                className={`${styles.leadingLink} ${styles.mobileLeadingLink}`}
-                href={leadingLink.href}
-              >
-                {leadingLink.icon}
-                {leadingLink.label}
-              </Link>
-            )}
-            {mobileFilter}
-          </div>
-        )}
+					<form action={action} className={styles.searchForm}>
+						<span className={styles.searchField}>
+							<input
+								aria-label={searchLabel}
+								defaultValue={searchDefaultValue || ''}
+								name='q'
+								placeholder={searchPlaceholder}
+								type='search'
+							/>
+						</span>
 
-        <div className={styles.searchRow}>
-          {leadingLink && (
-            <Link
-              className={`${styles.leadingLink} ${styles.desktopLeadingLink}`}
-              href={leadingLink.href}
-            >
-              {leadingLink.icon}
-              {leadingLink.label}
-            </Link>
-          )}
+						{Object.entries(hiddenInputs).map(([name, value]) =>
+							value ? (
+								<input key={name} name={name} type='hidden' value={value} />
+							) : null,
+						)}
 
-          <form action={action} className={styles.searchForm}>
-            <span className={styles.searchField}>
-              <input
-                aria-label={searchLabel}
-                defaultValue={searchDefaultValue || ""}
-                name="q"
-                placeholder={searchPlaceholder}
-                type="search"
-              />
-            </span>
+						<button type='submit'>
+							Найти
+							<FiSearch aria-hidden='true' />
+						</button>
+					</form>
+				</div>
 
-            {Object.entries(hiddenInputs).map(([name, value]) =>
-              value ? (
-                <input key={name} name={name} type="hidden" value={value} />
-              ) : null,
-            )}
+				{hasFilters && (
+					<div className={styles.filters} aria-label='Фильтры' role='list'>
+						{filters.map((filter) => (
+							<Link
+								className={`${styles.filterButton} ${
+									filter.isActive ? styles.filterButtonActive : ''
+								}`}
+								href={filter.href}
+								key={filter.id}
+							>
+								{filter.label}
+							</Link>
+						))}
+					</div>
+				)}
 
-            <button type="submit">
-              Найти
-              <AiOutlineSearch aria-hidden="true" />
-            </button>
-          </form>
-        </div>
+				<div className={styles.metaRow}>
+					{resultLabel && <p className={styles.resultLabel}>{resultLabel}</p>}
 
-        {hasFilters && (
-          <div className={styles.filters} aria-label="Фильтры" role="list">
-            {filters.map((filter) => (
-              <Link
-                className={`${styles.filterButton} ${
-                  filter.isActive ? styles.filterButtonActive : ""
-                }`}
-                href={filter.href}
-                key={filter.id}
-              >
-                {filter.label}
-              </Link>
-            ))}
-          </div>
-        )}
+					<div className={styles.actions}>
+						{hasActiveFilters ? (
+							<Link className={styles.resetButton} href={resetHref}>
+								Сбросить
+							</Link>
+						) : (
+							<button className={styles.resetButton} disabled type='button'>
+								Сбросить
+							</button>
+						)}
 
-        <div className={styles.metaRow}>
-          {resultLabel && <p className={styles.resultLabel}>{resultLabel}</p>}
-
-          <div className={styles.actions}>
-            {hasActiveFilters ? (
-              <Link className={styles.resetButton} href={resetHref}>
-                Сбросить
-              </Link>
-            ) : (
-              <button
-                className={styles.resetButton}
-                disabled
-                type="button"
-              >
-                Сбросить
-              </button>
-            )}
-
-            <details className={styles.sortSelect} ref={sortSelectRef}>
-              <summary>
-                <span>
-                  {activeSort.label}
-                  <FaArrowDown
-                    aria-hidden="true"
-                    className={`${styles.sortDirection} ${
-                      activeSort.value === "old" ? styles.sortDirectionReversed : ""
-                    }`}
-                  />
-                </span>
-                <FaChevronDown aria-hidden="true" className={styles.sortChevron} />
-              </summary>
-
-              <div className={styles.sortMenu}>
-                {sortOptions.map((option) => (
-                  <Link
-                    aria-current={option.isActive ? "page" : undefined}
-                    className={`${styles.sortOption} ${
-                      option.isActive ? styles.sortOptionActive : ""
-                    }`}
-                    href={option.href}
-                    key={option.value}
-                    onClick={() => {
-                      if (sortSelectRef.current) {
-                        sortSelectRef.current.open = false;
-                      }
-                    }}
-                  >
-                    {option.label}
-                  </Link>
-                ))}
-              </div>
-            </details>
-          </div>
-        </div>
-      </section>
-    </Noindex>
-  );
+						<Select
+							id={`catalog-sort-${sortId}`}
+							label='Сортировка'
+							labelVisuallyHidden
+							className={styles.sortSelect}
+							value={activeSort.value}
+							options={sortOptions}
+							onChange={(value) => {
+								const option = sortOptions.find((item) => item.value === value);
+								if (option) router.push(option.href);
+							}}
+						/>
+					</div>
+				</div>
+			</section>
+		</Noindex>
+	);
 }

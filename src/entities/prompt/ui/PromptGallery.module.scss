@@ -1,0 +1,28 @@
+@use '../../../styles/functions' as *;
+.gallery {
+	min-width: 0;
+	width: 100%;
+}
+.grid {
+	display: grid;
+	grid-template-columns: repeat(var(--gallery-columns, 3), minmax(0, 1fr));
+	gap: rem(20);
+	> article {
+		display: flex;
+		min-width: 0;
+	}
+}
+@media (max-width: 768px) {
+	.grid {
+		grid-template-columns: repeat(
+			min(2, var(--gallery-columns, 3)),
+			minmax(0, 1fr)
+		);
+		gap: rem(14);
+	}
+}
+@media (max-width: 360px) {
+	.grid {
+		grid-template-columns: 1fr;
+	}
+}

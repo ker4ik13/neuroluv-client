@@ -4,13 +4,17 @@ import Link from 'next/link';
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import {
 	FiAlertCircle,
-	FiArrowLeft,
+	FiCheckCircle,
 	FiExternalLink,
+	FiInbox,
+	FiInfo,
 	FiRefreshCw,
 } from 'react-icons/fi';
 import { useAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
 import type { AiReceiptRegistrationStatus } from '@/shared/api/ai';
+import { Breadcrumbs } from '@/shared/ui/breadcrumbs';
+import { Button, buttonClassName } from '@/shared/ui/button';
 import { getStatusLabel, getStatusTone } from '../model/format';
 import styles from './AiPages.module.scss';
 
@@ -25,33 +29,43 @@ export function AiPage({
 }
 
 export function AiPageHeader({
-	eyebrow,
 	title,
 	description,
 	actions,
 	backHref,
 }: {
-	eyebrow?: string;
 	title: string;
 	description?: string;
 	actions?: ReactNode;
 	backHref?: string;
 }) {
 	const { t } = useAiLocale();
+	const parentTitles: Record<string, string> = {
+		'/ai/prompts': t('Промпты', 'Prompts'),
+		'/ai/works': t('Мои работы', 'My works'),
+		'/ai/profile': t('Профиль', 'Profile'),
+	};
 	return (
 		<header className={styles.pageHeader}>
 			<div className={styles.pageHeading}>
-				{backHref ? (
-					<Link className={styles.backLink} href={backHref}>
-						<FiArrowLeft aria-hidden='true' />
-						{t('Назад', 'Back')}
-					</Link>
-				) : null}
-				{eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
+				<Breadcrumbs
+					items={[
+						{ label: 'Studio', href: '/ai' },
+						...(backHref && backHref !== '/ai'
+							? [
+									{
+										label: parentTitles[backHref] || t('Назад', 'Back'),
+										href: backHref,
+									},
+								]
+							: []),
+						{ label: title },
+					]}
+				/>
 				<h1>{title}</h1>
 				{description ? <p className={styles.lead}>{description}</p> : null}
+				{actions ? <div className={styles.headerActions}>{actions}</div> : null}
 			</div>
-			{actions ? <div className={styles.headerActions}>{actions}</div> : null}
 		</header>
 	);
 }
@@ -82,12 +96,9 @@ export function AiButton({
 	variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
 }) {
 	return (
-		<button
-			{...props}
-			className={`${styles.button} ${styles[`button_${variant}`]} ${className}`}
-		>
+		<Button {...props} variant={variant} className={className}>
 			{children}
-		</button>
+		</Button>
 	);
 }
 
@@ -103,10 +114,7 @@ export function AiLinkButton({
 	className?: string;
 }) {
 	return (
-		<Link
-			className={`${styles.button} ${styles[`button_${variant}`]} ${className}`}
-			href={href}
-		>
+		<Link className={buttonClassName(variant, className)} href={href}>
 			{children}
 		</Link>
 	);
@@ -166,7 +174,7 @@ export function AsyncState({
 	if (isEmpty) {
 		return (
 			<AiCard className={styles.stateCard}>
-				<div aria-hidden='true' className={styles.emptyOrb} />
+				<FiInbox aria-hidden='true' className={styles.emptyIcon} />
 				<h2>{resolvedEmptyTitle}</h2>
 				{emptyDescription ? <p>{emptyDescription}</p> : null}
 			</AiCard>
@@ -232,9 +240,17 @@ export function FieldMessage({
 	return (
 		<p
 			aria-live='polite'
+			role={tone === 'error' ? 'alert' : 'status'}
 			className={`${styles.fieldMessage} ${styles[`message_${tone}`]}`}
 		>
-			{children}
+			{tone === 'error' ? (
+				<FiAlertCircle aria-hidden='true' />
+			) : tone === 'success' ? (
+				<FiCheckCircle aria-hidden='true' />
+			) : (
+				<FiInfo aria-hidden='true' />
+			)}
+			<span>{children}</span>
 		</p>
 	);
 }
@@ -275,12 +291,22 @@ export function AccountGate({
 
 	return (
 		<AiCard className={styles.accountGate}>
-			<div className={styles.emptyOrb} />
+			<FiInbox aria-hidden='true' className={styles.emptyIcon} />
 			<h2>{resolvedTitle}</h2>
 			<p>{resolvedDescription}</p>
-			<AiLinkButton href={`/ai/auth?returnTo=${encodeURIComponent(returnTo)}`}>
-				{t('Войти или зарегистрироваться', 'Sign in or register')}
-			</AiLinkButton>
+			<div className={styles.gateActions}>
+				<AiLinkButton
+					href={`/ai/auth?mode=register&returnTo=${encodeURIComponent(returnTo)}`}
+				>
+					{t('Создать аккаунт', 'Create account')}
+				</AiLinkButton>
+				<AiLinkButton
+					variant='secondary'
+					href={`/ai/auth?returnTo=${encodeURIComponent(returnTo)}`}
+				>
+					{t('Войти', 'Sign in')}
+				</AiLinkButton>
+			</div>
 		</AiCard>
 	);
 }

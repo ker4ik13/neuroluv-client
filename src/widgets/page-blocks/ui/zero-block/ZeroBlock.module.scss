@@ -1,78 +1,47 @@
 @use '../../../../styles/functions' as *;
 @use '../../../../styles/mixins' as *;
 @use '../../../../styles/vars' as *;
-
 .section {
-	width: 100%;
-	padding: 0 rem(20);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: 0 rem(16);
-	}
+	@include content-section;
 }
-
 .inner {
-	display: flex;
-	width: 100%;
-	max-width: rem($container);
-	flex-direction: column;
-	gap: rem(30);
-	margin: 0 auto;
-	padding: rem(30);
-	background: var(--ai-surface, #{$color-white});
-	border: rem(1) solid var(--ai-border, transparent);
-	border-radius: rem(28);
-	box-shadow: var(--ai-shadow, 0 rem(10) rem(14) rgba(0, 0, 0, 0.05));
-
-	@media (max-width: em($breakpoint-tablet)) {
-		gap: rem(22);
-		padding: rem(22);
-		border-radius: rem(22);
-	}
+	display: grid;
+	gap: rem(28);
 }
-
+.withHeader {
+	grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+	gap: rem(64);
+	padding-top: rem(32);
+	border-top: rem(1) solid var(--ui-border);
+}
+.section:has(.inner:not(.withHeader)) {
+	padding-top: rem(24);
+	padding-bottom: rem(24);
+}
 .header {
+	@include sticky-section-heading;
 	display: flex;
-	max-width: rem(820);
 	flex-direction: column;
-	gap: rem(14);
-
-	h2 {
-		@include heading-font(900);
-
-		margin: 0;
-		color: var(--ai-text, #{$color-ink});
-		font-size: rem(44);
-		line-height: 1;
-		text-transform: uppercase;
-
-		@media (max-width: em($breakpoint-tablet)) {
-			font-size: rem(30);
-			line-height: 1.08;
-		}
-	}
-
-	p {
-		@include body-font(400);
-
-		margin: 0;
-		color: var(--ai-muted, #{$color-ink-muted});
-		font-size: rem(20);
-		line-height: 1.4;
-
-		@media (max-width: em($breakpoint-tablet)) {
-			font-size: rem(17);
-		}
-	}
+	gap: rem(18);
 }
-
+.header h2 {
+	@include section-title;
+}
+.header p {
+	@include section-copy;
+}
 .content {
 	display: flex;
 	min-width: 0;
 	flex-direction: column;
-	gap: rem(30);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		gap: rem(22);
+	gap: rem(24);
+}
+@media (max-width: em($breakpoint-tablet)) {
+	.withHeader {
+		grid-template-columns: 1fr;
+		gap: rem(24);
+	}
+	.withHeader {
+		padding-top: rem(28);
 	}
 }

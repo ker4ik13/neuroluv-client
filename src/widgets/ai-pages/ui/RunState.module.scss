@@ -1,0 +1,58 @@
+@use '../../../styles/functions' as *;
+.state {
+	min-width: rem(190);
+	max-width: 100%;
+	padding: rem(12) rem(14);
+	background: var(--ai-surface-muted);
+	border: rem(1) solid var(--ai-border);
+	border-radius: var(--ui-control-radius);
+}
+.caption {
+	display: flex;
+	align-items: center;
+	gap: rem(8);
+	color: var(--ai-muted);
+	font-size: rem(13);
+	line-height: 1.4;
+}
+.caption svg {
+	width: rem(16);
+	height: rem(16);
+	flex-shrink: 0;
+	color: var(--ai-primary);
+}
+.caption strong {
+	margin-left: auto;
+	color: var(--ai-text);
+	font-size: rem(12);
+	font-weight: 500;
+}
+.track {
+	height: rem(4);
+	overflow: hidden;
+	margin-top: rem(10);
+	background: var(--ai-border);
+	border-radius: rem(2);
+}
+.track span {
+	display: block;
+	height: 100%;
+	background: var(--ai-primary);
+	transition: width 200ms ease;
+}
+.spinner {
+	animation: run-spinner 1.5s linear infinite;
+}
+@keyframes run-spinner {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.spinner {
+		animation: none;
+	}
+	.track span {
+		transition: none;
+	}
+}

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
-	FiArrowUpRight,
 	FiCheck,
 	FiClock,
 	FiCreditCard,
@@ -18,7 +17,7 @@ import {
 	AI_PAYMENT_UPDATED_EVENT,
 	rememberPendingPayment,
 } from '@/features/ai-browser-notifications';
-import { useAiLocale } from '@/features/ai-locale';
+import { useAiLocale, withAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
 import {
 	type AiActivePromo,
@@ -38,11 +37,11 @@ import {
 } from '@/shared/api/ai';
 import { useFocusTrap } from '@/shared/lib/dom/useFocusTrap';
 import { formatCredits } from '@/shared/lib/formatCredits';
+import { SectionTabs } from '@/shared/ui/section-tabs';
 import { getAiErrorMessage, unwrapAiData, useAiResource } from '../model/api';
 import { formatDate, formatMoney, formatMoneyPerCredit } from '../model/format';
 import styles from './AiPages.module.scss';
 import {
-	AccountGate,
 	AiButton,
 	AiCard,
 	AiLinkButton,
@@ -53,6 +52,7 @@ import {
 	ReceiptState,
 	StatusBadge,
 } from './AiUi';
+import { PlanCard } from './PlanCard';
 
 type CheckoutProduct =
 	| { type: 'subscription'; value: AiPlan }
@@ -61,7 +61,9 @@ type CheckoutProduct =
 type BillingPeriod = Extract<AiPlan['interval'], 'month' | 'year'>;
 type SubscriptionActivationMode = 'immediate' | 'after_current_period';
 
-export function BalancePage() {
+export function BalancePage({
+	initialPlanId,
+}: { initialPlanId?: string } = {}) {
 	const { locale, t } = useAiLocale();
 	const {
 		session,
@@ -82,7 +84,11 @@ export function BalancePage() {
 	);
 	const [checkoutProduct, setCheckoutProduct] =
 		useState<CheckoutProduct | null>(null);
-	const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('month');
+	const [selectedBillingPeriod, setBillingPeriod] =
+		useState<BillingPeriod | null>(null);
+	const [view, setView] = useState<'subscriptions' | 'topups' | 'payments'>(
+		'subscriptions',
+	);
 	const [paymentProviderId, setPaymentProviderId] = useState('');
 	const [activationMode, setActivationMode] =
 		useState<SubscriptionActivationMode | null>(null);
@@ -101,7 +107,7 @@ export function BalancePage() {
 	const checkoutIntent = useRef<{ signature: string; key: string } | null>(
 		null,
 	);
-	const syncedActivePlanId = useRef<string | null>(null);
+	const focusedPlanId = useRef<string | null>(null);
 	const checkoutDialogRef = useRef<HTMLDivElement>(null);
 	const refreshPayments = payments.refresh;
 	const refreshProducts = products.refresh;
@@ -199,11 +205,21 @@ export function BalancePage() {
 		activePlanId &&
 		checkoutProduct.value.id !== activePlanId,
 	);
-	const authReturnHref = `/ai/auth?returnTo=${encodeURIComponent('/ai/balance')}`;
+	const authReturnHref = `/ai/auth?returnTo=${encodeURIComponent(initialPlanId ? `/ai/balance?plan=${encodeURIComponent(initialPlanId)}` : '/ai/balance')}`;
 	const activePlan = useMemo(
 		() => products.data?.plans.find((plan) => plan.id === activePlanId) ?? null,
 		[activePlanId, products.data?.plans],
 	);
+	const requestedPeriod = products.data?.plans.find(
+		(plan) => plan.id === initialPlanId,
+	)?.interval;
+	const fallbackPeriod =
+		requestedPeriod === 'month' || requestedPeriod === 'year'
+			? requestedPeriod
+			: activePlan?.interval === 'year'
+				? 'year'
+				: 'month';
+	const billingPeriod = selectedBillingPeriod ?? fallbackPeriod;
 	const visiblePlans = useMemo(
 		() =>
 			products.data?.plans.filter((plan) => plan.interval === billingPeriod) ??
@@ -212,16 +228,19 @@ export function BalancePage() {
 	);
 
 	useEffect(() => {
-		if (
-			!activePlan ||
-			syncedActivePlanId.current === activePlan.id ||
-			!['month', 'year'].includes(activePlan.interval)
-		) {
+		if (!initialPlanId || focusedPlanId.current === initialPlanId) return;
+		const plan = products.data?.plans.find((item) => item.id === initialPlanId);
+		if (!plan || (plan.interval !== 'month' && plan.interval !== 'year'))
 			return;
-		}
-		syncedActivePlanId.current = activePlan.id;
-		setBillingPeriod(activePlan.interval as BillingPeriod);
-	}, [activePlan]);
+		const timer = window.setTimeout(() => {
+			const card = document.getElementById(`plan-${plan.id}`);
+			if (!card) return;
+			focusedPlanId.current = plan.id;
+			card.scrollIntoView({ block: 'center', behavior: 'instant' });
+			card.focus({ preventScroll: true });
+		}, 100);
+		return () => window.clearTimeout(timer);
+	}, [initialPlanId, products.data?.plans, billingPeriod]);
 
 	function closeCheckout() {
 		setCheckoutProduct(null);
@@ -436,19 +455,43 @@ export function BalancePage() {
 
 	return (
 		<AiPage>
-			<AiPageHeader title={t('Баланс', 'Balance')} />
+			<AiPageHeader
+				title={
+					session.authenticated
+						? t('Баланс', 'Balance')
+						: t('Тарифы Нейролюб Studio', 'Neuroluv Studio plans')
+				}
+				description={
+					!session.authenticated
+						? t(
+								'Текст, изображения и видео — с одним балансом. Подберите тариф под свои задачи.',
+								'Text, images and video with a shared balance. Choose a plan for your projects.',
+							)
+						: undefined
+				}
+			/>
 			{!isSessionLoading && !session.authenticated ? (
-				<AccountGate
-					description={t(
-						'Посмотрите тарифы ниже. Для оформления подписки или покупки кредитов войдите в аккаунт.',
-						'Review the plans below. Sign in to subscribe or purchase credits.',
-					)}
-					returnTo='/ai/balance'
-					title={t(
-						'Тарифы доступны без регистрации',
-						'Pricing is available without signing in',
-					)}
-				/>
+				<div className={styles.guestPricingIntro}>
+					<p>
+						{t(
+							'После создания аккаунта вы сможете сохранять работы, продолжать чаты и выбрать подходящий тариф.',
+							'Create an account to save your work, continue chats and choose a plan.',
+						)}
+					</p>
+					<div>
+						<AiLinkButton
+							href={withAiLocale(
+								`/ai/auth?mode=register&returnTo=${encodeURIComponent('/ai/balance')}`,
+								locale,
+							)}
+						>
+							{t('Создать аккаунт', 'Create account')}
+						</AiLinkButton>
+						<AiLinkButton href={authReturnHref} variant='ghost'>
+							{t('Войти', 'Sign in')}
+						</AiLinkButton>
+					</div>
+				</div>
 			) : null}
 			{notice ? <FieldMessage tone='success'>{notice}</FieldMessage> : null}
 			{error && !checkoutProduct ? <FieldMessage>{error}</FieldMessage> : null}
@@ -623,7 +666,31 @@ export function BalancePage() {
 							</>
 						) : null}
 
-						<section className={styles.productSection}>
+						<SectionTabs<'subscriptions' | 'topups' | 'payments'>
+							label={t('Разделы баланса', 'Balance sections')}
+							className={styles.balanceNavigation}
+							value={view}
+							onChange={setView}
+							items={[
+								{
+									value: 'subscriptions',
+									label: t('Подписки', 'Subscriptions'),
+								},
+								{ value: 'topups', label: t('Пополнение', 'Top up') },
+								...(session.authenticated
+									? [
+											{
+												value: 'payments' as const,
+												label: t('История платежей', 'Payment history'),
+											},
+										]
+									: []),
+							]}
+						/>
+						<section
+							className={styles.productSection}
+							hidden={view !== 'subscriptions'}
+						>
 							<div className={styles.sectionTitleRow}>
 								<h2>{t('Подписки', 'Subscriptions')}</h2>
 								<div
@@ -665,124 +732,64 @@ export function BalancePage() {
 											plan.id === scheduledSubscription?.planId;
 
 										return (
-											<AiCard
+											<PlanCard
+												id={`plan-${plan.id}`}
+												tabIndex={-1}
 												aria-current={isActivePlan ? 'true' : undefined}
-												className={`${styles.planCard} ${
-													plan.badge && !isActivePlan
-														? styles.planCardFeatured
-														: ''
-												} ${isActivePlan ? styles.planCardActive : ''}`}
 												key={plan.id}
-											>
-												{isScheduledPlan ? (
-													<span
-														className={`${styles.planBadge} ${styles.planBadgeActive}`}
-													>
-														{t('Запланирован', 'Scheduled')}
-													</span>
-												) : isActivePlan ? (
-													<span
-														className={`${styles.planBadge} ${styles.planBadgeActive}`}
-													>
-														{t('Активный тариф', 'Active plan')}
-													</span>
-												) : plan.badge ? (
-													<span className={styles.planBadge}>{plan.badge}</span>
-												) : null}
-												<h3>{plan.name}</h3>
-												{plan.description ? <p>{plan.description}</p> : null}
-												{plan.interval === 'year' ? (
-													<div className={styles.annualPlanPrice}>
-														<s>
-															{formatMoney(
-																Math.round(plan.amountMinor / (12 * 0.9)),
-																plan.currency,
+												plan={plan}
+												locale={locale}
+												featured={Boolean(plan.badge && !isActivePlan)}
+												active={isActivePlan}
+												badgeLabel={
+													isScheduledPlan
+														? t('Запланирован', 'Scheduled')
+														: isActivePlan
+															? t('Активный тариф', 'Active plan')
+															: plan.badge
+												}
+												action={
+													session.authenticated ? (
+														<AiButton
+															disabled={Boolean(scheduledSubscription)}
+															title={
+																scheduledSubscription
+																	? t(
+																			'Сначала дождитесь активации уже оплаченного тарифа',
+																			'Wait for the already paid plan to activate first',
+																		)
+																	: undefined
+															}
+															variant='secondary'
+															onClick={() =>
+																openCheckout({
+																	type: 'subscription',
+																	value: plan,
+																})
+															}
+														>
+															{isActivePlan ? (
+																<>
+																	<FiCreditCard aria-hidden='true' />
+																	{t('Продлить', 'Extend')}
+																</>
+															) : (
+																<>{t('Выбрать', 'Choose')} </>
+															)}
+														</AiButton>
+													) : (
+														<AiLinkButton
+															href={withAiLocale(
+																`/ai/auth?returnTo=${encodeURIComponent(`/ai/balance?plan=${plan.id}`)}`,
 																locale,
 															)}
-														</s>
-														<strong className={styles.planPrice}>
-															{formatMoney(
-																Math.round(plan.amountMinor / 12),
-																plan.currency,
-																locale,
-															)}
-															<small>{t('/ месяц', '/ month')}</small>
-														</strong>
-														<span>
-															{t('Оплата за год', 'Billed yearly')}:{' '}
-															{formatMoney(
-																plan.amountMinor,
-																plan.currency,
-																locale,
-															)}
-														</span>
-													</div>
-												) : (
-													<strong className={styles.planPrice}>
-														{formatMoney(
-															plan.amountMinor,
-															plan.currency,
-															locale,
-														)}
-														<small>{plan.priceSuffix}</small>
-													</strong>
-												)}
-												<span className={styles.planCredits}>
-													{formatCredits(plan.credits, locale)}
-													{plan.interval === 'year'
-														? ` ${t('на год', 'per year')}`
-														: ''}
-												</span>
-												{plan.features.length ? (
-													<ul>
-														{plan.features.map((feature, index) => (
-															<li key={`${index}:${feature}`}>
-																<FiCheck aria-hidden='true' /> {feature}
-															</li>
-														))}
-													</ul>
-												) : null}
-												{session.authenticated ? (
-													<AiButton
-														disabled={Boolean(scheduledSubscription)}
-														title={
-															scheduledSubscription
-																? t(
-																		'Сначала дождитесь активации уже оплаченного тарифа',
-																		'Wait for the already paid plan to activate first',
-																	)
-																: undefined
-														}
-														variant='secondary'
-														onClick={() =>
-															openCheckout({
-																type: 'subscription',
-																value: plan,
-															})
-														}
-													>
-														{isActivePlan ? (
-															<>
-																<FiCreditCard aria-hidden='true' />
-																{t('Продлить', 'Extend')}
-															</>
-														) : (
-															<>
-																{t('Выбрать', 'Choose')}{' '}
-																<FiArrowUpRight aria-hidden='true' />
-															</>
-														)}
-													</AiButton>
-												) : (
-													<AiLinkButton
-														href={authReturnHref}
-														variant='secondary'
-													>
-														{t('Войти и выбрать', 'Sign in to choose')}{' '}
-														<FiArrowUpRight aria-hidden='true' />
-													</AiLinkButton>
-												)}
-											</AiCard>
+															variant='secondary'
+														>
+															{t('Войти и выбрать', 'Sign in to choose')}{' '}
+														</AiLinkButton>
+													)
+												}
+											/>
 										);
 									})}
 								</div>
@@ -796,7 +803,10 @@ export function BalancePage() {
 							)}
 						</section>
 
-						<section className={styles.productSection}>
+						<section
+							className={styles.productSection}
+							hidden={view !== 'topups'}
+						>
 							<div className={styles.sectionTitleRow}>
 								<h2>{t('Разовые пакеты', 'Credit packs')}</h2>
 							</div>
@@ -825,6 +835,7 @@ export function BalancePage() {
 											</span>
 											{session.authenticated ? (
 												<AiButton
+													className={styles.topupAction}
 													disabled={
 														!topup.eligible ||
 														!products.data?.subscription.active
@@ -842,7 +853,11 @@ export function BalancePage() {
 													{t('Купить', 'Buy')}
 												</AiButton>
 											) : (
-												<AiLinkButton href={authReturnHref} variant='secondary'>
+												<AiLinkButton
+													className={styles.topupAction}
+													href={authReturnHref}
+													variant='secondary'
+												>
 													<FiLock aria-hidden='true' />
 													{t('Войти для покупки', 'Sign in to purchase')}
 												</AiLinkButton>
@@ -864,7 +879,10 @@ export function BalancePage() {
 						</section>
 
 						{session.authenticated ? (
-							<div className={styles.balanceLowerGrid}>
+							<div
+								className={styles.balanceLowerGrid}
+								hidden={view !== 'payments'}
+							>
 								<AiCard className={styles.referralPaymentCard}>
 									<span>
 										<FiUsers aria-hidden='true' />
@@ -883,9 +901,12 @@ export function BalancePage() {
 													)}
 										</p>
 									</div>
-									<AiLinkButton href='/ai/referrals' variant='secondary'>
+									<AiLinkButton
+										className={styles.referralPaymentAction}
+										href='/ai/referrals'
+										variant='secondary'
+									>
 										{t('Подробнее', 'Learn more')}{' '}
-										<FiArrowUpRight aria-hidden='true' />
 									</AiLinkButton>
 								</AiCard>
 

@@ -1,0 +1,14 @@
+@use '../../../../styles/functions' as *;
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(12);
+}
+@media (max-width: 600px) {
+	.actions {
+		width: 100%;
+		a {
+			width: 100%;
+		}
+	}
+}

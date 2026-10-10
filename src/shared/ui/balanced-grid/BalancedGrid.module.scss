@@ -1,0 +1,30 @@
+@use '../../../styles/functions' as *;
+
+.grid {
+	display: grid;
+	min-width: 0;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: rem(16);
+}
+.cell {
+	display: flex;
+	min-width: 0;
+	grid-column: span var(--balanced-span);
+	> * {
+		flex: 1;
+		min-width: 0;
+	}
+}
+@media (max-width: 1024px) {
+	.cell {
+		grid-column: span var(--balanced-tablet-span);
+	}
+}
+@media (max-width: 600px) {
+	.grid {
+		gap: rem(12);
+	}
+	.cell {
+		grid-column: 1 / -1;
+	}
+}

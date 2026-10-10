@@ -1,3 +1,5 @@
+@use '../../../styles/mixins' as *;
+
 @use '../../../styles/functions' as *;
 @use '../../../styles/vars' as *;
 
@@ -43,6 +45,26 @@
 	object-fit: cover;
 }
 
+.unavailable {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	gap: rem(12);
+	padding: rem(20);
+	color: var(--ui-muted);
+	background: var(--ui-surface-soft);
+	text-align: center;
+	font-size: rem(13);
+	line-height: 1.5;
+}
+.unavailable svg {
+	width: rem(26);
+	height: rem(26);
+}
+
 .playBadge {
 	position: absolute;
 	right: rem(14);
@@ -57,10 +79,14 @@
 	background: rgba($color-ink, 0.82);
 	border: rem(1) solid rgba($color-white, 0.28);
 	border-radius: 50%;
-	box-shadow: 0 rem(8) rem(18) rgba(0, 0, 0, 0.22);
+	box-shadow: none;
 	pointer-events: none;
 
-	svg { width: rem(15); height: rem(15); margin-left: rem(2); }
+	svg {
+		width: rem(15);
+		height: rem(15);
+		margin-left: rem(2);
+	}
 }
 
 .arrow,
@@ -76,18 +102,34 @@
 	background: rgba($color-ink, 0.72);
 	border: rem(1) solid rgba($color-white, 0.32);
 	border-radius: 50%;
-	box-shadow: 0 rem(8) rem(18) rgba(0, 0, 0, 0.18);
+	box-shadow: none;
 	cursor: pointer;
-	transition: background 160ms ease, transform 160ms ease;
+	transition:
+		background 160ms ease,
+		transform 160ms ease;
 
-	&:hover { background: rgba($color-ink, 0.9); transform: scale(1.06); }
-	&:focus-visible { outline: rem(3) solid rgba($color-cyan, 0.62); outline-offset: rem(2); }
+	&:hover {
+		background: rgba($color-ink, 0.9);
+		transform: scale(1.06);
+	}
+	&:focus-visible {
+		@include focus-ring;
+	}
 }
 
-.arrow { top: 50%; transform: translateY(-50%); }
-.arrow:hover { transform: translateY(-50%) scale(1.06); }
-.arrowPrevious { left: rem(12); }
-.arrowNext { right: rem(12); }
+.arrow {
+	top: 50%;
+	transform: translateY(-50%);
+}
+.arrow:hover {
+	transform: translateY(-50%) scale(1.06);
+}
+.arrowPrevious {
+	left: rem(12);
+}
+.arrowNext {
+	right: rem(12);
+}
 
 .dots {
 	position: absolute;
@@ -110,14 +152,22 @@
 	background: rgba($color-white, 0.62);
 	border: 0;
 	border-radius: rem(8);
-	box-shadow: 0 rem(1) rem(5) rgba(0, 0, 0, 0.34);
+	box-shadow: none;
 	pointer-events: auto;
-	transition: width 180ms ease, background 180ms ease;
+	transition:
+		width 180ms ease,
+		background 180ms ease;
 }
 
-.dotActive { width: rem(20); background: $color-white; }
+.dotActive {
+	width: rem(20);
+	background: $color-white;
+}
 
-.fullscreenButton { right: rem(14); top: rem(14); }
+.fullscreenButton {
+	right: rem(14);
+	top: rem(14);
+}
 
 .fullscreen {
 	position: fixed;
@@ -157,17 +207,35 @@
 }
 
 @media (max-width: em($breakpoint-mobile)) {
-	.arrow { display: none; }
-	.dots { display: flex; }
-	.fullscreenButton { width: rem(34); height: rem(34); }
+	.arrow {
+		display: none;
+	}
+	.dots {
+		display: flex;
+	}
+	.fullscreenButton {
+		width: rem(34);
+		height: rem(34);
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.track { transition: none; }
-	.trackPeek { animation: none; }
+	.track {
+		transition: none;
+	}
+	.trackPeek {
+		animation: none;
+	}
 }
 
 @keyframes prompt-media-peek {
-	0%, 22%, 100% { transform: translate3d(0, 0, 0); }
-	52%, 68% { transform: translate3d(-12%, 0, 0); }
+	0%,
+	22%,
+	100% {
+		transform: translate3d(0, 0, 0);
+	}
+	52%,
+	68% {
+		transform: translate3d(-12%, 0, 0);
+	}
 }

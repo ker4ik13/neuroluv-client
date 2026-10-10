@@ -2,827 +2,251 @@
 @use '../../../styles/mixins' as *;
 @use '../../../styles/vars' as *;
 
-$sticky-sidebar-top: 82;
-
 .page {
 	width: 100%;
-	padding: rem(40) rem(20) rem(48);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(18) rem(16) rem(36);
-	}
-}
-
-.pageWithoutHero {
-	padding-top: 0;
-
-	.layout {
-		margin-top: 0;
-	}
-}
-
-.hero,
-.layout,
-.collections {
-	width: 100%;
-	max-width: rem($container);
+	max-width: rem($container + 40);
 	margin: 0 auto;
+	padding: rem(24) rem(20) rem(64);
 }
-
-.hero {
-	@include floating-particles(1, 0.38);
-
-	position: relative;
-	display: flex;
-	min-height: rem(310);
-	overflow: hidden;
-	align-items: center;
-	padding: rem(40);
-	color: $color-white;
-	background: $color-ink-soft;
-	border-radius: rem(24);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		align-items: flex-start;
-		flex-direction: column;
-		min-height: 0;
-		gap: rem(24);
-		padding: rem(32);
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(26) rem(22);
-		border-radius: rem(22);
-	}
-}
-
-.heroContent {
-	position: relative;
-	z-index: 2;
-	display: flex;
-	max-width: rem(620);
-	flex-direction: column;
-	align-items: flex-start;
-	gap: rem(30);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		max-width: rem(720);
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		gap: rem(20);
-	}
-}
-
-.heroEyebrow {
-	@include body-font(800);
-
-	color: $color-cyan-bright;
-	font-size: rem(16);
-	line-height: rem(20);
-	text-transform: uppercase;
-}
-
-.heroTitle {
-	@include heading-font(800);
-
-	max-width: rem(620);
-	color: $color-white;
-	font-size: rem(56);
-	line-height: rem(55);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(38);
-		line-height: 1.05;
-	}
-
-	@media (max-width: em($breakpoint-mobile)) {
-		font-size: rem(32);
-	}
-}
-
-.heroDescription {
-	@include body-font(400);
-
-	max-width: rem(582);
-	color: #e8e8e8;
-	font-size: rem(24);
-	line-height: 1.2;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(18);
-		line-height: 1.35;
-	}
-}
-
-.heroButton {
-	@include body-font(600);
-
-	display: inline-flex;
-	align-items: center;
-	gap: rem(10);
-	padding: rem(14) rem(24);
-	color: $color-white;
-	font-size: rem(20);
-	line-height: 1;
-	background: $color-cyan;
-	border-radius: rem(16);
-	transition: transform 160ms ease;
-
-	&:hover {
-		transform: translateY(rem(-2));
-	}
-
-	&:focus-visible {
-		@include focus-ring;
-	}
-
-	svg {
-		width: rem(22);
-		height: rem(22);
-	}
-}
-
-.heroImage {
-	position: absolute;
-	top: rem(-45);
-	right: rem(-37);
-	z-index: 1;
-	width: rem(622);
-	height: rem(622);
-	pointer-events: none;
-
-	img {
-		object-fit: contain;
-		object-position: right top;
-	}
-
-	@media (max-width: em($breakpoint-laptop)) {
-		position: relative;
-		top: auto;
-		right: auto;
-		width: 100%;
-		height: auto;
-		aspect-ratio: 16 / 7;
-		order: 2;
-
-		img {
-			object-position: center bottom;
-		}
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		aspect-ratio: 16 / 10;
-	}
-}
-
 .layout {
-	display: flex;
-	align-items: flex-start;
-	gap: rem(20);
-	margin-top: rem(32);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex-direction: column;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		margin-top: rem(14);
-	}
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) rem(280);
+	align-items: start;
+	gap: rem(32);
 }
-
 .main {
 	display: flex;
 	min-width: 0;
-	flex: 1 1 auto;
 	flex-direction: column;
-	gap: rem(22);
+	gap: rem(24);
 }
-
-.filtersPanel {
-	display: flex;
-	flex-direction: column;
-	gap: rem(14);
-}
-
-.searchForm {
-	display: flex;
-	width: 100%;
-	min-height: rem(64);
-	align-items: center;
-	gap: rem(12);
-	padding: rem(8);
-	background: $color-white;
-	border-radius: rem(100);
-	box-shadow: 0 rem(18) rem(38) rgba(0, 0, 0, 0.07);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		height: auto;
-		align-items: stretch;
-		flex-direction: column;
-		gap: rem(10);
-		border-radius: rem(22);
-	}
-
-	.searchField {
-		display: flex;
-		min-width: 0;
-		flex: 1;
-		align-items: center;
-		gap: rem(12);
-
-		@media (max-width: em($breakpoint-tablet)) {
-			width: 100%;
-		}
-	}
-
-	input {
-		@include body-font(400);
-
-		min-width: 0;
-		flex: 1;
-		height: rem(48);
-		color: $color-ink;
-		font-size: rem(18);
-		background: transparent;
-		border: 0;
-		outline: 0;
-
-		&::placeholder {
-			color: $color-ink-muted;
-		}
-
-		@media (max-width: em($breakpoint-tablet)) {
-			font-size: rem(16);
-		}
-	}
-
-	button {
-		@include body-font(600);
-
-		display: inline-flex;
-		height: rem(48);
-		align-items: center;
-		justify-content: center;
-		gap: rem(8);
-		padding: 0 rem(24);
-		color: $color-white;
-		font-size: rem(18);
-		background: $color-cyan;
-		border: 0;
-		border-radius: rem(100);
-		cursor: pointer;
-
-		@media (max-width: em($breakpoint-tablet)) {
-			width: 100%;
-			font-size: rem(16);
-		}
-	}
-}
-
-.searchIcon {
-	width: rem(20);
-	height: rem(20);
-	flex: 0 0 rem(20);
-	margin-left: rem(10);
-	color: $color-ink-muted;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		margin-left: rem(8);
-	}
-}
-
-.typeTabs {
-	display: flex;
-	flex-wrap: wrap;
-	gap: rem(10);
-	align-items: center;
-}
-
-.typeTab {
-	@include body-font(700);
-
-	display: inline-flex;
-	height: rem(32);
-	align-items: center;
-	justify-content: center;
-	padding: 0 rem(14);
-	color: $color-ink;
-	font-size: rem(13);
-	white-space: nowrap;
-	background: $color-white;
-	border: rem(1) solid rgba($color-border, 0.9);
-	border-radius: rem(16);
-	transition:
-		background-color 160ms ease,
-		color 160ms ease,
-		border-color 160ms ease;
-
-	&:hover {
-		border-color: rgba($color-cyan, 0.45);
-	}
-}
-
-.typeTabActive {
-	color: $color-white;
-	background: $color-ink-soft;
-	border-color: $color-ink-soft;
-}
-
-.filterActions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: rem(10);
-	align-items: center;
-}
-
-.sortButton,
-.resetButton {
-	@include body-font(600);
-
-	display: inline-flex;
-	min-height: rem(48);
-	align-items: center;
-	justify-content: center;
-	gap: rem(10);
-	padding: rem(8) rem(22);
-	color: $color-ink;
-	font-size: rem(18);
-	white-space: nowrap;
-	background: $color-white;
-	border: rem(1) solid #cfcfcf;
-	border-radius: rem(100);
-	transition:
-		background-color 160ms ease,
-		border-color 160ms ease,
-		color 160ms ease;
-
-	&:hover {
-		border-color: rgba($color-cyan, 0.5);
-	}
-
-	&:focus-visible {
-		@include focus-ring;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		flex: 1 1 rem(180);
-		font-size: rem(16);
-	}
-}
-
-.resetButton {
-	color: $color-white;
-	background: $color-ink-soft;
-	border-color: $color-ink-soft;
-}
-
-.sortIcon {
-	width: rem(20);
-	height: rem(20);
-	transition: transform 160ms ease;
-}
-
-.sortIconReversed {
-	transform: rotate(180deg);
-}
-
-.sortIconPopular {
-	transform: rotate(90deg);
-}
-
-.cards {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: rem(20);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	@media (max-width: em($breakpoint-mobile)) {
-		gap: rem(12);
-	}
-}
-
-.loader {
-	display: flex;
-	min-height: rem(1);
-	flex-direction: column;
-	align-items: center;
-	gap: 0;
-	padding: 0;
-}
-
-.loaderVisible {
-	height: auto;
-	gap: rem(16);
-	padding: rem(32) 0;
-}
-
-.loaderLine {
-	width: 100%;
-	height: rem(1);
-	background: $color-border;
-}
-
-.loaderText {
-	@include body-font(400);
-
-	display: inline-flex;
-	align-items: center;
-	gap: rem(12);
-	color: $color-ink;
-	font-size: rem(16);
-	line-height: 1;
-}
-
-.loaderDots {
-	display: inline-flex;
-	align-items: center;
-	gap: rem(5);
-
-	span {
-		width: rem(6);
-		height: rem(6);
-		background: $color-cyan;
-		border-radius: 50%;
-		animation: prompts-loader-dot 900ms ease-in-out infinite;
-	}
-
-	span:nth-child(2) {
-		animation-delay: 120ms;
-	}
-
-	span:nth-child(3) {
-		animation-delay: 240ms;
-	}
-}
-
-.paginationFallback {
-	display: flex;
-	width: 100%;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: rem(12);
-	padding: rem(20) 0;
-}
-
-.paginationLink {
-	@include body-font(600);
-
-	display: inline-flex;
-	min-height: rem(44);
-	align-items: center;
-	justify-content: center;
-	padding: rem(10) rem(18);
-	border: rem(1) solid $color-border;
-	border-radius: rem(14);
-	background: $color-white;
-	color: $color-ink;
-	font-size: rem(14);
-	transition:
-		border-color 160ms ease,
-		color 160ms ease,
-		transform 160ms ease;
-
-	&:hover {
-		border-color: $color-cyan;
-		color: $color-cyan;
-		transform: translateY(rem(-1));
-	}
-
-	&:focus-visible {
-		outline: rem(2) solid $color-cyan;
-		outline-offset: rem(3);
-	}
-}
-
-@keyframes prompts-loader-dot {
-	0%,
-	80%,
-	100% {
-		opacity: 0.35;
-		transform: translateY(0);
-	}
-
-	40% {
-		opacity: 1;
-		transform: translateY(rem(-4));
-	}
-}
-
 .sidebar {
 	position: sticky;
-	top: var(--smart-sticky-top, rem($sticky-sidebar-top));
+	top: var(--smart-sticky-top, var(--section-sticky-top));
 	display: flex;
-	width: rem(310);
-	flex: 0 0 rem(310);
+	min-width: 0;
 	flex-direction: column;
 	gap: rem(16);
-	align-self: flex-start;
-
-	@media (max-width: em($breakpoint-laptop)) {
-		position: static;
-		width: 100%;
-		flex-basis: auto;
-		order: -1;
-		flex-flow: row nowrap;
-		overflow-x: auto;
-		overflow-y: hidden;
-		padding: rem(2) 0 rem(10);
-		scroll-snap-type: x proximity;
-		scrollbar-width: none;
-		overscroll-behavior-x: contain;
-		-webkit-overflow-scrolling: touch;
-
-		&::-webkit-scrollbar {
-			display: none;
-		}
-
-		> .sidebarPanel,
-		> .telegramCard {
-			min-width: 0;
-			flex: 0 0 min(rem(320), calc(100vw - rem(48)));
-			scroll-snap-align: start;
-		}
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		display: none;
-	}
 }
-
 .sidebarPanel,
 .telegramCard {
+	@include quiet-card;
 	display: flex;
 	flex-direction: column;
-	gap: rem(14);
+	gap: rem(16);
 	padding: rem(20);
-	background: $color-white;
-	border-radius: rem(24);
-	box-shadow: 0 rem(12) rem(28) rgba(0, 0, 0, 0.06);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex: 1 1 calc((100% - rem(16)) / 2);
-		min-width: rem(280);
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		min-width: 0;
-		flex-basis: 100%;
-	}
-
-	h2 {
-		@include heading-font(800);
-
-		color: $color-ink;
-		font-size: rem(22);
-		line-height: 1.1;
-	}
 }
-
+.sidebarPanel h2 {
+	font-size: rem(17);
+	font-weight: 600;
+	padding-bottom: rem(12);
+	border-bottom: rem(1) solid var(--ui-border);
+}
 .categoryList {
 	display: flex;
 	flex-direction: column;
-	gap: rem(10);
+	gap: rem(4);
 }
-
 .categoryLink {
-	@include body-font(700);
-
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: rem(12);
-	color: $color-ink;
+	padding: rem(8) rem(10);
+	margin-inline: rem(-10);
 	font-size: rem(14);
-	line-height: 1.2;
-
-	small {
-		@include body-font(800);
-
-		display: inline-flex;
-		min-width: rem(34);
-		height: rem(24);
-		align-items: center;
-		justify-content: center;
-		padding: 0 rem(10);
-		color: $color-white;
-		font-size: rem(12);
-		background: $color-cyan;
-		border-radius: rem(12);
-	}
+	line-height: 1.4;
+	border-radius: rem(6);
 }
-
+.categoryLink small {
+	min-width: rem(28);
+	padding: rem(2) rem(6);
+	color: var(--ui-muted);
+	background: var(--ui-surface-soft);
+	border-radius: rem(5);
+	text-align: center;
+	font-size: rem(11);
+}
+.categoryLink:hover,
 .categoryLinkActive {
-	color: $color-cyan;
+	color: var(--ui-accent);
+	background: var(--ui-accent-soft);
 }
-
 .networkCloud,
 .tagCloud {
 	display: flex;
 	flex-wrap: wrap;
 	gap: rem(8);
 }
-
 .networkChip,
 .tagChip {
-	@include body-font(700);
-
 	display: inline-flex;
 	align-items: center;
-	gap: rem(8);
-	height: rem(32);
-	padding: 0 rem(12);
-	color: $color-ink;
-	font-size: rem(13);
-	background: $color-surface;
-	border-radius: rem(16);
-	transition:
-		background-color 160ms ease,
-		color 160ms ease;
+	gap: rem(6);
+	max-width: 100%;
+	padding: rem(6) rem(8);
+	background: var(--ui-surface-muted);
+	border: rem(1) solid var(--ui-border);
+	border-radius: rem(6);
+	font-size: rem(12);
+	line-height: 1.3;
+	overflow-wrap: normal;
 }
-
+.networkChip:hover,
+.networkChipActive,
+.tagChip:hover,
+.tagChipActive {
+	color: var(--ui-accent);
+	background: var(--ui-accent-soft);
+	border-color: var(--ui-accent);
+}
 .networkLogo {
 	display: inline-flex;
-	width: rem(22);
-	height: rem(22);
-	flex: 0 0 rem(22);
+	width: rem(18);
+	height: rem(18);
+	flex: 0 0 rem(18);
 	align-items: center;
 	justify-content: center;
-	overflow: hidden;
-	color: $color-cyan;
-	background: $color-white;
-	border: rem(1) solid rgba($color-ink, 0.1);
-	border-radius: rem(7);
-
-	img,
-	svg {
-		display: block;
-		width: 72%;
-		height: 72%;
-		object-fit: contain;
-	}
 }
-
-.tagChip {
-	height: rem(26);
-	color: $color-ink-muted;
-	font-size: rem(12);
+.networkLogo img {
+	object-fit: contain;
 }
-
-.networkChipActive,
-.tagChipActive {
-	color: $color-white;
-	background: $color-cyan;
-}
-
 .telegramCard {
-	color: $color-white;
-	background: $color-ink-soft;
-
-	p {
-		@include body-font(400);
-
-		color: rgba($color-white, 0.82);
-		font-size: rem(15);
-		line-height: rem(22);
-	}
-
-	a {
-		@include body-font(700);
-
-		display: inline-flex;
-		width: fit-content;
-		align-items: center;
-		gap: rem(8);
-		padding: rem(12) rem(16);
-		color: $color-white;
-		font-size: rem(16);
-		background: $color-cyan;
-		border-radius: rem(14);
-	}
+	background: var(--ui-accent-soft);
 }
-
 .telegramHead {
 	display: flex;
-	gap: rem(14);
-	align-items: flex-start;
-
-	span {
-		display: inline-flex;
-		width: rem(44);
-		height: rem(44);
-		flex: 0 0 rem(44);
-		align-items: center;
-		justify-content: center;
-		background: $color-cyan;
-		border-radius: rem(14);
-	}
-
-	strong {
-		@include heading-font(900);
-
-		color: $color-white;
-		font-size: rem(23);
-		line-height: 1.1;
-	}
-}
-
-.collections {
-	margin-top: rem(56);
-}
-
-.sectionHead {
-	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	margin-bottom: rem(24);
-
-	h2 {
-		@include heading-font(900);
-
-		color: $color-ink;
-		font-size: rem(42);
-		line-height: 1;
-		text-transform: uppercase;
-
-		@media (max-width: em($breakpoint-tablet)) {
-			font-size: rem(32);
-		}
-	}
+	gap: rem(10);
+	font-size: rem(20);
 }
-
+.telegramHead > span {
+	display: flex;
+	color: var(--ui-accent);
+}
+.telegramCard p {
+	color: var(--ui-muted);
+	font-size: rem(14);
+	line-height: 1.55;
+}
+.telegramCard > a {
+	align-self: flex-start;
+	padding: rem(10) rem(16);
+	color: #fff;
+	background: var(--ui-accent);
+	border-radius: rem(8);
+	font-weight: 500;
+}
+.collections {
+	margin-top: rem(48);
+	padding-top: rem(32);
+	border-top: rem(1) solid var(--ui-border);
+}
+.sectionHead h2 {
+	@include section-title;
+	margin-bottom: rem(24);
+}
 .collectionGrid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, rem(250)), 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: rem(16);
 }
-
 .collectionCard {
+	@include quiet-card;
 	display: flex;
-	min-height: rem(140);
 	flex-direction: column;
 	align-items: flex-start;
-	gap: rem(10);
-	padding: rem(18);
-	color: $color-white;
-	background: $color-ink-soft;
-	border-radius: rem(20);
-
-	strong {
-		@include heading-font(900);
-
-		font-size: rem(18);
-		line-height: 1.2;
+	gap: rem(12);
+	padding: rem(22);
+}
+.collectionCard strong {
+	font-size: rem(20);
+	line-height: 1.3;
+	font-weight: 500;
+}
+.collectionCard span {
+	color: var(--ui-muted);
+	font-size: rem(14);
+}
+.collectionCard small {
+	margin-top: auto;
+	color: var(--ui-accent);
+	font-size: rem(14);
+}
+.collectionCard:hover {
+	border-color: var(--ui-accent);
+}
+.loader {
+	display: grid;
+	gap: rem(12);
+	color: var(--ui-muted);
+	text-align: center;
+}
+.loaderVisible {
+	padding: rem(20);
+}
+.loaderLine {
+	width: rem(40);
+	height: rem(2);
+	margin: auto;
+	background: var(--ui-accent);
+}
+.loaderText {
+	font-size: rem(14);
+}
+.loaderDots {
+	display: none;
+}
+.paginationFallback {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: rem(16);
+}
+.paginationLink {
+	padding: rem(10) rem(16);
+	color: var(--ui-accent);
+	border: rem(1) solid var(--ui-border);
+	border-radius: rem(8);
+	font-size: rem(14);
+}
+.empty {
+	@include quiet-card;
+	display: grid;
+	gap: rem(12);
+	padding: rem(40);
+}
+.empty h2 {
+	font-size: rem(26);
+}
+.empty p {
+	color: var(--ui-muted);
+	line-height: 1.6;
+}
+.empty a {
+	color: var(--ui-accent);
+}
+@media (max-width: em($breakpoint-laptop)) {
+	.layout {
+		grid-template-columns: 1fr;
 	}
-
-	span {
-		@include body-font(400);
-
-		color: rgba($color-white, 0.78);
-		font-size: rem(13);
-	}
-
-	small {
-		@include body-font(800);
-
-		margin-top: auto;
-		color: $color-cyan;
-		font-size: rem(14);
+	.sidebar {
+		display: none;
 	}
 }
-
-.empty {
-	display: flex;
-	min-height: rem(280);
-	flex-direction: column;
-	align-items: flex-start;
-	justify-content: center;
-	gap: rem(14);
-	padding: rem(32);
-	background: $color-white;
-	border-radius: rem(24);
-
-	h2 {
-		@include heading-font(800);
-
-		color: $color-ink;
-		font-size: rem(28);
+@media (max-width: em($breakpoint-tablet)) {
+	.page {
+		padding: rem(16) rem(16) rem(40);
 	}
-
-	p {
-		@include body-font(400);
-
-		color: $color-ink-muted;
-		font-size: rem(18);
+	.collectionGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
-
-	a {
-		@include body-font(700);
-
-		color: $color-cyan;
-		font-size: rem(16);
+}
+@media (max-width: em($breakpoint-mobile)) {
+	.collectionCard {
+		padding: rem(16);
+	}
+	.collectionCard strong {
+		font-size: rem(17);
 	}
 }

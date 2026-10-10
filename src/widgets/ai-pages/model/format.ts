@@ -6,6 +6,7 @@ export function formatMoney(
 	return new Intl.NumberFormat(locale, {
 		style: 'currency',
 		currency,
+		minimumFractionDigits: amountMinor % 100 === 0 ? 0 : 2,
 		maximumFractionDigits: 2,
 	}).format(amountMinor / 100);
 }

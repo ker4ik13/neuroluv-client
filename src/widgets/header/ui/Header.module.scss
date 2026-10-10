@@ -1,8 +1,9 @@
 @use '../../../styles/functions' as *;
 @use '../../../styles/mixins' as *;
 @use '../../../styles/vars' as *;
+@use '../../../styles/navigation' as navigation;
 
-$header-burger-breakpoint: 900;
+$header-burger-breakpoint: 1320;
 $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 
 .header {
@@ -14,7 +15,7 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	margin: 0 auto;
 	background: $color-white;
 	border-bottom: rem(1) solid rgba($color-border, 0.9);
-	box-shadow: 0 rem(6) rem(22) rgba($color-ink, 0.06);
+	box-shadow: none;
 
 	@media (max-width: em($header-burger-breakpoint)) {
 		min-height: rem(66);
@@ -65,17 +66,19 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 .inner {
 	position: relative;
 	z-index: 2;
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 	width: 100%;
 	min-height: rem(66);
 	align-items: center;
 	justify-content: flex-start;
-	gap: rem(20);
+	gap: rem(16);
 	padding: rem(10) 0;
 	color: $color-ink;
 	background: transparent;
 
 	@media (max-width: em($header-burger-breakpoint)) {
+		display: flex;
 		position: relative;
 		top: auto;
 		right: auto;
@@ -86,68 +89,37 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
+		min-height: rem(64);
 		padding: rem(8) 0;
 	}
 }
 
-.logo {
-	position: relative;
-	z-index: 2;
-	display: flex;
-	flex: 0 0 auto;
-	align-items: center;
-	gap: rem(10);
-
-	&:focus-visible {
-		@include focus-ring;
-	}
-}
-
-.logoText {
-	@include heading-font(700);
-
-	overflow: hidden;
-	color: $color-ink-soft;
-	font-size: rem(28);
-	line-height: 1;
-	white-space: nowrap;
-
-	@media (max-width: em($header-burger-breakpoint)) {
-		font-size: rem(24);
-	}
-}
-
 .burger {
+	&:disabled {
+		opacity: 0.5;
+		cursor: wait;
+	}
+	svg {
+		width: rem(24);
+		height: rem(24);
+	}
 	display: none;
-	width: rem(36);
-	height: rem(36);
-	flex: 0 0 rem(36);
+	width: rem(44);
+	height: rem(44);
+	flex: 0 0 rem(44);
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	gap: rem(4);
 	margin-left: auto;
 	color: $color-ink;
-	background: transparent;
-	border: 0;
-	border-radius: rem(12);
+	background: var(--ui-surface-muted);
+	border: rem(1) solid var(--ui-border);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 
 	&:focus-visible {
 		@include focus-ring;
-	}
-
-	&[aria-expanded='true'] .burgerLine:nth-child(1) {
-		transform: translateY(rem(8)) rotate(45deg);
-	}
-
-	&[aria-expanded='true'] .burgerLine:nth-child(2) {
-		opacity: 0;
-		transform: scaleX(0);
-	}
-
-	&[aria-expanded='true'] .burgerLine:nth-child(3) {
-		transform: translateY(rem(-8)) rotate(-45deg);
 	}
 
 	@media (max-width: em($header-burger-breakpoint)) {
@@ -155,30 +127,14 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	}
 }
 
-.burgerLine {
-	display: block;
-	width: rem(24);
-	height: rem(4);
-	background: currentColor;
-	border-radius: rem(4);
-	transition:
-		opacity 180ms ease,
-		transform 180ms ease;
-}
-
 .content {
-	display: flex;
-	min-width: 0;
-	flex: 1 1 auto;
-	align-items: center;
-	justify-content: flex-end;
-	gap: rem(20);
+	display: contents;
 
 	@media (max-width: em($header-burger-breakpoint)) {
 		position: fixed;
-		top: rem(66);
-		left: 0;
-		right: 0;
+		top: rem(74);
+		left: rem(16);
+		right: rem(16);
 		z-index: $z-index-header + 1;
 		display: flex;
 		width: auto;
@@ -195,9 +151,9 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 		pointer-events: none;
 		visibility: hidden;
 		background: $color-white;
-		border: 0;
-		border-bottom: rem(1) solid rgba($color-border, 0.9);
-		border-radius: 0;
+		border: rem(1) solid var(--ui-border);
+		border-radius: rem(12);
+		box-shadow: var(--ui-popover-shadow);
 		opacity: 0;
 		transform: translateY(rem(-8));
 		transition:
@@ -207,7 +163,7 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	@media (max-width: em($breakpoint-mobile)) {
-		top: rem(64);
+		top: rem(72);
 		max-height: calc(100dvh - rem(76));
 	}
 }
@@ -228,8 +184,8 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	flex: 0 1 auto;
 	align-items: center;
 	justify-content: center;
-	margin-right: auto;
-	margin-left: auto;
+	grid-column: 2;
+	margin: 0;
 
 	@media (max-width: em($header-burger-breakpoint)) {
 		display: none;
@@ -288,6 +244,8 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 		gap: rem(8);
 		padding: rem(10) rem(11);
 	}
+	@include navigation.item;
+	padding-inline: rem(8);
 }
 
 .navLinkActive,
@@ -373,10 +331,8 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	transform-origin: top center;
 	background: rgba($color-white, 0.98);
 	border: rem(1) solid rgba($color-border, 0.86);
-	border-radius: rem(24);
-	box-shadow:
-		0 rem(30) rem(80) rgba($color-ink, 0.17),
-		0 rem(6) rem(20) rgba($color-ink, 0.07);
+	border-radius: rem(14);
+	box-shadow: var(--ui-popover-shadow);
 	backdrop-filter: blur(rem(20));
 	transition:
 		width 320ms $menu-easing,
@@ -452,7 +408,7 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	color: #15171a;
 	font-size: rem(14);
 	line-height: 1.25;
-	background: rgba($color-surface, 0.68);
+	background: transparent;
 	border: rem(1) solid transparent;
 	border-radius: rem(12);
 	transition:
@@ -473,9 +429,10 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	> .navLabel {
-		overflow-wrap: anywhere;
+		overflow-wrap: normal;
 		white-space: normal;
 	}
+	@include navigation.item;
 }
 
 .dropdownLinkActive,
@@ -486,12 +443,8 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dropdownLinkHighlighted {
-	background: linear-gradient(
-		135deg,
-		rgba($color-cyan, 0.12),
-		rgba($color-blue, 0.07)
-	);
-	border-color: rgba($color-cyan, 0.16);
+	background: var(--ui-accent-soft);
+	border-color: var(--ui-border);
 }
 
 .mobileNavigation {
@@ -521,13 +474,13 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	min-height: rem(48);
 	box-sizing: border-box;
 	align-items: center;
-	justify-content: flex-end;
+	justify-content: flex-start;
 	gap: rem(10);
 	padding: rem(10) rem(12);
 	color: #15171a;
 	font-size: 1rem;
 	line-height: 1.25;
-	text-align: right;
+	text-align: left;
 	background: transparent;
 	border: 0;
 	border-radius: rem(12);
@@ -535,6 +488,7 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	&:focus-visible {
 		@include focus-ring;
 	}
+	@include navigation.item;
 }
 
 .mobileTrigger {
@@ -542,6 +496,7 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .mobileChevron {
+	margin-left: auto;
 	width: rem(13);
 	height: rem(13);
 	flex: 0 0 rem(13);
@@ -562,6 +517,7 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	border: rem(1) solid rgba($color-border, 0.7);
 	border-radius: rem(16);
 	animation: mobile-panel-in 180ms $menu-easing;
+	@include navigation.children;
 }
 
 .mobileDropdownLink {
@@ -572,13 +528,13 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	min-height: rem(50);
 	box-sizing: border-box;
 	align-items: center;
-	justify-content: flex-end;
+	justify-content: flex-start;
 	gap: rem(10);
 	padding: rem(10) rem(12);
 	color: #15171a;
 	font-size: 1rem;
 	line-height: 1.25;
-	text-align: right;
+	text-align: left;
 	background: $color-white;
 	border: rem(1) solid transparent;
 	border-radius: rem(12);
@@ -586,15 +542,18 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	&:focus-visible {
 		@include focus-ring;
 	}
+	@include navigation.item;
 }
 
 .socials {
 	position: relative;
 	z-index: 2;
 	display: flex;
+	grid-column: 3;
+	justify-self: end;
 	flex: 0 0 auto;
 	align-items: center;
-	justify-content: flex-end;
+	justify-content: flex-start;
 	gap: rem(16);
 
 	@media (max-width: em($header-burger-breakpoint)) {
@@ -606,18 +565,9 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	color: $color-ink;
 	border: 0;
 	border-radius: 50%;
 	transition: color 160ms ease;
-
-	&:hover {
-		color: $color-cyan;
-	}
-
-	&:focus-visible {
-		@include focus-ring;
-	}
 }
 
 .socialIcon {
@@ -710,7 +660,6 @@ $menu-easing: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.burgerLine,
 	.content,
 	.menuBackdrop,
 	.desktopChevron,

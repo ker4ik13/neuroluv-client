@@ -1,6 +1,7 @@
 @use '../../../styles/functions' as *;
 @use '../../../styles/mixins' as *;
 @use '../../../styles/vars' as *;
+@use '../../../styles/studio-theme' as studio-theme;
 
 .triggerWrap {
 	display: none;
@@ -22,12 +23,13 @@
 	justify-content: center;
 	gap: rem(10);
 	padding: rem(12) rem(18);
-	color: $color-ink;
-	font-size: rem(17);
-	background: $color-white;
-	border: rem(1) solid $color-border;
-	border-radius: rem(16);
-	box-shadow: 0 rem(10) rem(24) rgba($color-ink, 0.06);
+	color: var(--ui-text, #{$color-ink});
+	font-size: rem(15);
+	font-weight: 500;
+	background: var(--ui-surface, #{$color-white});
+	border: rem(1) solid var(--ui-border, #{$color-border});
+	border-radius: var(--ui-control-radius);
+	box-shadow: none;
 	cursor: pointer;
 
 	svg {
@@ -42,14 +44,11 @@
 }
 
 .triggerAi {
-	color: #142b3b;
 	font-family: inherit;
-	background: #fff;
-	border-color: #d8e3eb;
-	box-shadow: 0 rem(10) rem(30) rgba(19, 40, 56, 0.06);
+	box-shadow: none;
 
 	svg {
-		color: #087fdb;
+		color: var(--ui-accent);
 	}
 }
 
@@ -69,17 +68,17 @@
 }
 
 .portalAi {
-	--ai-bg: #f3f7fa;
-	--ai-surface: #fff;
-	--ai-surface-soft: #eaf2f7;
-	--ai-surface-muted: #f9fbfc;
-	--ai-field-bg: #f9fbfc;
-	--ai-border: #dce7ed;
-	--ai-text: #132838;
-	--ai-muted: #607484;
-	--ai-primary: #087fdb;
-	--ai-primary-hover: #006fc5;
-	--ai-primary-soft: #e7f4ff;
+	--ai-bg: var(--ui-canvas);
+	--ai-surface: var(--ui-surface);
+	--ai-surface-soft: var(--ui-surface-soft);
+	--ai-surface-muted: var(--ui-surface-muted);
+	--ai-field-bg: var(--ui-surface);
+	--ai-border: var(--ui-border);
+	--ai-text: var(--ui-text);
+	--ai-muted: var(--ui-muted);
+	--ai-primary: var(--ui-accent);
+	--ai-primary-hover: var(--ui-accent-hover);
+	--ai-primary-soft: var(--ui-accent-soft);
 	--ai-success: #148957;
 	--ai-warning: #b7650b;
 	--ai-error: #c43b4d;
@@ -94,21 +93,7 @@
 }
 
 :global(html[data-ai-theme='dark']) .portalAi {
-	--ai-bg: #0b1218;
-	--ai-surface: #111c25;
-	--ai-surface-soft: #182630;
-	--ai-surface-muted: #14212a;
-	--ai-field-bg: #0f1921;
-	--ai-border: #2a3d49;
-	--ai-text: #eaf3f8;
-	--ai-muted: #9bb0bd;
-	--ai-primary: #42a8ef;
-	--ai-primary-hover: #6dbbf2;
-	--ai-primary-soft: #142f43;
-	--ai-success: #45c58c;
-	--ai-warning: #e7a14d;
-	--ai-error: #ef7180;
-	--ai-danger: #ef7180;
+	@include studio-theme.dark;
 	--mobile-sheet-background: var(--ai-surface);
 	--mobile-sheet-border: var(--ai-border);
 	--mobile-sheet-close: var(--ai-surface-soft);
@@ -116,11 +101,6 @@
 	--mobile-sheet-text: var(--ai-text);
 }
 
-:global(html[data-ai-theme='dark']) .triggerAi {
-	color: #edf6fb;
-	background: #10212d;
-	border-color: #294252;
-}
 
 .backdrop {
 	position: absolute;
@@ -150,7 +130,7 @@
 	overflow: hidden;
 	background: $color-surface;
 	border-radius: rem(26) rem(26) 0 0;
-	box-shadow: 0 rem(-18) rem(60) rgba($color-ink, 0.22);
+	box-shadow: none;
 	transform: translate3d(0, calc(100% + rem(24)), 0);
 	transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 	will-change: transform;

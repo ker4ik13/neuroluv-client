@@ -1,9 +1,10 @@
 "use client";
 
+import { FiChevronDown } from 'react-icons/fi';
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { FaChevronDown } from "react-icons/fa";
+
 
 import type {
   PromptCollectionItem,
@@ -69,7 +70,7 @@ export function PromptCollectionsGrid({
           type="button"
         >
           <span>{isLoading ? "Загружаем" : "Показать еще"}</span>
-          <FaChevronDown aria-hidden="true" />
+          <FiChevronDown aria-hidden="true" />
         </button>
       )}
     </div>

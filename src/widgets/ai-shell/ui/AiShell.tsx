@@ -12,12 +12,13 @@ import {
 	FiGift,
 	FiHelpCircle,
 	FiImage,
+	FiMenu,
 	FiMessageSquare,
 	FiUser,
 	FiVideo,
+	FiX,
 	FiZap,
 } from 'react-icons/fi';
-import { RiSparkling2Fill } from 'react-icons/ri';
 import type { FooterData } from '@/entities/footer';
 import type {
 	NavigationIcon,
@@ -31,7 +32,7 @@ import {
 	withAiLocale,
 } from '@/features/ai-locale';
 import { AiSessionProvider, useAiSession } from '@/features/ai-session';
-import { AiThemeProvider } from '@/features/ai-theme';
+import { AiThemeProvider, AiThemeToggle } from '@/features/ai-theme';
 import {
 	aiApiFetch,
 	aiApiFetchCached,
@@ -41,10 +42,12 @@ import {
 	type AiSession,
 } from '@/shared/api/ai';
 import { useViewportScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
+import { useClientReady } from '@/shared/lib/dom/useClientReady';
+import { useFocusTrap } from '@/shared/lib/dom/useFocusTrap';
 import { formatCreditNumber, formatCredits } from '@/shared/lib/formatCredits';
 import { AppIcon } from '@/shared/ui/app-icon';
 import { Container } from '@/shared/ui/container';
-import { SiteHeaderLogo } from '@/shared/ui/site-header-logo';
+import { SiteBrand } from '@/shared/ui/site-brand';
 import { FooterView } from '@/widgets/footer';
 import styles from './AiShell.module.scss';
 
@@ -119,6 +122,8 @@ function AiShellContent({
 	navigation,
 }: AiShellContentProps) {
 	const pathname = usePathname();
+	const isClientReady = useClientReady();
+	const previousPathname = useRef(pathname);
 	const { isEnglish, locale, t } = useAiLocale();
 	const { session, isLoading } = useAiSession();
 	const [desktopValue, setDesktopValue] = useState('');
@@ -130,8 +135,15 @@ function AiShellContent({
 		DEFAULT_GUEST_FREE_GENERATIONS,
 	);
 	const isNavigationOpen = Boolean(desktopValue) || isMenuOpen;
+	const headerRef = useRef<HTMLElement>(null);
+	const closeNavigation = useCallback(() => {
+		setDesktopValue('');
+		setIsMenuOpen(false);
+		setMobileSectionId(null);
+	}, []);
 
 	useViewportScrollLock(isNavigationOpen);
+	useFocusTrap(isMenuOpen, headerRef);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -178,6 +190,8 @@ function AiShellContent({
 	}, [isLoading, pathname, session.authenticated]);
 
 	useEffect(() => {
+		if (previousPathname.current === pathname) return;
+		previousPathname.current = pathname;
 		const timer = window.setTimeout(() => {
 			setDesktopValue('');
 			setIsMenuOpen(false);
@@ -197,11 +211,13 @@ function AiShellContent({
 		}
 
 		document.addEventListener('keydown', handleEscape);
+		window.addEventListener('resize', closeNavigation);
 
 		return () => {
 			document.removeEventListener('keydown', handleEscape);
+			window.removeEventListener('resize', closeNavigation);
 		};
-	}, []);
+	}, [closeNavigation]);
 
 	const normalizedProvidedNavigation = useMemo(
 		() => normalizeDirectusNavigation(navigation || []),
@@ -221,12 +237,6 @@ function AiShellContent({
 	const isGenerationPage = isGenerationSeoPagePath(pathname);
 	const isChatWorkspace = isGenerationChatPath(pathname) && !isGenerationPage;
 
-	function closeNavigation() {
-		setDesktopValue('');
-		setIsMenuOpen(false);
-		setMobileSectionId(null);
-	}
-
 	function toggleMobileMenu() {
 		setIsMenuOpen((isOpen) => !isOpen);
 		setDesktopValue('');
@@ -235,33 +245,18 @@ function AiShellContent({
 
 	return (
 		<div
-			className={`${styles.app} ${isChatWorkspace ? styles.appChatWorkspace : ''}`}
+			className={`${styles.app} ${isChatWorkspace ? styles.appChatWorkspace : ''} ${pathname === '/ai' ? styles.appLanding : ''}`}
 		>
-			<header className={styles.header}>
+			<header className={styles.header} ref={headerRef}>
 				<Container className={styles.headerContainer}>
 					<div className={styles.headerInner}>
-						<Link
-							aria-label={`${brandName.full} — ${t('главная', 'home')}`}
-							className={styles.brand}
-							href='/ai'
-							title={brandName.full}
-							onClick={closeNavigation}
-						>
-							<SiteHeaderLogo
-								fallback={
-									<span aria-hidden='true' className={styles.brandMark}>
-										<RiSparkling2Fill />
-									</span>
-								}
-								logo={logo}
-							/>
-							<span className={styles.brandText}>
-								<span className={styles.brandPrimary}>{brandName.primary}</span>
-								{brandName.secondary ? (
-									<span className={styles.brandAi}>{brandName.secondary}</span>
-								) : null}
-							</span>
-						</Link>
+						<SiteBrand
+							area='studio'
+							logo={logo}
+							name={brandName.primary}
+							english={isEnglish}
+							onNavigate={closeNavigation}
+						/>
 
 						<DesktopNavigation
 							items={sortedNavigation}
@@ -272,6 +267,16 @@ function AiShellContent({
 						/>
 
 						<div className={styles.account}>
+							<AiThemeToggle
+								switchToLightLabel={t(
+									'Включить светлую тему',
+									'Switch to light theme',
+								)}
+								switchToDarkLabel={t(
+									'Включить тёмную тему',
+									'Switch to dark theme',
+								)}
+							/>
 							{session.authenticated && session.wallet ? (
 								<Link
 									aria-label={`${t('Баланс', 'Balance')}: ${formatCredits(session.wallet.availableCredits, locale)}`}
@@ -331,31 +336,19 @@ function AiShellContent({
 								aria-expanded={isMenuOpen}
 								aria-label={
 									isMenuOpen
-										? t('Закрыть меню профиля', 'Close account menu')
-										: t('Открыть меню профиля', 'Open account menu')
-								}
-								className={styles.mobileAccountTrigger}
-								type='button'
-								onClick={toggleMobileMenu}
-							>
-								<FiUser aria-hidden='true' />
-							</button>
-
-							<button
-								aria-controls='ai-mobile-navigation'
-								aria-expanded={isMenuOpen}
-								aria-label={
-									isMenuOpen
 										? t('Закрыть меню', 'Close menu')
 										: t('Открыть меню', 'Open menu')
 								}
 								className={styles.menuButton}
+								disabled={!isClientReady}
 								type='button'
 								onClick={toggleMobileMenu}
 							>
-								<span className={styles.menuLine} />
-								<span className={styles.menuLine} />
-								<span className={styles.menuLine} />
+								{isMenuOpen ? (
+									<FiX aria-hidden='true' />
+								) : (
+									<FiMenu aria-hidden='true' />
+								)}
 							</button>
 						</div>
 					</div>
@@ -421,7 +414,25 @@ function AiShellContent({
 			>
 				{children}
 			</main>
-			{!isChatWorkspace && footer ? <FooterView footer={footer} /> : null}
+			{!isChatWorkspace && footer ? (
+				<FooterView
+					footer={footer}
+					utilities={
+						<AiThemeToggle
+							lightLabel={t('Светлая тема', 'Light theme')}
+							darkLabel={t('Тёмная тема', 'Dark theme')}
+							switchToLightLabel={t(
+								'Включить светлую тему',
+								'Switch to light theme',
+							)}
+							switchToDarkLabel={t(
+								'Включить тёмную тему',
+								'Switch to dark theme',
+							)}
+						/>
+					}
+				/>
+			) : null}
 		</div>
 	);
 }
@@ -440,6 +451,7 @@ function DesktopNavigation({
 	onValueChange: (value: string) => void;
 }) {
 	const { t } = useAiLocale();
+	const isClientReady = useClientReady();
 	const navigationRef = useRef<HTMLElement>(null);
 	const viewportRef = useRef<HTMLDivElement>(null);
 	const viewportPositionRef = useRef<HTMLDivElement>(null);
@@ -545,6 +557,7 @@ function DesktopNavigation({
 							value={itemValue}
 						>
 							<NavigationMenu.Trigger
+								disabled={!isClientReady}
 								className={`${styles.navLink} ${styles.desktopTrigger} ${isActive ? styles.navLinkActive : ''}`}
 								ref={(trigger) => {
 									if (trigger) triggerRefs.current.set(itemValue, trigger);
@@ -955,7 +968,7 @@ function getDropdownColumnCount(itemCount: number): number {
 }
 
 function getNavigationIcon(icon?: string | NavigationIcon | null) {
-	if (typeof icon !== 'string') return <RiSparkling2Fill />;
+	if (typeof icon !== 'string') return <FiZap />;
 
 	switch (icon) {
 		case 'text':
@@ -971,7 +984,7 @@ function getNavigationIcon(icon?: string | NavigationIcon | null) {
 		case 'faq':
 			return <FiHelpCircle />;
 		default:
-			return <RiSparkling2Fill />;
+			return <FiZap />;
 	}
 }
 

@@ -1,0 +1,35 @@
+@use '../../../styles/mixins' as *;
+
+.toggle {
+	display: inline-flex;
+	min-width: 44px;
+	min-height: 44px;
+	align-items: center;
+	justify-content: center;
+	gap: 9px;
+	padding: 10px;
+	color: var(--ai-text);
+	background: transparent;
+	border: 1px solid var(--ai-border);
+	border-radius: 10px;
+	cursor: pointer;
+
+	svg {
+		width: 19px;
+		height: 19px;
+		flex-shrink: 0;
+	}
+	span {
+		font-size: 14px;
+	}
+	&:hover {
+		background: var(--ai-surface-soft);
+	}
+	&:disabled {
+		opacity: 0.5;
+		cursor: wait;
+	}
+	&:focus-visible {
+		@include focus-ring;
+	}
+}

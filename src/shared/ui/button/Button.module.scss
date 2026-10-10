@@ -1,0 +1,67 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+.button {
+	display: inline-flex;
+	min-height: var(--ui-control-height);
+	align-items: center;
+	justify-content: center;
+	gap: rem(8);
+	padding: rem(11) rem(18);
+	font-size: rem(15);
+	font-weight: 500;
+	line-height: 1.3;
+	text-align: center;
+	border: rem(1) solid transparent;
+	border-radius: var(--ui-control-radius);
+	cursor: pointer;
+	transition:
+		background-color 150ms ease,
+		border-color 150ms ease,
+		color 150ms ease;
+	svg {
+		flex: 0 0 auto;
+		width: rem(18);
+		height: rem(18);
+	}
+	&:focus-visible {
+		@include focus-ring;
+	}
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+}
+.primary {
+	--ui-focus-color: var(--ui-on-accent);
+	color: var(--ui-on-accent);
+	background: var(--ui-accent);
+	border-color: var(--ui-accent);
+}
+.primary:hover:not(:disabled) {
+	background: var(--ui-accent-hover);
+}
+.secondary {
+	color: var(--ui-accent);
+	background: var(--ui-accent-soft);
+	border-color: var(--ui-border);
+}
+.secondary:hover:not(:disabled) {
+	border-color: var(--ui-accent);
+}
+.ghost {
+	color: var(--ui-text);
+	background: var(--ui-surface);
+	border-color: var(--ui-border);
+}
+.ghost:hover:not(:disabled) {
+	background: var(--ui-surface-soft);
+}
+.danger {
+	color: var(--ui-danger);
+	background: color-mix(in srgb, var(--ui-danger) 8%, var(--ui-surface));
+	border-color: color-mix(in srgb, var(--ui-danger) 30%, var(--ui-border));
+}
+.danger:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--ui-danger) 12%, var(--ui-surface));
+	border-color: color-mix(in srgb, var(--ui-danger) 50%, var(--ui-border));
+}

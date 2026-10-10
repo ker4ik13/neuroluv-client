@@ -16,10 +16,10 @@
 	font: inherit;
 	line-height: 1.5;
 	white-space: pre-wrap;
-	overflow-wrap: anywhere;
+	overflow-wrap: normal;
 	background: var(--ai-field-bg);
-	border: rem(1) solid transparent;
-	border-radius: rem(14);
+	border: rem(1) solid var(--ai-border);
+	border-radius: var(--ui-control-radius);
 	outline: none;
 	cursor: text;
 
@@ -32,7 +32,6 @@
 	&:focus-visible {
 		background: var(--ai-surface);
 		border-color: var(--ai-primary);
-		box-shadow: inset 0 0 0 rem(1) rgba(8, 127, 219, 0.16);
 	}
 }
 
@@ -46,7 +45,7 @@
 	padding: rem(3) rem(7) rem(3) rem(3);
 	color: var(--ai-primary);
 	font-size: rem(12);
-	font-weight: 800;
+	font-weight: 600;
 	line-height: 1;
 	vertical-align: middle;
 	background: rgba(8, 127, 219, 0.1);
@@ -79,7 +78,7 @@
 	margin: 0 rem(2);
 	padding: rem(2) rem(6);
 	color: #a54d00;
-	font-weight: 800;
+	font-weight: 600;
 	line-height: 1.45;
 	background: #fff2db;
 	border: rem(1) solid rgba(231, 137, 18, 0.3);
@@ -109,7 +108,7 @@
 	background: var(--ai-surface);
 	border: rem(1) solid rgba(8, 127, 219, 0.18);
 	border-radius: rem(14);
-	box-shadow: 0 rem(18) rem(45) rgba(19, 40, 56, 0.18);
+	box-shadow: none;
 
 	button {
 		display: grid;
@@ -135,7 +134,7 @@
 
 		strong,
 		small {
-			overflow-wrap: anywhere;
+			overflow-wrap: normal;
 			white-space: normal;
 		}
 

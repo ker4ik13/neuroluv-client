@@ -1,0 +1,24 @@
+@use '../../../styles/mixins' as *;
+
+.link {
+	--social-hover-color: var(--social-color);
+	color: var(--ui-text);
+	transition: color 160ms ease;
+	&:hover,
+	&:focus-visible {
+		color: var(--social-hover-color);
+	}
+	&:focus-visible {
+		@include focus-ring(var(--social-hover-color));
+	}
+}
+
+:global(html[data-ai-theme='dark']) .link {
+	--social-hover-color: var(--social-dark-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.link {
+		transition: none;
+	}
+}

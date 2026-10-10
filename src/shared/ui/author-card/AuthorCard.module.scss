@@ -3,13 +3,13 @@
 @use '../../../styles/vars' as *;
 
 .card {
+	@include quiet-card;
 	display: flex;
 	flex-direction: column;
 	gap: rem(18);
 	padding: rem(20);
 	background: $color-white;
-	border-radius: rem(24);
-	box-shadow: 0 rem(12) rem(28) rgba(0, 0, 0, 0.07);
+	border-radius: rem(14);
 }
 
 .main {

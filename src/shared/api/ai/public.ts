@@ -2,8 +2,10 @@ import 'server-only';
 import { AI_API_URL } from '@/shared/config/ai';
 import type {
 	AiApiEnvelope,
+	AiBillingProducts,
 	AiFaqItem,
 	AiPageMetadata,
+	AiPlan,
 	AiPromptCatalog,
 	AiPromptDetail,
 	AiPublicShare,
@@ -11,14 +13,25 @@ import type {
 
 const PUBLIC_FETCH_TIMEOUT_MS = 3_000;
 
+export async function getAiPublicPlans(): Promise<AiPlan[]> {
+	// Anonymous request: never cache a user's wallet, promo code or subscription.
+	const products = await fetchAiPublic<AiBillingProducts>('/billing/products', {
+		revalidateSeconds: 300,
+		throwOnError: true,
+	});
+	return products?.plans ?? [];
+}
+
 type PublicFetchOptions = {
 	revalidateSeconds?: number;
 	throwOnError?: boolean;
 };
 
-export async function getAiPublicPromptCatalog(): Promise<AiPromptCatalog | null> {
+export async function getAiPublicPromptCatalog(
+	pageSize: 12 | 24 = 12,
+): Promise<AiPromptCatalog | null> {
 	return fetchAiPublic<AiPromptCatalog>(
-		'/catalog/prompts?page=1&pageSize=12&sort=newest',
+		`/catalog/prompts?page=1&pageSize=${pageSize}&sort=newest`,
 		{ revalidateSeconds: 300, throwOnError: true },
 	);
 }
@@ -92,8 +105,7 @@ export async function getAiPublicShare(
 
 		if (!response.ok) return { data: null, status: response.status };
 		const payload = (await response.json()) as
-			| AiPublicShare
-			| AiApiEnvelope<AiPublicShare>;
+			AiPublicShare | AiApiEnvelope<AiPublicShare>;
 		return {
 			data:
 				'data' in payload && Object.keys(payload).length === 1

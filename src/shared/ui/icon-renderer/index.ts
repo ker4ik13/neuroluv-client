@@ -1,1 +1,1 @@
-export { IconRenderer } from "./IconRenderer";
+export { IconRenderer } from './IconRenderer';

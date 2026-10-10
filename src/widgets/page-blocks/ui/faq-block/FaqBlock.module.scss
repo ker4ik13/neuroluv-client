@@ -1,205 +1,53 @@
 @use '../../../../styles/functions' as *;
 @use '../../../../styles/mixins' as *;
 @use '../../../../styles/vars' as *;
-
 .section {
-	width: 100%;
-	max-width: rem($container + 40);
-	margin: 0 auto;
-	padding: rem(40) rem(20);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(32) rem(16);
-	}
+	@include content-section;
 }
-
 .inner {
-	display: flex;
-	gap: rem(40);
-	align-items: flex-start;
-	justify-content: space-between;
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex-direction: column;
-		gap: rem(24);
-	}
+	display: grid;
+	grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+	gap: rem(64);
+	align-items: start;
 }
-
 .head {
+	@include sticky-section-heading;
 	display: flex;
-	max-width: rem(540);
-	flex: 0 0 rem(540);
 	flex-direction: column;
-	gap: rem(24);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		max-width: rem(720);
-		flex-basis: auto;
-	}
+	gap: rem(20);
 }
-
 .title {
-	@include heading-font(800);
-
-	color: var(--ai-text, #141414);
-	font-size: rem(54);
-	line-height: 0.95;
-	text-transform: uppercase;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(38);
-		line-height: 1.05;
-	}
-
-	@media (max-width: em($breakpoint-mobile)) {
-		font-size: rem(32);
-	}
+	@include section-title;
 }
-
 .description {
-	@include body-font(400);
-
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: rem(8);
-	color: var(--ai-text, #1e1e1e);
-	font-size: rem(20);
-	line-height: 1.35;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(18);
-	}
+	color: var(--ui-muted);
+	font-size: rem(17);
+	line-height: 1.65;
 }
-
 .link {
-	@include body-font(600);
-
 	display: inline-flex;
 	align-items: center;
 	gap: rem(8);
-	color: $color-cyan;
-	transition: color 160ms ease;
-
-	&:hover {
-		color: $color-blue-hover;
-	}
-
-	&:focus-visible {
-		@include focus-ring;
-	}
+	color: var(--ui-accent);
 }
-
+.link:hover {
+	text-decoration: underline;
+}
+.link:focus-visible {
+	@include focus-ring;
+}
 .linkIcon {
 	width: rem(20);
 	height: rem(20);
-	flex: 0 0 rem(20);
 }
 
-.questions {
-	display: flex;
-	width: 100%;
-	min-width: 0;
-	flex: 1 1 rem(770);
-	flex-direction: column;
-	gap: rem(14);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex-basis: auto;
-	}
-}
-
-.item {
-	width: 100%;
-	box-sizing: border-box;
-	overflow: hidden;
-	background: var(--ai-surface, #{$color-white});
-	border: rem(1) solid var(--ai-border, #{$color-border});
-	border-radius: rem(20);
-	box-shadow: 0 rem(12) rem(20) rgba(0, 0, 0, 0.06);
-
-	&[open] .toggle::before {
-		transform: translate(-50%, -50%) rotate(90deg);
-		opacity: 0;
-	}
-}
-
-.question {
-	@include body-font(700);
-
-	display: flex;
-	width: 100%;
-	box-sizing: border-box;
-	min-height: rem(72);
-	align-items: center;
-	justify-content: space-between;
-	gap: rem(20);
-	padding: rem(22) rem(24);
-	color: var(--ai-text, #{$color-ink});
-	font-size: rem(22);
-	line-height: 1.2;
-	cursor: pointer;
-	list-style: none;
-
-	&::-webkit-details-marker {
-		display: none;
-	}
-
-	&:focus-visible {
-		@include focus-ring;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		min-height: rem(64);
-		padding: rem(18) rem(20);
-		font-size: rem(18);
-	}
-}
-
-.toggle {
-	position: relative;
-	width: rem(32);
-	height: rem(32);
-	flex: 0 0 rem(32);
-	color: $color-cyan;
-	background: rgba($color-cyan, 0.1);
-	border-radius: rem(10);
-
-	&::before,
-	&::after {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		width: rem(14);
-		height: rem(2);
-		content: '';
-		background: currentColor;
-		border-radius: rem(2);
-		transform: translate(-50%, -50%);
-		transition:
-			opacity 160ms ease,
-			transform 160ms ease;
-	}
-
-	&::before {
-		transform: translate(-50%, -50%) rotate(90deg);
-	}
-}
-
-.answer {
-	@include body-font(400);
-
-	padding: 0 rem(24) rem(24);
-	color: var(--ai-muted, #546170);
-	font-size: rem(18);
-	line-height: 1.45;
-
-	p + p {
-		margin-top: rem(10);
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: 0 rem(20) rem(20);
-		font-size: rem(16);
+@media (max-width: em($breakpoint-tablet)) {
+	.inner {
+		grid-template-columns: 1fr;
+		gap: rem(24);
 	}
 }

@@ -1,21 +1,21 @@
 $color-white: #ffffff;
-$color-ink: #132838;
-$color-ink-soft: #192d3d;
-$color-ink-muted: #5c6b7a;
-$color-cyan: #0db8d1;
-$color-cyan-bright: #06b6d4;
-$color-blue: #2f80ed;
-$color-blue-hover: #2e80eb;
-$color-surface: #f1f4f6;
-$color-surface-strong: #e0e5eb;
-$color-border: #e4e9ed;
+$color-ink: #20262d;
+$color-ink-soft: #282f37;
+$color-ink-muted: #65707c;
+$color-blue: #087fdb;
+$color-blue-hover: #006fc5;
+$color-cyan: $color-blue;
+$color-cyan-bright: $color-blue;
+$color-surface: #f7f8fa;
+$color-surface-strong: #edf0f3;
+$color-border: #cfd8e2;
 
 $font-heading: 'Gilroy', Arial, 'Helvetica Neue', Helvetica, sans-serif;
 $font-body: 'Gilroy', Arial, 'Helvetica Neue', Helvetica, sans-serif;
 
 $font-size-base: 16;
 
-$container: 1520;
+$container: 1280;
 $page-gutter: 24;
 $page-gutter-mobile: 12;
 $page-gutter-desktop: 100;
@@ -26,8 +26,8 @@ $radius-xs: 8;
 $radius-sm: 12;
 $radius-button-lg: 14;
 $radius-header: 16;
-$radius-md: 24;
-$radius-lg: 28;
+$radius-md: 16;
+$radius-lg: 20;
 
 $breakpoint-mobile: 480;
 $breakpoint-tablet: 768;

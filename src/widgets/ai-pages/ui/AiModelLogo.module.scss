@@ -36,6 +36,10 @@
 	}
 }
 
+.logoMonochrome img {
+	filter: brightness(0);
+}
+
 :global(html[data-ai-theme='dark']) .logoMonochrome img {
 	filter: brightness(0) invert(1);
 }

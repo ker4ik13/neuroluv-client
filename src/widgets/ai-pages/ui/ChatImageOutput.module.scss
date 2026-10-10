@@ -63,9 +63,9 @@
 	padding: 0;
 	color: var(--ai-primary);
 	font-size: rem(17);
-	background: #f2f7fb;
+	background: var(--ai-surface-soft);
 	border: rem(1) solid var(--ai-border);
-	border-radius: rem(10);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 	transition:
 		color 160ms ease,
@@ -96,7 +96,7 @@
 	min-width: 0;
 	color: var(--ai-muted);
 	font-size: rem(12);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.35;
 }
 
@@ -124,7 +124,7 @@
 	justify-content: flex-end;
 	color: var(--ai-muted);
 	font-size: rem(12);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.35;
 }
 
@@ -148,7 +148,7 @@
 .copyError {
 	color: #b42318;
 	font-size: rem(12);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.4;
 }
 
@@ -210,7 +210,7 @@
 	background: var(--ai-surface);
 	border: 0;
 	border-radius: rem(14);
-	box-shadow: 0 rem(14) rem(36) rgba(0, 0, 0, 0.32);
+	box-shadow: none;
 }
 
 .closeButton {
@@ -247,7 +247,11 @@
 	place-items: stretch;
 	overflow: hidden;
 	background:
-		radial-gradient(circle at 50% 48%, rgba(28, 126, 214, 0.14), transparent 44%),
+		radial-gradient(
+			circle at 50% 48%,
+			rgba(28, 126, 214, 0.14),
+			transparent 44%
+		),
 		rgba(6, 16, 26, 0.94);
 	isolation: isolate;
 }
@@ -290,8 +294,7 @@
 	grid-template-rows: minmax(0, 1fr) auto auto;
 	place-self: center;
 	gap: rem(10);
-	padding:
-		max(rem(52), env(safe-area-inset-top))
+	padding: max(rem(52), env(safe-area-inset-top))
 		max(rem(18), env(safe-area-inset-right))
 		max(rem(14), env(safe-area-inset-bottom))
 		max(rem(18), env(safe-area-inset-left));
@@ -325,8 +328,7 @@
 	}
 
 	&:focus-visible {
-		outline: rem(2) solid rgba(122, 203, 255, 0.94);
-		outline-offset: rem(2);
+		@include focus-ring;
 	}
 }
 
@@ -394,7 +396,7 @@
 	height: 100%;
 	object-fit: contain;
 	object-position: center;
-	box-shadow: 0 rem(18) rem(52) rgba(0, 0, 0, 0.42);
+	box-shadow: none;
 	transition: opacity 180ms ease;
 }
 
@@ -429,7 +431,7 @@
 	gap: rem(10);
 	color: rgba(255, 255, 255, 0.76);
 	font-size: rem(12);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.35;
 
 	span {
@@ -457,7 +459,7 @@
 		overflow: hidden;
 		color: #fff;
 		font-size: rem(13);
-		font-weight: 700;
+		font-weight: 600;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
@@ -538,9 +540,7 @@
 
 .galleryThumbnailActive {
 	border-color: #28a9f2;
-	box-shadow:
-		0 0 0 rem(2) rgba(21, 153, 234, 0.96),
-		0 rem(8) rem(24) rgba(0, 0, 0, 0.24);
+	box-shadow: none;
 	opacity: 1;
 }
 
@@ -584,8 +584,7 @@
 		grid-template-columns: minmax(0, 1fr);
 		gap: rem(8);
 		overflow: hidden;
-		padding:
-			max(rem(48), env(safe-area-inset-top))
+		padding: max(rem(48), env(safe-area-inset-top))
 			max(rem(8), env(safe-area-inset-right))
 			max(rem(8), env(safe-area-inset-bottom))
 			max(rem(8), env(safe-area-inset-left));

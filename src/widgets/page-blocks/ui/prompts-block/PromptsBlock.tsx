@@ -1,84 +1,51 @@
-import Link from "next/link";
-import { FaArrowRight } from "react-icons/fa";
-
-import type { PagePromptCard, PagePromptsBlock } from "@/entities/page";
-import { PromptCardMedia } from "@/shared/ui/prompt-card-media";
-
-import styles from "./PromptsBlock.module.scss";
+import Link from 'next/link';
+import type { PagePromptsBlock } from '@/entities/page';
+import { type PromptCardData, PromptGallery } from '@/entities/prompt';
+import { buttonClassName } from '@/shared/ui/button';
+import { SectionHeading } from '@/shared/ui/section-heading';
+import styles from './PromptsBlock.module.scss';
 
 type PromptsBlockProps = {
-  block: PagePromptsBlock;
+	block: PagePromptsBlock;
 };
 
 const difficultyLabels: Record<string, string> = {
-  easy: "Легко",
-  medium: "Средне",
-  hard: "Сложно",
+	easy: 'Легко',
+	medium: 'Средне',
+	hard: 'Сложно',
 };
 
 export function PromptsBlock({ block }: PromptsBlockProps) {
-  if (block.prompts.length === 0) {
-    return null;
-  }
+	if (block.prompts.length === 0) {
+		return null;
+	}
+	const prompts: PromptCardData[] = block.prompts.map((prompt) => ({
+		...prompt,
+		difficultyLabel: prompt.difficulty
+			? difficultyLabels[prompt.difficulty] || prompt.difficulty
+			: null,
+		neuralNetwork: prompt.neuralNetwork
+			? { title: prompt.neuralNetwork }
+			: null,
+	}));
 
-  return (
-    <section className={styles.section}>
-      <div className={styles.inner}>
-        <div className={styles.head}>
-          <div className={styles.headText}>
-            <h2 className={styles.title}>{block.title}</h2>
-            {block.description && (
-              <p className={styles.description}>{block.description}</p>
-            )}
-          </div>
-
-          {block.link && (
-            <Link className={styles.moreLink} href={block.link}>
-              Все промпты
-              <FaArrowRight aria-hidden="true" />
-            </Link>
-          )}
-        </div>
-
-        <div className={styles.cards}>
-          {block.prompts.map((prompt, index) => (
-            <PromptCard key={`prompt-${prompt.id}-${index}`} prompt={prompt} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PromptCard({ prompt }: { prompt: PagePromptCard }) {
-  return (
-    <Link className={styles.card} href={prompt.href}>
-      {prompt.image && (
-        <PromptCardMedia
-          alt={prompt.image.title || prompt.title}
-          autoPlay={prompt.autoplay}
-          className={styles.imageWrap}
-          image={prompt.image}
-          images={prompt.images}
-          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-        />
-      )}
-
-      <span className={styles.cardContent}>
-        <span className={styles.meta}>
-          {prompt.neuralNetwork && (
-            <span className={styles.badge}>{prompt.neuralNetwork}</span>
-          )}
-          {prompt.format && <span className={styles.badge}>{prompt.format}</span>}
-          {prompt.difficulty && (
-            <span className={styles.badge}>
-              {difficultyLabels[prompt.difficulty] || prompt.difficulty}
-            </span>
-          )}
-        </span>
-
-        <span className={styles.cardTitle}>{prompt.title}</span>
-      </span>
-    </Link>
-  );
+	return (
+		<section className={styles.section}>
+			<div className={styles.inner}>
+				<SectionHeading title={block.title} description={block.description} />
+				<PromptGallery
+					prompts={prompts}
+					layout={block.layout}
+					headingLevel={3}
+				/>
+				{block.link && (
+					<div className={styles.actions}>
+						<Link className={buttonClassName('ghost')} href={block.link}>
+							Все промпты
+						</Link>
+					</div>
+				)}
+			</div>
+		</section>
+	);
 }

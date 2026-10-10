@@ -1,0 +1,32 @@
+// Shared navigation rhythm for the public library and the Studio workspace.
+@mixin item {
+	min-height: 44px;
+	gap: 10px;
+	padding: 10px 12px;
+	color: var(--ui-text);
+	font-size: 15px;
+	font-weight: 500;
+	line-height: 1.35;
+	text-align: left;
+	border-radius: var(--ui-control-radius);
+	transition:
+		color 160ms ease,
+		background-color 160ms ease,
+		border-color 160ms ease;
+
+	&:hover,
+	&[data-state='open'] {
+		color: var(--ui-accent);
+		background: var(--ui-accent-soft);
+		transform: none;
+	}
+}
+
+@mixin children {
+	gap: 4px;
+	margin-top: 6px;
+	padding: 6px;
+	background: var(--ui-surface-muted);
+	border: 1px solid var(--ui-border);
+	border-radius: 10px;
+}

@@ -1,11 +1,59 @@
-@use "../../../styles/functions" as *;
-@use "../../../styles/mixins" as *;
-@use "../../../styles/vars" as *;
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+@use '../../../styles/vars' as *;
 
 .box {
 	display: flex;
 	flex-direction: column;
 	gap: rem(16);
+}
+
+.plainText {
+	@include quiet-card;
+	gap: rem(16);
+	padding: rem(20);
+	.head {
+		flex-direction: row;
+		align-items: center;
+		h3 {
+			color: var(--ui-text);
+			font-size: rem(22);
+		}
+	}
+	.button {
+		width: auto;
+		color: var(--ui-text);
+		background: var(--ui-surface);
+		border: rem(1) solid var(--ui-border);
+		border-radius: var(--ui-control-radius);
+		font-weight: 500;
+		&:hover {
+			color: var(--ui-accent);
+			background: var(--ui-accent-soft);
+			transform: none;
+		}
+	}
+	.content {
+		padding: 0;
+		color: var(--ui-text);
+		background: none;
+		:where(p, li, blockquote) {
+			color: var(--ui-text);
+		}
+	}
+	> p[role='alert'] {
+		color: var(--ui-danger);
+		font-size: rem(14);
+	}
+	@media (max-width: 480px) {
+		.head {
+			flex-direction: column;
+			align-items: stretch;
+		}
+		.button {
+			width: 100%;
+		}
+	}
 }
 
 .head {
@@ -96,7 +144,7 @@
 
 	:where(p, li, blockquote) {
 		color: #d7e7ef;
-		overflow-wrap: anywhere;
+		overflow-wrap: normal;
 	}
 
 	:where(ul, ol) {
@@ -108,7 +156,7 @@
 
 	a {
 		color: $color-cyan;
-		font-weight: 700;
+		font-weight: 600;
 		text-decoration: underline;
 		text-decoration-thickness: rem(1);
 		text-underline-offset: rem(4);
@@ -124,7 +172,7 @@
 	}
 
 	strong {
-		font-weight: 800;
+		font-weight: 600;
 	}
 
 	p + p {

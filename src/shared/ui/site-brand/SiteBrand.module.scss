@@ -1,0 +1,85 @@
+@use '../../../styles/mixins' as *;
+
+.root {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--ui-text);
+	border-radius: var(--ui-control-radius);
+	> svg {
+		width: 32px;
+		height: 32px;
+	}
+}
+
+.name {
+	font-size: 25px;
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.segments {
+	display: flex;
+	gap: 0;
+	padding: 0;
+	background: var(--ui-surface);
+	border: 1px solid var(--ui-border);
+	border-radius: var(--ui-control-radius);
+
+	a {
+		min-height: var(--ui-control-height);
+		padding-inline: 10px;
+		border: 0;
+		border-radius: 0;
+		&:first-child {
+			border-radius: var(--ui-control-radius) 0 0 var(--ui-control-radius);
+		}
+		&:last-child {
+			border-radius: 0 var(--ui-control-radius) var(--ui-control-radius) 0;
+			border-left: 1px solid var(--ui-border);
+		}
+	}
+}
+
+.compact {
+	display: none;
+}
+
+.brand:focus-visible,
+.segments a:focus-visible {
+	@include focus-ring;
+}
+
+@media (max-width: 1200px) {
+	.root {
+		gap: 12px;
+	}
+	.segments {
+		display: none;
+	}
+	.compact {
+		display: grid;
+		width: 140px;
+	}
+}
+
+@media (max-width: 640px) {
+	.root {
+		gap: 8px;
+	}
+	.name {
+		display: none;
+	}
+	.compact {
+		width: 140px;
+	}
+}

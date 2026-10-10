@@ -1,303 +1,322 @@
-import type { NavigationIcon } from "@/entities/navigation";
-import type { NewsContentBlock } from "@/entities/news";
+import type { NavigationIcon } from '@/entities/navigation';
+import type { NewsContentBlock } from '@/entities/news';
+import type { PromptGallerySortMode } from '@/shared/lib/content/prompt-selection';
 
 export type PageImage = {
-  id: string;
-  title: string;
-  url: string;
-  type: string | null;
-  width: number | null;
-  height: number | null;
+	id: string;
+	title: string;
+	url: string;
+	type: string | null;
+	width: number | null;
+	height: number | null;
 };
 
 export type PageHeroButton = {
-  id: number;
-  label: string;
-  href: string;
-  target: "_self" | "_blank";
-  variant: "primary" | "secondary" | "outline";
-  icon: NavigationIcon | null;
+	id: number;
+	label: string;
+	href: string;
+	target: '_self' | '_blank';
+	variant: 'primary' | 'secondary' | 'outline';
+	icon: NavigationIcon | null;
 };
 
 export type PageHeroBlock = {
-  id: number;
-  type: "hero";
-  theme: "dark" | "light";
-  eyebrow: string | null;
-  title: string;
-  description: string;
-  link: string | null;
-  image: PageImage | null;
-  buttons: PageHeroButton[];
+	id: number;
+	type: 'hero';
+	theme: 'dark' | 'light';
+	eyebrow: string | null;
+	title: string;
+	description: string;
+	link: string | null;
+	image: PageImage | null;
+	buttons: PageHeroButton[];
+	galleryId?: number | null;
+	galleryPrompts?: PagePromptCard[];
+	layout?: 'split' | 'centered';
 };
 
 export type PageAboutCard = {
-  id: number;
-  title: string;
-  description: string;
-  icon: NavigationIcon | null;
+	id: number;
+	title: string;
+	description: string;
+	icon: NavigationIcon | null;
 };
 
 export type PageAboutBlock = {
-  id: number;
-  type: "about";
-  title: string;
-  description: string;
-  advantageTitle: string | null;
-  advantageDescription: string | null;
-  advantageImage: PageImage | null;
-  cards: PageAboutCard[];
+	id: number;
+	type: 'about';
+	title: string;
+	description: string;
+	advantageTitle: string | null;
+	advantageDescription: string | null;
+	advantageImage: PageImage | null;
+	cards: PageAboutCard[];
+	layout?: 'split' | 'cards';
 };
 
 export type PageTaskExamplesCard = {
-  id: number;
-  title: string;
-  description: string;
-  href: string | null;
-  isSelected: boolean;
-  icon: NavigationIcon | null;
+	id: number;
+	title: string;
+	description: string;
+	href: string | null;
+	isSelected: boolean;
+	icon: NavigationIcon | null;
 };
 
 export type PageTaskExamplesBlock = {
-  id: number;
-  type: "taskExamples";
-  title: string;
-  description: string;
-  cards: PageTaskExamplesCard[];
+	id: number;
+	type: 'taskExamples';
+	title: string;
+	description: string;
+	cards: PageTaskExamplesCard[];
 };
 
 export type PageServiceCard = {
-  id: number;
-  title: string;
-  description: string;
-  href: string;
-  isPopular: boolean;
-  icon: NavigationIcon | null;
-  advantages: string[];
+	id: number;
+	title: string;
+	description: string;
+	href: string;
+	isPopular: boolean;
+	icon: NavigationIcon | null;
+	advantages: string[];
 };
 
 export type PageServicesBlock = {
-  id: number;
-  type: "services";
-  title: string;
-  description: string;
-  allServicesHref: string | null;
-  services: PageServiceCard[];
+	id: number;
+	type: 'services';
+	title: string;
+	description: string;
+	allServicesHref: string | null;
+	services: PageServiceCard[];
 };
 
 export type PageFaqItem = {
-  id: number;
-  title: string;
-  answer: string;
+	id: number;
+	title: string;
+	answer: string;
 };
 
 export type PageFaqBlock = {
-  id: number;
-  type: "faq";
-  title: string;
-  description: string;
-  link: string | null;
-  icon: NavigationIcon | null;
-  questions: PageFaqItem[];
+	id: number;
+	type: 'faq';
+	title: string;
+	description: string;
+	link: string | null;
+	icon: NavigationIcon | null;
+	questions: PageFaqItem[];
 };
 
 export type PageUseCaseCard = {
-  id: number;
-  title: string;
-  tasks: string[];
+	id: number;
+	title: string;
+	tasks: string[];
 };
 
 export type PageUseCasesBlock = {
-  id: number;
-  type: "useCases";
-  title: string;
-  description: string;
-  cardTitle: string;
-  cardDescription: string;
-  cardImage: PageImage | null;
-  adviceIcon: NavigationIcon | null;
-  adviceTitle: string | null;
-  adviceDescription: string | null;
-  buttons: PageHeroButton[];
-  useCases: PageUseCaseCard[];
+	id: number;
+	type: 'useCases';
+	title: string;
+	description: string;
+	cardTitle: string;
+	cardDescription: string;
+	cardImage: PageImage | null;
+	adviceIcon: NavigationIcon | null;
+	adviceTitle: string | null;
+	adviceDescription: string | null;
+	buttons: PageHeroButton[];
+	useCases: PageUseCaseCard[];
 };
 
 export type PageStepItem = {
-  id: number;
-  title: string;
-  description: string;
+	id: number;
+	title: string;
+	description: string;
 };
 
 export type PageStepsBlock = {
-  id: number;
-  type: "steps";
-  title: string;
-  description: string;
-  steps: PageStepItem[];
+	id: number;
+	type: 'steps';
+	title: string;
+	description: string;
+	steps: PageStepItem[];
+	layout?: 'cards' | 'compact';
 };
 
 export type PageTableColumn = {
-  id: number;
-  title: string;
-  isSelected: boolean;
+	id: number;
+	title: string;
+	isSelected: boolean;
 };
 
 export type PageTableRow = {
-  id: number;
-  cells: string[];
+	id: number;
+	cells: string[];
 };
 
 export type PageTableBlock = {
-  id: number;
-  type: "table";
-  title: string;
-  description: string;
-  columns: PageTableColumn[];
-  rows: PageTableRow[];
+	id: number;
+	type: 'table';
+	title: string;
+	description: string;
+	columns: PageTableColumn[];
+	rows: PageTableRow[];
 };
 
 export type PagePromptCard = {
-  id: number;
-  title: string;
-  description: string;
-  href: string;
-  format: string | null;
-  difficulty: string | null;
-  viewsCount: number;
-  neuralNetwork: string | null;
-  image: PageImage | null;
-  images: PageImage[];
-  autoplay: boolean;
+	id: number;
+	title: string;
+	description: string;
+	href: string;
+	format: string | null;
+	difficulty: string | null;
+	viewsCount: number;
+	neuralNetwork: string | null;
+	image: PageImage | null;
+	images: PageImage[];
+	autoplay: boolean;
+	publishedAt?: string | null;
 };
 
 export type PagePromptSelection = {
-  authorId: string | null;
-  collectionId: number | null;
-  difficulty: string | null;
-  goalId: number | null;
-  neuralNetworkId: number | null;
-  tagIds: number[];
-  typeIds: number[];
+	authorId: string | null;
+	collectionId: number | null;
+	difficulty: string | null;
+	goalId: number | null;
+	neuralNetworkId: number | null;
+	tagIds: number[];
+	typeIds: number[];
 };
 
 export type PagePromptsBlock = {
-  id: number;
-  type: "prompts";
-  title: string;
-  description: string;
-  link: string | null;
-  limit: number;
-  selection: PagePromptSelection;
-  selectionMode:
-    | "manual"
-    | "fresh"
-    | "old"
-    | "author"
-    | "collection"
-    | "tags"
-    | "goal"
-    | "type"
-    | "neural_network"
-    | "difficulty";
-  prompts: PagePromptCard[];
+	id: number;
+	type: 'prompts';
+	title: string;
+	description: string;
+	link: string | null;
+	limit: number;
+	selection: PagePromptSelection;
+	selectionMode:
+		| 'manual'
+		| 'fresh'
+		| 'old'
+		| 'author'
+		| 'collection'
+		| 'tags'
+		| 'goal'
+		| 'type'
+		| 'neural_network'
+		| 'difficulty';
+	prompts: PagePromptCard[];
+	layout?: 'masonry' | 'grid';
+	sortMode?: PromptGallerySortMode;
 };
 
 export type PageArticleCard = {
-  id: number;
-  title: string;
-  description: string;
-  href: string;
-  image: PageImage | null;
-  badge: string;
+	id: number;
+	title: string;
+	description: string;
+	href: string;
+	image: PageImage | null;
+	badge: string;
 };
 
 export type PageArticleSelection = {
-  authorId: string | null;
-  tagIds: number[];
-  topicId: number | null;
+	authorId: string | null;
+	tagIds: number[];
+	topicId: number | null;
 };
 
 export type PageArticlesBlock = {
-  id: number;
-  type: "articles";
-  title: string;
-  description: string;
-  link: string | null;
-  limit: number;
-  selection: PageArticleSelection;
-  selectionMode: "manual" | "fresh" | "old" | "topic" | "tags" | "author";
-  articles: PageArticleCard[];
+	id: number;
+	type: 'articles';
+	title: string;
+	description: string;
+	link: string | null;
+	limit: number;
+	selection: PageArticleSelection;
+	selectionMode: 'manual' | 'fresh' | 'old' | 'topic' | 'tags' | 'author';
+	articles: PageArticleCard[];
+	layout?: 'editorial' | 'cards';
 };
 
 export type PageTaskGridItem = {
-  id: number;
-  title: string;
-  description: string;
-  icon: NavigationIcon | null;
+	id: number;
+	title: string;
+	description: string;
+	icon: NavigationIcon | null;
 };
 
 export type PageTaskGridBlock = {
-  id: number;
-  type: "taskGrid";
-  title: string;
-  description: string;
-  tasks: PageTaskGridItem[];
+	id: number;
+	type: 'taskGrid';
+	title: string;
+	description: string;
+	tasks: PageTaskGridItem[];
+	layout?: 'cards' | 'compact';
 };
 
 export type PageCtaItem = {
-  id: number;
-  title: string;
-  description: string;
-  icon: NavigationIcon | null;
+	id: number;
+	title: string;
+	description: string;
+	icon: NavigationIcon | null;
 };
 
 export type PageBigCtaBlock = {
-  id: number;
-  type: "bigCta";
-  title: string;
-  description: string;
-  image: PageImage | null;
-  buttons: PageHeroButton[];
-  advantages: PageCtaItem[];
-  steps: Omit<PageCtaItem, "icon">[];
+	id: number;
+	type: 'bigCta';
+	title: string;
+	description: string;
+	image: PageImage | null;
+	buttons: PageHeroButton[];
+	advantages: PageCtaItem[];
+	steps: Omit<PageCtaItem, 'icon'>[];
+	layout?: PageCtaLayout;
+	tone?: PageCtaTone;
 };
 
 export type PageMiniCtaBlock = {
-  id: number;
-  type: "miniCta";
-  title: string;
-  description: string;
-  image: PageImage | null;
-  buttons: PageHeroButton[];
+	id: number;
+	type: 'miniCta';
+	title: string;
+	description: string;
+	image: PageImage | null;
+	buttons: PageHeroButton[];
+	layout?: PageCtaLayout;
+	tone?: PageCtaTone;
 };
 
+export type PageCtaLayout =
+	'image_right' | 'image_left' | 'centered' | 'banner';
+export type PageCtaTone = 'neutral' | 'soft' | 'accent' | 'dark';
+
 export type PageZeroBlock = {
-  id: number;
-  type: "zero";
-  title: string | null;
-  description: string | null;
-  contentBlocks: NewsContentBlock[];
+	id: number;
+	type: 'zero';
+	title: string | null;
+	description: string | null;
+	contentBlocks: NewsContentBlock[];
 };
 
 export type PageBlock =
-  | PageHeroBlock
-  | PageAboutBlock
-  | PageTaskExamplesBlock
-  | PageServicesBlock
-  | PageFaqBlock
-  | PageUseCasesBlock
-  | PageStepsBlock
-  | PageTableBlock
-  | PagePromptsBlock
-  | PageArticlesBlock
-  | PageTaskGridBlock
-  | PageBigCtaBlock
-  | PageMiniCtaBlock
-  | PageZeroBlock;
+	| PageHeroBlock
+	| PageAboutBlock
+	| PageTaskExamplesBlock
+	| PageServicesBlock
+	| PageFaqBlock
+	| PageUseCasesBlock
+	| PageStepsBlock
+	| PageTableBlock
+	| PagePromptsBlock
+	| PageArticlesBlock
+	| PageTaskGridBlock
+	| PageBigCtaBlock
+	| PageMiniCtaBlock
+	| PageZeroBlock;
 
 export type Page = {
-  id: number;
-  title: string;
-  slug: string;
-  blocks: PageBlock[];
+	id: number;
+	title: string;
+	slug: string;
+	blocks: PageBlock[];
 };

@@ -5,17 +5,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FaChevronDown } from 'react-icons/fa';
+import { FiChevronDown, FiMenu, FiX } from 'react-icons/fi';
 import type {
 	HeaderNavigation,
 	NavigationItem,
 	SocialLink,
 } from '@/entities/navigation';
 import { useViewportScrollLock } from '@/shared/lib/dom/useBodyScrollLock';
+import { useClientReady } from '@/shared/lib/dom/useClientReady';
+import { useFocusTrap } from '@/shared/lib/dom/useFocusTrap';
 import { AppIcon } from '@/shared/ui/app-icon';
-import { BrandIcon } from '@/shared/ui/brand-icon';
 import { Container } from '@/shared/ui/container';
-import { SiteHeaderLogo } from '@/shared/ui/site-header-logo';
+import { SiteBrand } from '@/shared/ui/site-brand';
+import { SocialLink as SocialLinkControl } from '@/shared/ui/social-link';
 import styles from './Header.module.scss';
 
 const DESKTOP_MENU_DELAY_MS = 80;
@@ -27,13 +29,21 @@ type HeaderViewProps = {
 };
 
 export function HeaderView({ navigation }: HeaderViewProps) {
+	const isClientReady = useClientReady();
 	const pathname = usePathname();
 	const [desktopValue, setDesktopValue] = useState('');
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [mobileSectionId, setMobileSectionId] = useState<number | null>(null);
 	const isNavigationOpen = Boolean(desktopValue) || isMobileMenuOpen;
+	const headerRef = useRef<HTMLElement>(null);
+	const closeNavigation = useCallback(() => {
+		setDesktopValue('');
+		setIsMobileMenuOpen(false);
+		setMobileSectionId(null);
+	}, []);
 
 	useViewportScrollLock(isNavigationOpen);
+	useFocusTrap(isMobileMenuOpen, headerRef);
 
 	useEffect(() => {
 		function handleEscape(event: KeyboardEvent) {
@@ -47,37 +57,31 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 		}
 
 		document.addEventListener('keydown', handleEscape);
+		window.addEventListener('resize', closeNavigation);
 
 		return () => {
 			document.removeEventListener('keydown', handleEscape);
+			window.removeEventListener('resize', closeNavigation);
 		};
-	}, []);
-
-	function closeNavigation() {
-		setDesktopValue('');
-		setIsMobileMenuOpen(false);
-		setMobileSectionId(null);
-	}
+	}, [closeNavigation]);
 
 	return (
-		<header className={styles.header}>
+		<header className={styles.header} ref={headerRef}>
 			<Container className={styles.container}>
 				<div className={styles.inner}>
-					<Link
-						aria-label='На главную'
-						className={styles.logo}
-						href='/'
-						onClick={closeNavigation}
-					>
-						<SiteHeaderLogo logo={navigation.logo} />
-						<span className={styles.logoText}>{navigation.siteName}</span>
-					</Link>
+					<SiteBrand
+						area='library'
+						logo={navigation.logo}
+						name={navigation.siteName}
+						onNavigate={closeNavigation}
+					/>
 
 					<button
 						aria-controls='mobile-site-navigation'
 						aria-expanded={isMobileMenuOpen}
 						aria-label={isMobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
 						className={styles.burger}
+						disabled={!isClientReady}
 						type='button'
 						onClick={() => {
 							setIsMobileMenuOpen((isOpen) => !isOpen);
@@ -85,9 +89,11 @@ export function HeaderView({ navigation }: HeaderViewProps) {
 							setDesktopValue('');
 						}}
 					>
-						<span className={styles.burgerLine} />
-						<span className={styles.burgerLine} />
-						<span className={styles.burgerLine} />
+						{isMobileMenuOpen ? (
+							<FiX aria-hidden='true' />
+						) : (
+							<FiMenu aria-hidden='true' />
+						)}
 					</button>
 
 					<div
@@ -151,6 +157,7 @@ function DesktopNavigation({
 	onNavigate,
 	onValueChange,
 }: DesktopNavigationProps) {
+	const isClientReady = useClientReady();
 	const navigationRef = useRef<HTMLElement>(null);
 	const viewportRef = useRef<HTMLDivElement>(null);
 	const viewportPositionRef = useRef<HTMLDivElement>(null);
@@ -277,6 +284,7 @@ function DesktopNavigation({
 							value={itemValue}
 						>
 							<NavigationMenu.Trigger
+								disabled={!isClientReady}
 								className={`${styles.navLink} ${styles.desktopTrigger} ${isActive ? styles.navLinkActive : ''}`}
 								ref={(trigger) => {
 									if (trigger) {
@@ -299,7 +307,7 @@ function DesktopNavigation({
 								}}
 							>
 								<NavLinkContent item={item} />
-								<FaChevronDown
+								<FiChevronDown
 									aria-hidden='true'
 									className={styles.desktopChevron}
 								/>
@@ -385,10 +393,7 @@ function MobileNavigation({
 	onSectionChange,
 }: MobileNavigationProps) {
 	return (
-		<nav
-			aria-label='Мобильная навигация'
-			className={styles.mobileNavigation}
-		>
+		<nav aria-label='Мобильная навигация' className={styles.mobileNavigation}>
 			{items.map((item, index) => {
 				const isActive = isNavigationItemActive(item, pathname);
 				const isOpen = openSectionId === item.id;
@@ -423,7 +428,7 @@ function MobileNavigation({
 							onClick={() => onSectionChange(isOpen ? null : item.id)}
 						>
 							<NavLinkContent item={item} />
-							<FaChevronDown
+							<FiChevronDown
 								aria-hidden='true'
 								className={`${styles.mobileChevron} ${isOpen ? styles.mobileChevronOpen : ''}`}
 							/>
@@ -511,15 +516,12 @@ function NavLinkContent({ item }: { item: NavigationItem }) {
 
 function SocialLinkEntry({ link }: { link: SocialLink }) {
 	return (
-		<a
-			aria-label={link.title}
+		<SocialLinkControl
+			label={link.title}
 			className={styles.socialLink}
 			href={link.url}
-			rel='noreferrer'
-			target='_blank'
-			title={link.title}
-		>
-			<BrandIcon className={styles.socialIcon} platform={link.platform} />
-		</a>
+			platform={link.platform}
+			iconClassName={styles.socialIcon}
+		/>
 	);
 }

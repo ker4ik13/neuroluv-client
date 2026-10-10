@@ -8,6 +8,7 @@ import {
 import {
   buildBreadcrumbJsonLd,
   buildNewsArticleJsonLd,
+  buildFaqQuestionsJsonLd,
   buildWebPageJsonLd,
 } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
@@ -72,6 +73,7 @@ export default async function NewsDetailRoute({ params }: NewsDetailRouteProps) 
             url: data.item.href,
           }),
           buildNewsArticleJsonLd(data.item),
+          buildFaqQuestionsJsonLd(data.item.contentBlocks.flatMap(block => block.type === 'faq' ? block.questions : [])),
           buildBreadcrumbJsonLd([
             { name: "Главная", url: "/" },
             { name: "Новости", url: "/news" },

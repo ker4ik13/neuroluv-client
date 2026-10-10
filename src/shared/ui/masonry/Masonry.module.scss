@@ -1,0 +1,34 @@
+@use '../../../styles/functions' as *;
+.masonry {
+	position: relative;
+	width: 100%;
+	min-width: 0;
+	columns: var(--masonry-columns, 3);
+	column-gap: rem(20);
+}
+.item {
+	display: block;
+	break-inside: avoid;
+	margin-bottom: rem(20);
+}
+.masonry[data-masonry-ready='true'] {
+	display: grid;
+	.item {
+		position: absolute;
+		margin: 0;
+	}
+}
+@media (max-width: 768px) {
+	.masonry {
+		columns: min(2, var(--masonry-columns, 3));
+		column-gap: rem(14);
+	}
+	.item {
+		margin-bottom: rem(14);
+	}
+}
+@media (max-width: 360px) {
+	.masonry {
+		columns: 1;
+	}
+}

@@ -39,14 +39,12 @@ import {
 	FiX,
 	FiZap,
 } from 'react-icons/fi';
-import { RiSparkling2Fill } from 'react-icons/ri';
 import { useAiLocale } from '@/features/ai-locale';
 import { useAiSession } from '@/features/ai-session';
 import {
 	type AiApiEnvelope,
 	AiApiError,
 	aiApiFetch,
-	submitAiRun,
 	type AiCitation,
 	type AiConversation,
 	type AiConversationKind,
@@ -63,6 +61,7 @@ import {
 	type AiUploadResult,
 	type AiWorkDetail,
 	type AiWorkOutput,
+	submitAiRun,
 } from '@/shared/api/ai';
 import { useFocusTrap } from '@/shared/lib/dom/useFocusTrap';
 import { writeClipboardText } from '@/shared/lib/dom/writeClipboardText';
@@ -87,7 +86,6 @@ import {
 import { useAdaptivePolling } from '../model/useAdaptivePolling';
 import { useAiLiveSync } from '../model/useAiLiveSync';
 import { AiMarkdown } from './AiMarkdown';
-import { MediaDownloadLink } from './MediaDownloadLink';
 import { AiModelLogo } from './AiModelLogo';
 import { AiSelect, type AiSelectOption } from './AiSelect';
 import { AiCard, AiPage, AsyncState, FieldMessage } from './AiUi';
@@ -98,10 +96,12 @@ import {
 	ImageLightbox,
 } from './ChatImageOutput';
 import styles from './GenerationChatPage.module.scss';
+import { MediaDownloadLink } from './MediaDownloadLink';
 import {
 	PromptComposerEditor,
 	type PromptComposerMention,
 } from './PromptComposerEditor';
+import { RunState } from './RunState';
 
 export type GenerationChatKind = 'image' | 'video' | 'text' | 'photo-to-prompt';
 
@@ -822,6 +822,7 @@ export function GenerationChatPage({
 
 		const conversationId = draft.conversationId;
 		const controller = new AbortController();
+		let snapshotApplied = false;
 		hydratedConversation.current = conversationId;
 		queueMicrotask(() => setIsConversationLoading(true));
 		void aiApiFetch<AiConversation | AiApiEnvelope<AiConversation>>(
@@ -829,8 +830,10 @@ export function GenerationChatPage({
 			{ signal: controller.signal },
 		)
 			.then((payload) => {
+				if (controller.signal.aborted) return;
 				const conversation = unwrapAiData(payload);
 				applyConversationSnapshot(conversation);
+				snapshotApplied = true;
 			})
 			.catch((error) => {
 				if (!controller.signal.aborted) {
@@ -846,7 +849,14 @@ export function GenerationChatPage({
 			.finally(() => {
 				if (!controller.signal.aborted) setIsConversationLoading(false);
 			});
-		return () => controller.abort();
+		return () => {
+			controller.abort();
+			// Locale/context changes can replace the snapshot callback mid-request.
+			// An aborted attempt must not mark a never-loaded conversation as hydrated.
+			if (!snapshotApplied && hydratedConversation.current === conversationId) {
+				hydratedConversation.current = null;
+			}
+		};
 	}, [
 		applyConversationSnapshot,
 		draft.conversationId,
@@ -2100,12 +2110,18 @@ export function GenerationChatPage({
 
 			acceptedConversationId = conversationId;
 			if (viewEpoch.current === submissionEpoch) {
-				setTurns((current) => current.map((turn) =>
-					turn.id === clientId ? {
-						...turn,
-						uploadStates: Object.fromEntries(inputFiles.map((file) => [file.id, 'uploading' as const])),
-					} : turn,
-				));
+				setTurns((current) =>
+					current.map((turn) =>
+						turn.id === clientId
+							? {
+									...turn,
+									uploadStates: Object.fromEntries(
+										inputFiles.map((file) => [file.id, 'uploading' as const]),
+									),
+								}
+							: turn,
+					),
+				);
 			}
 			const uploadedFiles = await Promise.all(
 				submittedReferences.map(async (reference) => {
@@ -2164,39 +2180,39 @@ export function GenerationChatPage({
 
 			runSubmitted = true;
 			const runPayload = await submitAiRun({
-					idempotencyKey,
-					quoteId: freshQuote.quoteId,
-					operation: submittedOperation,
-					modelId: submittedDraft.modelId,
-					...(conversationId ? { conversationId } : {}),
-					contextEnabled:
-						session.authenticated && supportsContext && Boolean(conversationId)
-							? submittedDraft.contextEnabled
-							: false,
-					...(submittedUseConversationReference
-						? { useConversationReference: true }
-						: {}),
-					...(submittedDraft.promptId
-						? { promptId: submittedDraft.promptId }
-						: {}),
-					...(submittedDraft.publicShareDraftToken
-						? { publicShareDraftToken: submittedDraft.publicShareDraftToken }
-						: {}),
-					...(submittedDraft.publicPromptUseToken
-						? { publicPromptUseToken: submittedDraft.publicPromptUseToken }
-						: {}),
-					...(submittedDraft.repeatRunId
-						? { retryRunId: submittedDraft.repeatRunId }
-						: {}),
-					...(submittedTool ? { toolId: submittedTool.id } : {}),
-					parameters: buildParameters(
-						submittedDraft,
-						submittedOperation,
-						submittedFiles,
-						submittedUseConversationReference,
-						submittedModel.capabilities,
-					),
-					inputFileIds,
+				idempotencyKey,
+				quoteId: freshQuote.quoteId,
+				operation: submittedOperation,
+				modelId: submittedDraft.modelId,
+				...(conversationId ? { conversationId } : {}),
+				contextEnabled:
+					session.authenticated && supportsContext && Boolean(conversationId)
+						? submittedDraft.contextEnabled
+						: false,
+				...(submittedUseConversationReference
+					? { useConversationReference: true }
+					: {}),
+				...(submittedDraft.promptId
+					? { promptId: submittedDraft.promptId }
+					: {}),
+				...(submittedDraft.publicShareDraftToken
+					? { publicShareDraftToken: submittedDraft.publicShareDraftToken }
+					: {}),
+				...(submittedDraft.publicPromptUseToken
+					? { publicPromptUseToken: submittedDraft.publicPromptUseToken }
+					: {}),
+				...(submittedDraft.repeatRunId
+					? { retryRunId: submittedDraft.repeatRunId }
+					: {}),
+				...(submittedTool ? { toolId: submittedTool.id } : {}),
+				parameters: buildParameters(
+					submittedDraft,
+					submittedOperation,
+					submittedFiles,
+					submittedUseConversationReference,
+					submittedModel.capabilities,
+				),
+				inputFileIds,
 			});
 			const nextRun = unwrapAiData(runPayload);
 			if (viewEpoch.current === submissionEpoch) {
@@ -2224,13 +2240,20 @@ export function GenerationChatPage({
 		} catch (error) {
 			const message = getAiErrorMessage(error);
 			if (viewEpoch.current === submissionEpoch) {
-				const safeToRestore = !runSubmitted || (
-					error instanceof AiApiError && error.problem.status >= 400 && error.problem.status < 500
-				);
+				const safeToRestore =
+					!runSubmitted ||
+					(error instanceof AiApiError &&
+						error.problem.status >= 400 &&
+						error.problem.status < 500);
 				if (safeToRestore) {
 					setDraft((current) =>
-						current.prompt.trim() || current.modelId !== submittedDraft.modelId ? current
-							: { ...submittedDraft, conversationId: acceptedConversationId || current.conversationId },
+						current.prompt.trim() || current.modelId !== submittedDraft.modelId
+							? current
+							: {
+									...submittedDraft,
+									conversationId:
+										acceptedConversationId || current.conversationId,
+								},
 					);
 					if (referencesRef.current.length === 0) {
 						const restored = submittedReferences.map((reference) => ({
@@ -3066,10 +3089,34 @@ export function GenerationChatPage({
 												) : (
 													<div className={styles.emptyChat}>
 														<span>
-															<RiSparkling2Fill aria-hidden='true' />
+															{kind === 'text' ? (
+																<FiMessageCircle aria-hidden='true' />
+															) : kind === 'video' ? (
+																<FiVideo aria-hidden='true' />
+															) : (
+																<FiImage aria-hidden='true' />
+															)}
 														</span>
 														<h2>
-															{t('Начните диалог', 'Start a conversation')}
+															{isTool
+																? t(
+																		'Получите промпт из фото',
+																		'Get a prompt from your photo',
+																	)
+																: kind === 'image'
+																	? t(
+																			'Каким будет ваше изображение?',
+																			'What would you like to create?',
+																		)
+																	: kind === 'video'
+																		? t(
+																				'Начните с идеи для видео',
+																				'Start with a video idea',
+																			)
+																		: t(
+																				'Что вы хотите узнать?',
+																				'What would you like to know?',
+																			)}
 														</h2>
 														<p>
 															{kind === 'image'
@@ -3139,7 +3186,8 @@ export function GenerationChatPage({
 												</span>
 											</button>
 										) : null}
-											{referenceInputVisible && attachmentSupportKinds.length > 0 ? (
+										{referenceInputVisible &&
+										attachmentSupportKinds.length > 0 ? (
 											<div
 												aria-label={t(
 													'Поддерживаемые вложения',
@@ -3934,13 +3982,7 @@ function ChatTurnMessage({
 						className={`${styles.assistantMessage} ${isGenerating ? styles.typingMessage : ''}`}
 						role={isGenerating ? 'status' : undefined}
 					>
-						{isGenerating ? (
-							<div aria-hidden='true' className={styles.typingIndicator}>
-								<span />
-								<span />
-								<span />
-							</div>
-						) : null}
+						{isGenerating ? <RunState run={run} /> : null}
 						{hasSuccessfulResult ? (
 							<ChatOutputs
 								chargedCredits={work?.chargedCredits ?? run?.chargedCredits}
@@ -3955,6 +3997,22 @@ function ChatTurnMessage({
 							/>
 						) : null}
 						{submitError ? <FieldMessage>{submitError}</FieldMessage> : null}
+						{run?.status === 'cancelled' && (
+							<FieldMessage tone='notice'>
+								{t(
+									'Генерация отменена. Вы можете отправить новый запрос.',
+									'Generation cancelled. You can send a new request.',
+								)}
+							</FieldMessage>
+						)}
+						{run?.status === 'partially_succeeded' && (
+							<FieldMessage tone='notice'>
+								{t(
+									'Готова часть результатов. Доступные варианты можно сохранить.',
+									'Some results are ready. You can save the available outputs.',
+								)}
+							</FieldMessage>
+						)}
 						{run?.errorMessage ? (
 							<FieldMessage>{run.errorMessage}</FieldMessage>
 						) : null}
@@ -5268,6 +5326,11 @@ function DurationField({
 				max={Math.max(allowedValues.length - 1, 0)}
 				min={0}
 				step={1}
+				style={
+					{
+						'--ui-range-progress': `${allowedValues.length > 1 ? (currentIndex / (allowedValues.length - 1)) * 100 : 0}%`,
+					} as CSSProperties
+				}
 				type='range'
 				value={currentIndex}
 				onChange={(event) => {
@@ -6086,11 +6149,20 @@ function mergeRunOutputs(
 			// Signed media URLs can be regenerated on every polling response. Keeping
 			// the already rendered URL prevents the browser from reloading the same
 			// image or video on every background synchronization.
-			outputUrl: output.type === 'image' ? output.outputUrl ?? existing.outputUrl : existing.outputUrl ?? output.outputUrl,
-			previewUrl: output.type === 'image' ? output.previewUrl ?? existing.previewUrl : existing.previewUrl ?? output.previewUrl,
+			outputUrl:
+				output.type === 'image'
+					? (output.outputUrl ?? existing.outputUrl)
+					: (existing.outputUrl ?? output.outputUrl),
+			previewUrl:
+				output.type === 'image'
+					? (output.previewUrl ?? existing.previewUrl)
+					: (existing.previewUrl ?? output.previewUrl),
 			downloadUrl: output.downloadUrl ?? existing.downloadUrl,
 			copyUrl: existing.copyUrl ?? output.copyUrl,
-			url: output.type === 'image' ? output.url ?? existing.url : existing.url ?? output.url,
+			url:
+				output.type === 'image'
+					? (output.url ?? existing.url)
+					: (existing.url ?? output.url),
 		};
 	});
 	const missingCurrent = current.filter(
@@ -6121,7 +6193,9 @@ function mergeMessageAttachments(
 			width: file.width ?? existing.width,
 			height: file.height ?? existing.height,
 			durationMs: file.durationMs ?? existing.durationMs,
-			previewUrl: file.mimeType?.startsWith('image/') ? file.previewUrl ?? existing.previewUrl : existing.previewUrl ?? file.previewUrl,
+			previewUrl: file.mimeType?.startsWith('image/')
+				? (file.previewUrl ?? existing.previewUrl)
+				: (existing.previewUrl ?? file.previewUrl),
 			downloadUrl: file.downloadUrl ?? existing.downloadUrl,
 		};
 	});
@@ -6226,10 +6300,10 @@ function getAcceptedFileTypesLabel(mimeTypes: ReadonlySet<string>): string {
 			'image/jpeg': 'JPG',
 			'image/png': 'PNG',
 			'image/webp': 'WebP',
-				'video/mp4': 'MP4',
-				'video/mpeg': 'MPEG',
-				'video/quicktime': 'MOV',
-				'video/webm': 'WebM',
+			'video/mp4': 'MP4',
+			'video/mpeg': 'MPEG',
+			'video/quicktime': 'MOV',
+			'video/webm': 'WebM',
 			'video/x-matroska': 'MKV',
 			'audio/mpeg': 'MP3',
 			'audio/wav': 'WAV',

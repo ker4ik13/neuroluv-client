@@ -1,6 +1,6 @@
-import { AI_API_URL } from '@/shared/config/ai';
 import type { AiApiProblem } from './contracts';
 import { getAiDeviceFingerprint } from './deviceFingerprint';
+import { getAiRequestUrl } from './request-url';
 import {
 	AiRequestTimeoutError,
 	allowsRequestRetry,
@@ -71,7 +71,7 @@ export async function aiApiFetch<T>(
 			headers.set('x-csrf-token', await getCsrfToken());
 		}
 
-		const requestUrl = `${AI_API_URL}${normalizePath(path)}`;
+		const requestUrl = getAiRequestUrl(normalizePath(path));
 		const requestBody = serializeBody(body, headers);
 		return await executeAiRequest(
 			async (requestSignal) => {
@@ -233,7 +233,7 @@ async function getCsrfToken(): Promise<string> {
 	if (!csrfRequest) {
 		csrfRequest = executeAiRequest(
 			async (signal) => {
-				const response = await fetch(`${AI_API_URL}/auth/csrf`, {
+				const response = await fetch(getAiRequestUrl('/auth/csrf'), {
 					credentials: 'include',
 					headers: { accept: 'application/json' },
 					signal,

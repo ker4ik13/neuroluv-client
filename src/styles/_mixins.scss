@@ -1,94 +1,72 @@
-@use "functions" as *;
-@use "vars" as *;
+@use 'functions' as *;
+@use 'vars' as *;
 
 @mixin heading-font($weight: 700) {
-  $mobile-weight: $weight;
+	$resolved-weight: min($weight, 600);
 
-  @if $weight > 700 {
-    $mobile-weight: 700;
-  }
-
-  font-family: $font-heading;
-  font-weight: $weight;
-  letter-spacing: 0;
-
-  @media (max-width: em($breakpoint-tablet)) {
-    font-weight: $mobile-weight;
-  }
+	font-family: $font-heading;
+	font-weight: $resolved-weight;
+	letter-spacing: -0.025em;
 }
 
 @mixin body-font($weight: 400) {
-  font-family: $font-body;
-  font-weight: $weight;
-  letter-spacing: 0;
+	font-family: $font-body;
+	font-weight: min($weight, 600);
+	letter-spacing: 0;
 }
 
-@mixin focus-ring($color: $color-cyan) {
-  outline: rem(1) solid $color;
-  outline-offset: rem(-1);
+@mixin focus-ring($color: null) {
+	outline: var(--ui-focus-width, 1px) solid
+		var(--ui-focus-color, var(--ui-accent));
+	outline-offset: var(--ui-focus-offset, -1px);
+	@if $color {
+		outline-color: $color;
+	}
 }
 
-@mixin floating-particles($z-index: 1, $opacity: 0.42) {
-  &::after {
-    position: absolute;
-    inset: rem(-80);
-    z-index: $z-index;
-    pointer-events: none;
-    background-image:
-      radial-gradient(circle, rgba($color-white, 0.78) 0 rem(1.5), transparent rem(2.5)),
-      radial-gradient(circle, rgba($color-cyan, 0.62) 0 rem(1.5), transparent rem(3)),
-      radial-gradient(circle, rgba($color-white, 0.34) 0 rem(2), transparent rem(4)),
-      radial-gradient(circle, rgba($color-blue, 0.46) 0 rem(1), transparent rem(3));
-    background-position:
-      0 0,
-      rem(46) rem(78),
-      rem(118) rem(28),
-      rem(172) rem(132);
-    background-size:
-      rem(142) rem(142),
-      rem(190) rem(190),
-      rem(260) rem(260),
-      rem(320) rem(320);
-    content: '';
-    mix-blend-mode: screen;
-    opacity: $opacity;
-    transform: translate3d(0, 0, 0);
-    animation:
-      floating-particles-drift 26s linear infinite,
-      floating-particles-pulse 7s ease-in-out infinite alternate;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &::after {
-      animation: none;
-    }
-  }
+@mixin content-section {
+	width: 100%;
+	max-width: rem($container + 40);
+	margin: 0 auto;
+	padding: rem(48) rem(20);
+	@media (max-width: em($breakpoint-tablet)) {
+		padding: rem(32) rem(16);
+	}
 }
 
-@keyframes floating-particles-drift {
-  from {
-    background-position:
-      0 0,
-      rem(46) rem(78),
-      rem(118) rem(28),
-      rem(172) rem(132);
-  }
-
-  to {
-    background-position:
-      rem(142) rem(-142),
-      rem(-144) rem(268),
-      rem(378) rem(288),
-      rem(-148) rem(-188);
-  }
+@mixin section-title {
+	@include heading-font(600);
+	color: var(--ui-text);
+	font-size: clamp(rem(28), 3.2vw, rem(42));
+	line-height: 1.16;
+	text-wrap: balance;
+	text-transform: none;
 }
 
-@keyframes floating-particles-pulse {
-  from {
-    opacity: 0.24;
-  }
+@mixin section-copy {
+	@include body-font(400);
+	color: var(--ui-muted);
+	font-size: rem(17);
+	line-height: 1.65;
+	overflow-wrap: normal;
+	word-break: normal;
+	hyphens: none;
+}
 
-  to {
-    opacity: 0.58;
-  }
+@mixin quiet-card {
+	color: var(--ui-text);
+	background: var(--ui-surface);
+	border: rem(1) solid var(--ui-border);
+	border-radius: rem($radius-sm);
+	box-shadow: var(--ui-panel-shadow);
+}
+
+@mixin sticky-section-heading {
+	position: sticky;
+	top: var(--section-heading-sticky-top);
+	align-self: start;
+
+	@media (max-width: em($breakpoint-laptop)) {
+		position: static;
+	}
 }

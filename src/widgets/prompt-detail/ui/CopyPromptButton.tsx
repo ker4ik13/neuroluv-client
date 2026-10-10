@@ -1,7 +1,8 @@
 "use client";
 
+import { FiCopy } from 'react-icons/fi';
 import { useState } from "react";
-import { AiOutlineCopy } from "react-icons/ai";
+
 
 import styles from "./PromptDetailPage.module.scss";
 
@@ -31,7 +32,7 @@ export function CopyPromptButton({
   return (
     <button className={styles.heroActionButton} onClick={handleCopy} type="button">
       {isCopied ? "Скопировано" : label}
-      <AiOutlineCopy aria-hidden="true" />
+      <FiCopy aria-hidden="true" />
     </button>
   );
 }

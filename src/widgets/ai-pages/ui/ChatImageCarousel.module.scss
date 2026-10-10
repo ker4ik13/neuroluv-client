@@ -47,7 +47,9 @@
 	border: rem(2) solid transparent;
 	border-radius: rem(13);
 	cursor: pointer;
-	transition: border-color 160ms ease, transform 160ms ease;
+	transition:
+		border-color 160ms ease,
+		transform 160ms ease;
 
 	img {
 		display: block;
@@ -86,7 +88,9 @@
 	border-radius: 50%;
 	cursor: pointer;
 	transform: translateY(-50%);
-	transition: background-color 160ms ease, transform 160ms ease;
+	transition:
+		background-color 160ms ease,
+		transform 160ms ease;
 
 	&:hover {
 		background: var(--ai-primary);
@@ -98,8 +102,12 @@
 	}
 }
 
-.arrowPrevious { left: rem(10); }
-.arrowNext { right: rem(10); }
+.arrowPrevious {
+	left: rem(10);
+}
+.arrowNext {
+	right: rem(10);
+}
 
 .compact {
 	grid-template-columns: minmax(0, 1fr);

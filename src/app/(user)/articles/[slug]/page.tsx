@@ -7,6 +7,7 @@ import {
 } from "@/shared/api/directus/articles";
 import {
   buildBlogArticleJsonLd,
+  buildFaqQuestionsJsonLd,
   buildBreadcrumbJsonLd,
   buildWebPageJsonLd,
 } from "@/shared/lib/seo/json-ld";
@@ -74,6 +75,7 @@ export default async function ArticleDetailRoute({
             url: data.item.href,
           }),
           buildBlogArticleJsonLd(data.item),
+          buildFaqQuestionsJsonLd(data.item.contentBlocks.flatMap(block => block.type === 'faq' ? block.questions : [])),
           buildBreadcrumbJsonLd([
             { name: "Главная", url: "/" },
             { name: "Блог", url: "/articles" },

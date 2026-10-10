@@ -3,20 +3,23 @@
 @use '../../../styles/vars' as *;
 
 .card {
+	@include quiet-card;
 	display: flex;
 	min-width: 0;
 	overflow: hidden;
 	flex-direction: column;
 	gap: 0;
 	padding: 0;
-	color: $color-ink;
-	background: $color-white;
-	border-radius: rem(24);
-	box-shadow: 0 rem(12) rem(28) rgba(0, 0, 0, 0.07);
-	transition: box-shadow 160ms ease;
+	color: var(--ui-text);
+	background: var(--ui-surface);
+	border-radius: rem(14);
+	transition: border-color 160ms ease;
 
 	&:hover {
-		box-shadow: 0 rem(16) rem(34) rgba(0, 0, 0, 0.1);
+		border-color: var(--ui-accent);
+	}
+	&:focus-within {
+		border-color: var(--ui-accent);
 	}
 
 	&:focus-visible {
@@ -29,12 +32,13 @@
 	display: flex;
 	width: 100%;
 	overflow: hidden;
-	aspect-ratio: 1 / 1.2;
+	aspect-ratio: var(--prompt-preview-ratio, 0.8);
 	align-items: center;
 	justify-content: center;
 	color: $color-white;
-	background: $color-white;
-	border-radius: rem(16);
+	background: var(--ui-surface-soft);
+	border-radius: 0;
+	border-bottom: rem(1) solid var(--ui-border);
 
 	img {
 		object-fit: cover;
@@ -53,21 +57,9 @@
 	font-size: rem(28);
 	line-height: 1;
 	text-align: center;
-	background: $color-ink-soft;
-	text-transform: uppercase;
-
-	&::before {
-		position: absolute;
-		inset: rem(-28);
-		z-index: -1;
-		background: radial-gradient(
-			circle,
-			rgba($color-cyan, 0.55),
-			transparent 68%
-		);
-		content: '';
-		filter: blur(rem(16));
-	}
+	color: var(--ui-muted);
+	background: var(--ui-surface-soft);
+	text-transform: none;
 }
 
 .cardBody {
@@ -89,6 +81,13 @@
 	gap: rem(8);
 }
 
+.actions {
+	margin-top: auto;
+	padding: 0 16px 16px;
+
+	@media (max-width: 480px) { padding: 0 12px 12px; }
+}
+
 .badge,
 .badgePrimary {
 	@include body-font(700);
@@ -97,10 +96,10 @@
 	align-items: center;
 	gap: rem(5);
 	padding: rem(6) rem(10);
-	color: $color-ink;
+	color: var(--ui-text);
 	font-size: rem(12);
 	line-height: 1;
-	background: $color-surface;
+	background: var(--ui-surface-soft);
 	border-radius: rem(16);
 
 	> svg {
@@ -125,7 +124,7 @@
 
 	display: -webkit-box;
 	overflow: hidden;
-	color: #000000;
+	color: var(--ui-text);
 	font-size: rem(18);
 	line-height: 1.15;
 	-webkit-box-orient: vertical;
@@ -134,6 +133,12 @@
 	@media (max-width: em($breakpoint-tablet)) {
 		font-size: rem(16);
 	}
+}
+
+.detailLine {
+	color: var(--ui-muted);
+	font-size: rem(12);
+	line-height: 1.4;
 }
 
 .networkLogo {

@@ -1,323 +1,107 @@
 @use '../../../../styles/functions' as *;
 @use '../../../../styles/mixins' as *;
 @use '../../../../styles/vars' as *;
-
 .section {
-	width: 100%;
-	max-width: rem($container + 40);
-	margin: 0 auto;
-	padding: rem(40) rem(20);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(32) rem(16);
-	}
+	@include content-section;
 }
-
 .inner {
 	display: flex;
 	flex-direction: column;
-	gap: rem(28);
+	gap: rem(32);
 }
-
 .intro {
-	@include floating-particles(1, 0.38);
-
-	position: relative;
-	display: flex;
-	overflow: hidden;
-	align-items: flex-start;
-	gap: rem(40);
-	padding: rem(30);
-	color: $color-white;
-	background: $color-ink-soft;
-	border-radius: rem(24);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		min-height: 0;
-		flex-direction: column;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		padding: rem(24);
-		border-radius: rem(20);
-	}
+	display: grid;
+	grid-template-columns: 1fr 0.8fr;
+	align-items: center;
+	gap: rem(64);
 }
-
+.intro[data-has-image='false'] {
+	grid-template-columns: 1fr;
+}
 .introText {
-	position: relative;
-	z-index: 1;
 	display: flex;
 	max-width: rem(700);
 	flex-direction: column;
-	align-items: flex-start;
-	gap: rem(24);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		max-width: rem(640);
-	}
+	gap: rem(20);
 }
-
 .title {
-	@include heading-font(800);
-
-	color: $color-white;
-	font-size: rem(56);
-	line-height: 0.95;
-	text-transform: uppercase;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(38);
-		line-height: 1.05;
-	}
-
-	@media (max-width: em($breakpoint-mobile)) {
-		font-size: rem(32);
-	}
+	@include section-title;
 }
-
 .description {
-	@include body-font(400);
-
-	color: #e5f0f5;
-	font-size: rem(22);
-	line-height: 1.36;
-
-	@media (max-width: em($breakpoint-tablet)) {
-		font-size: rem(18);
-	}
-}
-
-.actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: rem(14);
-}
-
-.button {
-	@include body-font(600);
-
-	display: inline-flex;
-	min-height: rem(48);
-	align-items: center;
-	justify-content: center;
-	gap: rem(8);
-	padding: rem(14) rem(24);
-	color: $color-white;
-	font-size: rem(18);
-	line-height: 1;
-	border: rem(1) solid transparent;
-	border-radius: rem(14);
-	transition:
-		color 160ms ease,
-		background-color 160ms ease,
-		border-color 160ms ease;
-
-	&:focus-visible {
-		@include focus-ring;
-	}
-}
-
-.buttonPrimary {
-	background: $color-blue-hover;
-
-	&:hover {
-		background: $color-blue;
-	}
-}
-
-.buttonSecondary {
-	background: rgba($color-white, 0.08);
-	border-color: rgba($color-white, 0.22);
-
-	&:hover {
-		background: rgba($color-white, 0.14);
-	}
-}
-
-.buttonIcon {
-	width: rem(20);
-	height: rem(20);
-	flex: 0 0 rem(20);
+	@include section-copy;
 }
 
 .imageWrap {
-	position: absolute;
-	top: 50%;
-	right: rem(50);
-	height: 100%;
-	width: auto;
-	transform: translateY(-50%);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		position: relative;
-		top: auto;
-		right: auto;
-		width: min(100%, rem(360));
-		height: auto;
-		margin-left: auto;
-		transform: none;
-	}
+	min-width: 0;
+	overflow: hidden;
+	border-radius: rem($radius-sm);
 }
-
 .image {
 	display: block;
 	width: 100%;
-	height: 100%;
+	height: auto;
 	object-fit: contain;
 }
 
-.cards {
-	--use-cases-columns: 3;
-
-	display: grid;
-	grid-template-columns: repeat(var(--use-cases-columns), minmax(0, 1fr));
-	gap: rem(20);
-
-	&[data-layout='one'] {
-		--use-cases-columns: 1;
-	}
-
-	&[data-layout='two'] {
-		--use-cases-columns: 2;
-	}
-
-	&[data-layout='three'] {
-		--use-cases-columns: 3;
-	}
-
-	@media (max-width: em($breakpoint-laptop)) {
-		--use-cases-columns: 2;
-
-		&[data-layout='one'] {
-			--use-cases-columns: 1;
-		}
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		--use-cases-columns: 1;
-	}
-	@media (max-width: em($breakpoint-mobile)) {
-		--use-cases-columns: 1;
-
-		&[data-layout='two'] {
-			--use-cases-columns: 1;
-		}
-
-		&[data-layout='three'] {
-			--use-cases-columns: 1;
-		}
-	}
-}
-
 .card {
-	display: flex;
-	min-height: rem(190);
-	flex-direction: column;
-	gap: rem(18);
-	padding: rem(26);
-	background: $color-white;
-	border-radius: rem(24);
-	box-shadow: 0 rem(12) rem(14) rgba(0, 0, 0, 0.06);
-
-	@media (max-width: em($breakpoint-tablet)) {
-		min-height: 0;
-		padding: rem(22);
-		border-radius: rem(20);
-	}
+	@include quiet-card;
+	padding: rem(28);
 }
-
 .cardTitle {
-	@include body-font(700);
-
-	color: #141414;
-	font-size: rem(22);
-	line-height: 1;
-	text-transform: uppercase;
+	font-size: rem(18);
+	font-weight: 600;
+	line-height: 1.4;
 }
-
 .tasks {
-	display: flex;
-	flex-direction: column;
-	gap: rem(10);
+	display: grid;
+	gap: rem(14);
+	margin-top: rem(24);
+	list-style: none;
 }
-
 .task {
-	@include body-font(400);
-
 	display: flex;
 	align-items: flex-start;
 	gap: rem(10);
-	color: #1e1e1e;
-	font-size: rem(17);
-	line-height: 1.4;
+	@include section-copy;
 }
-
 .taskIcon {
-	width: rem(18);
-	height: rem(18);
-	flex: 0 0 rem(18);
-	margin-top: rem(2);
-	color: $color-cyan;
-}
-
-.advice {
-	display: flex;
-	min-height: rem(80);
-	align-items: center;
-	gap: rem(24);
-	padding: rem(20);
-	color: $color-white;
-	background: $color-ink-soft;
-	border-radius: rem(24);
-
-	@media (max-width: em($breakpoint-laptop)) {
-		flex-wrap: wrap;
-	}
-
-	@media (max-width: em($breakpoint-tablet)) {
-		align-items: flex-start;
-		gap: rem(14);
-		border-radius: rem(20);
-	}
-}
-
-.adviceIconBox {
-	display: inline-flex;
-	width: rem(40);
-	height: rem(40);
-	flex: 0 0 rem(40);
-	align-items: center;
-	justify-content: center;
-	color: $color-white;
-	background: $color-blue-hover;
-	border-radius: rem(12);
-}
-
-.adviceIcon {
 	width: rem(20);
 	height: rem(20);
+	flex-shrink: 0;
+	margin-top: rem(2);
+	color: var(--ui-accent);
 }
-
-.adviceEmoji {
-	font-size: rem(20);
-	line-height: 1;
+.advice {
+	display: grid;
+	grid-template-columns: rem(24) minmax(0, 1fr);
+	align-items: start;
+	gap: rem(10) rem(14);
+	padding: rem(24);
+	background: var(--ui-surface-muted);
+	border-radius: rem($radius-sm);
 }
-
+.adviceIconBox {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ui-accent);
+}
+.adviceIcon {
+	width: rem(22);
+	height: rem(22);
+}
 .adviceTitle {
-	@include body-font(700);
-
-	font-size: rem(22);
-	line-height: 1;
-}
-
-.adviceDescription {
-	@include body-font(400);
-
-	color: #d1e0eb;
 	font-size: rem(18);
-	line-height: 1.25;
-
-	@media (max-width: em($breakpoint-laptop)) {
-		width: 100%;
+	font-weight: 500;
+	line-height: 1.4;
+}
+.adviceDescription {
+	@include section-copy;
+	grid-column: 2;
+}
+@media (max-width: em($breakpoint-tablet)) {
+	.intro {
+		grid-template-columns: 1fr;
+		gap: rem(28);
 	}
 }

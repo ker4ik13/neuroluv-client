@@ -24,25 +24,25 @@
 }
 
 .label {
-	color: var(--ai-text);
+	color: var(--ui-text);
 	font-size: rem(14);
-	font-weight: 750;
+	font-weight: 600;
 }
 
 .trigger {
 	display: grid;
 	width: 100%;
-	min-height: rem(46);
+	min-height: rem(44);
 	grid-template-columns: minmax(0, 1fr) rem(20);
 	align-items: center;
 	gap: rem(12);
 	padding: rem(8) rem(11);
-	color: var(--ai-text);
+	color: var(--ui-text);
 	font: inherit;
 	text-align: left;
-	background: var(--ai-field-bg);
-	border: rem(1) solid var(--ai-border);
-	border-radius: rem(12);
+	background: var(--ui-surface);
+	border: rem(1) solid var(--ui-border);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 	outline: none;
 	transition:
@@ -51,14 +51,14 @@
 		box-shadow 150ms ease;
 
 	&:hover:not(:disabled) {
-		border-color: #c4d5df;
+		border-color: var(--ui-accent);
 	}
 
 	&:focus-visible {
 		@include focus-ring;
 
-		background: var(--ai-surface);
-		border-color: var(--ai-primary);
+		background: var(--ui-surface);
+		border-color: var(--ui-accent);
 	}
 
 	&:disabled {
@@ -68,13 +68,12 @@
 }
 
 .rootOpen .trigger {
-	background: var(--ai-surface);
-	border-color: var(--ai-primary);
-	box-shadow: inset 0 0 0 rem(1) rgba(8, 127, 219, 0.16);
+	background: var(--ui-surface);
+	border-color: var(--ui-accent);
 }
 
 .rootInvalid .trigger {
-	border-color: var(--ai-error);
+	border-color: var(--ui-danger);
 }
 
 .triggerContent,
@@ -111,15 +110,15 @@
 .placeholder,
 .optionLabel {
 	font-size: rem(15);
-	font-weight: 700;
+	font-weight: 500;
 	line-height: 1.25;
-	overflow-wrap: anywhere;
+	overflow-wrap: normal;
 	white-space: normal;
 }
 
 .placeholder {
-	color: #8797a4;
-	font-weight: 600;
+	color: var(--ui-muted);
+	font-weight: 400;
 }
 
 .valueDescription,
@@ -133,15 +132,15 @@
 .valueDescription,
 .optionDescription,
 .description {
-	color: var(--ai-muted);
-	overflow-wrap: anywhere;
+	color: var(--ui-muted);
+	overflow-wrap: normal;
 }
 
 .chevron {
 	width: rem(20);
 	height: rem(20);
 	flex: 0 0 rem(20);
-	color: var(--ai-muted);
+	color: var(--ui-muted);
 	transition: transform 150ms ease;
 }
 
@@ -163,10 +162,10 @@
 	overflow: hidden auto;
 	overscroll-behavior: contain;
 	list-style: none;
-	background: var(--ai-surface);
-	border: rem(1) solid rgba(8, 127, 219, 0.28);
-	border-radius: rem(14);
-	box-shadow: 0 rem(18) rem(50) rgba(19, 40, 56, 0.18);
+	background: var(--ui-surface);
+	border: rem(1) solid var(--ui-border);
+	border-radius: var(--ui-control-radius);
+	box-shadow: var(--ui-popover-shadow);
 }
 
 .listboxBottom {
@@ -190,18 +189,18 @@
 
 	&:not(:first-child) {
 		padding-top: rem(5);
-		border-top: rem(1) solid var(--ai-border);
+		border-top: rem(1) solid var(--ui-border);
 	}
 }
 
 .optionGroupLabel {
 	padding: rem(6) rem(11) rem(3);
-	color: var(--ai-muted);
+	color: var(--ui-muted);
 	font-size: rem(11);
-	font-weight: 800;
+	font-weight: 600;
 	letter-spacing: 0.06em;
 	line-height: 1.25;
-	text-transform: uppercase;
+	text-transform: none;
 }
 
 .optionGroupList {
@@ -220,9 +219,9 @@
 	align-items: center;
 	gap: rem(10);
 	padding: rem(7) rem(9);
-	color: var(--ai-text);
+	color: var(--ui-text);
 	text-decoration: none;
-	border-radius: rem(10);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 	outline: none;
 	transition:
@@ -236,7 +235,7 @@
 	.trigger {
 		min-height: rem(42);
 		padding: rem(7) rem(10);
-		background: var(--ai-surface);
+		background: var(--ui-surface);
 	}
 
 	.value,
@@ -252,12 +251,12 @@
 }
 
 .optionActive {
-	background: var(--ai-surface-soft);
+	background: var(--ui-surface-soft);
 }
 
 .optionSelected {
-	color: var(--ai-primary);
-	background: var(--ai-primary-soft);
+	color: var(--ui-accent);
+	background: var(--ui-accent-soft);
 }
 
 .optionDisabled {
@@ -275,8 +274,8 @@
 }
 
 .error {
-	color: var(--ai-error);
-	font-weight: 650;
+	color: var(--ui-danger);
+	font-weight: 600;
 }
 
 @media (max-width: 520px) {

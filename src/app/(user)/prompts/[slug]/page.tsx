@@ -8,6 +8,7 @@ import {
 import {
   buildBreadcrumbJsonLd,
   buildPromptJsonLd,
+  buildFaqQuestionsJsonLd,
   buildWebPageJsonLd,
 } from "@/shared/lib/seo/json-ld";
 import { buildPageMetadata } from "@/shared/lib/seo/metadata";
@@ -74,6 +75,7 @@ export default async function PromptDetailRoute({
             url: data.item.href,
           }),
           buildPromptJsonLd(data.item),
+          buildFaqQuestionsJsonLd(data.item.contentBlocks.flatMap(block => block.type === 'faq' ? block.questions : [])),
           buildBreadcrumbJsonLd([
             { name: "Главная", url: "/" },
             { name: "Промпты", url: "/prompts" },

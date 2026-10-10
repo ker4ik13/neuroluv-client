@@ -1,12 +1,14 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { FooterData, FooterLink } from '@/entities/footer';
 import type { NavigationLogo, SocialLink } from '@/entities/navigation';
-import { BrandIcon } from '@/shared/ui/brand-icon';
 import { Container } from '@/shared/ui/container';
+import { SocialLink as SocialLinkControl } from '@/shared/ui/social-link';
 import styles from './Footer.module.scss';
 
 type FooterViewProps = {
 	footer: FooterData;
+	utilities?: ReactNode;
 };
 
 const FOUNDER_CREDIT = {
@@ -15,7 +17,7 @@ const FOUNDER_CREDIT = {
 	url: 'https://t.me/imishka0',
 } as const;
 
-export function FooterView({ footer }: FooterViewProps) {
+export function FooterView({ footer, utilities }: FooterViewProps) {
 	return (
 		<footer className={styles.footer}>
 			<Container className={styles.inner}>
@@ -73,7 +75,12 @@ export function FooterView({ footer }: FooterViewProps) {
 				<div className={styles.divider} />
 
 				<div className={styles.bottom}>
-					<p className={styles.copyright}>{footer.copyrightText}</p>
+					<div className={styles.identity}>
+						<p className={styles.copyright}>{footer.copyrightText}</p>
+						{utilities ? (
+							<div className={styles.utilities}>{utilities}</div>
+						) : null}
+					</div>
 
 					<div className={styles.credits}>
 						<CreditBadge {...FOUNDER_CREDIT} />
@@ -119,16 +126,13 @@ function LogoMark({ logo }: { logo: NavigationLogo | null }) {
 
 function SocialLinkItem({ link }: { link: SocialLink }) {
 	return (
-		<a
-			aria-label={link.title}
+		<SocialLinkControl
+			label={link.title}
 			className={styles.socialLink}
 			href={link.url}
-			rel='noreferrer'
-			target='_blank'
-			title={link.title}
-		>
-			<BrandIcon className={styles.socialIcon} platform={link.platform} />
-		</a>
+			platform={link.platform}
+			iconClassName={styles.socialIcon}
+		/>
 	);
 }
 

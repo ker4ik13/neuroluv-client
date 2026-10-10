@@ -1,0 +1,38 @@
+@use '../../../styles/functions' as *;
+@use '../../../styles/mixins' as *;
+.nav {
+	color: var(--ui-muted);
+	font-size: rem(13);
+	line-height: 1.5;
+}
+.nav ol {
+	display: flex;
+	flex-wrap: wrap;
+	gap: rem(5) rem(10);
+	list-style: none;
+}
+.nav li {
+	display: inline-flex;
+	min-width: 0;
+	max-width: 100%;
+	align-items: center;
+	gap: rem(10);
+}
+.nav svg {
+	width: rem(14);
+	height: rem(14);
+	flex: 0 0 auto;
+}
+.nav a:hover {
+	color: var(--ui-accent);
+}
+.nav a:focus-visible {
+	@include focus-ring;
+}
+.nav span {
+	overflow: hidden;
+	max-width: 60ch;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--ui-text);
+}

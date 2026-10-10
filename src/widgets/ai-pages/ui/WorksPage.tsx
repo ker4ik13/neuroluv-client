@@ -197,6 +197,7 @@ export function WorksPage({
     <AiPage>
       <AiPageHeader
         title={t("Мои работы", "My works")}
+        description={t('Ваши изображения и видео. Находите нужное, сохраняйте и делитесь результатами.', 'Your images and videos. Find, save and share your results.')}
         actions={
           <AiLinkButton href="/ai">
             <FiPlus aria-hidden="true" />

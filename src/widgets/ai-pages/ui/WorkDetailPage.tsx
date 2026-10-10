@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   FiArchive,
-  FiArrowLeft,
   FiBookmark,
   FiCalendar,
   FiCopy,
@@ -267,14 +265,7 @@ export function WorkDetailPage({ id }: { id: string }) {
       >
         {work.data ? (
           <>
-            <header className={styles.detailToolbar}>
-              <Link className={styles.detailBackLink} href="/ai/works">
-                <FiArrowLeft aria-hidden="true" />
-                {t("Назад", "Back")}
-              </Link>
-              <strong className={styles.detailTitle}>{work.data.title}</strong>
-              <StatusBadge status={work.data.status} />
-            </header>
+            <AiPageHeader title={work.data.title} backHref='/ai/works' actions={<StatusBadge status={work.data.status} />} />
 
             <div className={styles.workDetailGrid}>
               <AiCard className={styles.resultCard}>

@@ -12,7 +12,6 @@ import {
 	FiLock,
 	FiLogOut,
 	FiMail,
-	FiMessageCircle,
 	FiMoon,
 	FiSave,
 	FiSend,
@@ -37,6 +36,7 @@ import {
 	clearAiCsrfToken,
 } from '@/shared/api/ai';
 import { AI_SUPPORT_URL } from '@/shared/config/ai';
+import { SectionTabs } from '@/shared/ui/section-tabs';
 import { getAiErrorMessage, unwrapAiData, useAiResource } from '../model/api';
 import styles from './AiPages.module.scss';
 import { AiSelect } from './AiSelect';
@@ -55,14 +55,16 @@ export function ProfilePage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { setLocale, t } = useAiLocale();
-	const { setTheme } = useAiTheme();
+	const { theme: themePreference, setTheme, applyAccountTheme } = useAiTheme();
 	const { session, isLoading: isSessionLoading, refresh } = useAiSession();
 	const profile = useAiResource<AiUserProfile>(
 		session.authenticated ? '/profile' : null,
 	);
 	const [displayName, setDisplayName] = useState('');
 	const [language, setLanguage] = useState<AiLocale>('ru-RU');
-	const [themePreference, setThemePreference] = useState<AiTheme>('system');
+	const [section, setSection] = useState<
+		'general' | 'notifications' | 'security'
+	>('general');
 	const [marketingConsent, setMarketingConsent] = useState(false);
 	const [telegramNotifications, setTelegramNotifications] = useState(false);
 	const [browserNotifications, setBrowserNotifications] = useState(false);
@@ -101,12 +103,12 @@ export function ProfilePage() {
 			setDisplayName(data.displayName);
 			setLanguage(data.language === 'en-US' ? 'en-US' : 'ru-RU');
 			const profileTheme = data.preferences?.theme;
-			const nextTheme =
-				profileTheme === 'light' || profileTheme === 'dark'
-					? profileTheme
-					: 'system';
-			setThemePreference(nextTheme);
-			setTheme(nextTheme);
+			if (
+				profileTheme === 'light' ||
+				profileTheme === 'dark' ||
+				profileTheme === 'system'
+			)
+				applyAccountTheme(profileTheme);
 			setMarketingConsent(Boolean(data.marketingConsent));
 			setTelegramNotifications(
 				Boolean(data.preferences?.telegramNotifications),
@@ -115,7 +117,7 @@ export function ProfilePage() {
 		}, 0);
 
 		return () => window.clearTimeout(timer);
-	}, [profile.data, setTheme]);
+	}, [profile.data, applyAccountTheme]);
 
 	useEffect(() => {
 		if (!session.authenticated) return;
@@ -150,6 +152,7 @@ export function ProfilePage() {
 	async function saveProfile(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		if (!displayName.trim()) {
+			setSection('general');
 			setError(t('Укажите имя', 'Enter your name'));
 			return;
 		}
@@ -455,15 +458,10 @@ export function ProfilePage() {
 		<AiPage>
 			<AiPageHeader
 				title={t('Профиль', 'Profile')}
-				actions={
-					<AiButton
-						disabled={isPending}
-						variant='ghost'
-						onClick={() => void logout()}
-					>
-						<FiLogOut aria-hidden='true' /> {t('Выйти', 'Sign out')}
-					</AiButton>
-				}
+				description={t(
+					'Настройки аккаунта, уведомлений и безопасности.',
+					'Account, notification and security settings.',
+				)}
 			/>
 
 			<AsyncState
@@ -509,21 +507,53 @@ export function ProfilePage() {
 									{t('Помощь и FAQ', 'Help and FAQ')}
 								</AiLinkButton>
 								<AiLinkButton href={AI_SUPPORT_URL} variant='ghost'>
-									<FiMessageCircle aria-hidden='true' />{' '}
-									{t('Обратная связь', 'Feedback')}
-								</AiLinkButton>
-								<AiLinkButton href={AI_SUPPORT_URL} variant='ghost'>
 									<FiSend aria-hidden='true' /> {t('Поддержка', 'Support')}
 								</AiLinkButton>
+								<AiButton
+									disabled={isPending}
+									variant='danger'
+									onClick={() => void logout()}
+								>
+									<FiLogOut aria-hidden='true' /> {t('Выйти', 'Sign out')}
+								</AiButton>
 							</div>
 						</AiCard>
 
 						<div className={styles.profileSettingsColumn}>
-							<AiCard className={styles.profileFormCard}>
+							<SectionTabs<'general' | 'notifications' | 'security'>
+								label={t('Разделы профиля', 'Profile sections')}
+								value={section}
+								onChange={setSection}
+								items={[
+									{
+										value: 'general',
+										label: t('Общие', 'General'),
+										icon: <FiUser aria-hidden />,
+									},
+									{
+										value: 'notifications',
+										label: t('Уведомления', 'Notifications'),
+										icon: <FiBell aria-hidden />,
+									},
+									{
+										value: 'security',
+										label: t('Вход и безопасность', 'Sign-in and security'),
+										icon: <FiShield aria-hidden />,
+									},
+								]}
+							/>
+							<AiCard
+								className={styles.profileFormCard}
+								hidden={section === 'security'}
+							>
 								<form className={styles.formStack} onSubmit={saveProfile}>
 									<div className={styles.cardTitleRow}>
 										<div>
-											<h2>{t('Настройки', 'Settings')}</h2>
+											<h2>
+												{section === 'notifications'
+													? t('Уведомления', 'Notifications')
+													: t('Общие настройки', 'General settings')}
+											</h2>
 											<p>
 												{t(
 													'Изменения применятся ко всем устройствам.',
@@ -533,56 +563,66 @@ export function ProfilePage() {
 										</div>
 										<FiShield aria-hidden='true' />
 									</div>
-									<label className={styles.field}>
-										<span>{t('Имя', 'Name')}</span>
-										<input
-											maxLength={120}
-											required
-											value={displayName}
-											onChange={(event) => setDisplayName(event.target.value)}
+									<div
+										className={styles.formStack}
+										hidden={section === 'notifications'}
+									>
+										<label className={styles.field}>
+											<span>{t('Имя', 'Name')}</span>
+											<input
+												maxLength={120}
+												required={section === 'general'}
+												value={displayName}
+												onChange={(event) => setDisplayName(event.target.value)}
+											/>
+										</label>
+										<AiSelect<AiLocale>
+											id='profile-language'
+											label={t('Язык интерфейса', 'Interface language')}
+											options={[
+												{ value: 'ru-RU', label: 'Русский' },
+												{ value: 'en-US', label: 'English' },
+											]}
+											value={language}
+											onChange={(nextLanguage) => {
+												setLanguage(nextLanguage);
+												setLocale(nextLanguage);
+											}}
 										/>
-									</label>
-									<AiSelect<AiLocale>
-										id='profile-language'
-										label={t('Язык интерфейса', 'Interface language')}
-										options={[
-											{ value: 'ru-RU', label: 'Русский' },
-											{ value: 'en-US', label: 'English' },
-										]}
-										value={language}
-										onChange={(nextLanguage) => {
-											setLanguage(nextLanguage);
-											setLocale(nextLanguage);
-										}}
-									/>
-									<AiSelect<AiTheme>
-										id='profile-theme'
-										label={t('Оформление', 'Appearance')}
-										options={[
-											{ value: 'system', label: t('Как в системе', 'System') },
-											{ value: 'light', label: t('Светлая', 'Light') },
-											{ value: 'dark', label: t('Тёмная', 'Dark') },
-										]}
-										value={themePreference}
-										onChange={(nextTheme) => {
-											setThemePreference(nextTheme);
-											setTheme(nextTheme);
-										}}
-									/>
-									<div className={styles.preferenceTitle}>
-										<FiMoon aria-hidden='true' />
-										<p>
-											{t(
-												'Тема сохраняется для этого устройства и аккаунта.',
-												'The theme is saved for this device and account.',
-											)}
-										</p>
+										<AiSelect<AiTheme>
+											id='profile-theme'
+											label={t('Оформление', 'Appearance')}
+											options={[
+												{
+													value: 'system',
+													label: t('Как в системе', 'System'),
+												},
+												{ value: 'light', label: t('Светлая', 'Light') },
+												{ value: 'dark', label: t('Тёмная', 'Dark') },
+											]}
+											value={themePreference}
+											onChange={setTheme}
+										/>
+										<div className={styles.preferenceTitle}>
+											<FiMoon aria-hidden='true' />
+											<p>
+												{t(
+													'Тема сохраняется для этого устройства и аккаунта.',
+													'The theme is saved for this device and account.',
+												)}
+											</p>
+										</div>
 									</div>
-									<div className={styles.preferenceGroup}>
+									<div
+										className={styles.preferenceGroup}
+										hidden={section !== 'notifications'}
+									>
 										<div className={styles.preferenceTitle}>
 											<FiBell aria-hidden='true' />
 											<div>
-												<h3>{t('Уведомления', 'Notifications')}</h3>
+												<h3>
+													{t('Каналы уведомлений', 'Notification channels')}
+												</h3>
 												<p>
 													{t(
 														'Вы можете изменить выбор в любой момент.',
@@ -730,7 +770,10 @@ export function ProfilePage() {
 								</form>
 							</AiCard>
 
-							<AiCard className={styles.profileFormCard}>
+							<AiCard
+								className={styles.profileFormCard}
+								hidden={section !== 'security'}
+							>
 								<div className={styles.cardTitleRow}>
 									<div>
 										<h2>{t('Способы входа', 'Sign-in methods')}</h2>
@@ -855,7 +898,10 @@ export function ProfilePage() {
 							</AiCard>
 
 							{profile.data.authMethods.emailPassword ? (
-								<AiCard className={styles.profileFormCard}>
+								<AiCard
+									className={styles.profileFormCard}
+									hidden={section !== 'security'}
+								>
 									<div className={styles.cardTitleRow}>
 										<div>
 											<h2>{t('Безопасность', 'Security')}</h2>

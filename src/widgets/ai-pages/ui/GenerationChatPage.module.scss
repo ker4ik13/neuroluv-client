@@ -36,8 +36,8 @@
 	padding: rem(5) rem(7);
 	color: var(--ai-muted);
 	font-size: rem(12);
-	font-weight: 750;
-	border-radius: rem(9);
+	font-weight: 600;
+	border-radius: var(--ui-control-radius);
 
 	&:hover {
 		color: var(--ai-primary);
@@ -59,9 +59,11 @@
 	display: grid;
 	height: 100%;
 	min-height: 0;
-	grid-template-columns: rem(280) minmax(0, 1fr) rem(360);
+	grid-template-columns: rem(236) minmax(0, 1fr) rem(304);
 	align-items: stretch;
-	gap: 0;
+	gap: rem(12);
+	padding: rem(12);
+	background: var(--ai-bg);
 }
 
 .chat {
@@ -74,9 +76,8 @@
 	overflow: hidden;
 	isolation: isolate;
 	background: var(--ai-surface);
-	border: 0;
-	border-radius: 0;
-	box-shadow: none;
+	border: rem(1) solid var(--ai-border);
+	border-radius: rem(12);
 }
 
 .dropOverlay {
@@ -94,7 +95,7 @@
 	background: color-mix(in srgb, var(--ai-surface) 92%, transparent);
 	border: rem(2) dashed
 		color-mix(in srgb, var(--ai-primary) 62%, var(--ai-border));
-	border-radius: rem(18);
+	border-radius: rem(14);
 	box-shadow:
 		inset 0 0 0 rem(1) color-mix(in srgb, var(--ai-border) 72%, transparent),
 		0 rem(16) rem(42) color-mix(in srgb, #000 18%, transparent);
@@ -107,11 +108,11 @@
 		height: rem(52);
 		align-items: center;
 		justify-content: center;
-		color: #fff;
+		color: var(--ai-primary);
 		font-size: rem(24);
-		background: linear-gradient(135deg, #0db8d1, #2f80ed 70%, #6b61ff);
+		background: var(--ai-surface-soft);
 		border-radius: rem(16);
-		box-shadow: 0 rem(12) rem(28) rgba(47, 128, 237, 0.22);
+		box-shadow: none;
 	}
 
 	strong {
@@ -135,6 +136,7 @@
 }
 
 .historyCard {
+	background: var(--ai-surface-muted);
 	display: grid;
 	height: 100%;
 	min-height: 0;
@@ -143,7 +145,7 @@
 	padding: rem(15);
 	overflow: hidden;
 	border: 0;
-	border-right: rem(1) solid var(--ai-border);
+	border: rem(1) solid var(--ai-border);
 	border-radius: 0;
 	box-shadow: none;
 }
@@ -157,9 +159,9 @@
 	span {
 		color: var(--ai-primary);
 		font-size: rem(10);
-		font-weight: 800;
+		font-weight: 600;
 		letter-spacing: 0.07em;
-		text-transform: uppercase;
+		text-transform: none;
 	}
 
 	h2 {
@@ -193,13 +195,13 @@
 	justify-content: center;
 	gap: rem(7);
 	padding: rem(9) rem(11);
-	color: #fff;
+	color: var(--ai-on-primary);
 	font: inherit;
 	font-size: rem(13);
-	font-weight: 750;
-	background: linear-gradient(135deg, #0a9ed7, var(--ai-primary) 65%, #386ff2);
+	font-weight: 600;
+	background: var(--ai-primary);
 	border: 0;
-	border-radius: rem(11);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 
 	&:focus-visible {
@@ -240,7 +242,7 @@
 		text-align: left;
 		background: transparent;
 		border: rem(1) solid transparent;
-		border-radius: rem(11);
+		border-radius: var(--ui-control-radius);
 		cursor: pointer;
 
 		> span:first-child {
@@ -372,7 +374,7 @@
 	font-size: rem(11);
 	line-height: 1.4;
 	background: rgba(180, 35, 54, 0.08);
-	border-radius: rem(9);
+	border-radius: var(--ui-control-radius);
 }
 
 .historyState {
@@ -398,10 +400,10 @@
 		padding: rem(7) rem(10);
 		color: var(--ai-primary);
 		font: inherit;
-		font-weight: 750;
+		font-weight: 600;
 		background: var(--ai-primary-soft);
 		border: 0;
-		border-radius: rem(9);
+		border-radius: var(--ui-control-radius);
 		cursor: pointer;
 
 		&:focus-visible {
@@ -474,10 +476,10 @@
 		color: var(--ai-text);
 		font: inherit;
 		font-size: rem(14);
-		font-weight: 750;
+		font-weight: 600;
 		background: color-mix(in srgb, var(--ai-surface) 90%, transparent);
 		border: rem(1) solid var(--ai-border);
-		border-radius: rem(9);
+		border-radius: var(--ui-control-radius);
 		outline: none;
 
 		&:focus-visible {
@@ -497,7 +499,7 @@
 	color: var(--ai-text);
 	font: inherit;
 	font-size: rem(14);
-	font-weight: 750;
+	font-weight: 600;
 	line-height: rem(34);
 	text-align: left;
 	text-overflow: ellipsis;
@@ -573,7 +575,7 @@
 	font-size: rem(17);
 	background: var(--ai-surface-soft);
 	border: 0;
-	border-radius: rem(9);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 
 	&:hover,
@@ -609,13 +611,7 @@
 	overscroll-behavior-x: none;
 	overscroll-behavior-y: contain;
 	scrollbar-gutter: stable;
-	background:
-		radial-gradient(
-			circle at 8% 4%,
-			rgba(13, 184, 209, 0.055),
-			transparent 18rem
-		),
-		linear-gradient(180deg, var(--ai-surface), var(--ai-surface-muted));
+	background: var(--ai-surface);
 }
 
 .scrollToBottomButton {
@@ -633,8 +629,8 @@
 	font-size: rem(19);
 	background: color-mix(in srgb, var(--ai-surface) 94%, transparent);
 	border: rem(1) solid var(--ai-border);
-	border-radius: rem(10);
-	box-shadow: 0 rem(8) rem(22) rgba(9, 37, 54, 0.14);
+	border-radius: var(--ui-control-radius);
+	box-shadow: none;
 	cursor: pointer;
 	backdrop-filter: blur(rem(7));
 
@@ -672,11 +668,11 @@
 		height: rem(70);
 		align-items: center;
 		justify-content: center;
-		color: #fff;
+		color: var(--ai-primary);
 		font-size: rem(30);
-		background: linear-gradient(135deg, #0db8d1, #2f80ed 70%, #6b61ff);
-		border-radius: rem(23);
-		box-shadow: 0 rem(18) rem(40) rgba(47, 128, 237, 0.22);
+		background: var(--ai-surface-soft);
+		border-radius: rem(14);
+		box-shadow: none;
 	}
 
 	h2 {
@@ -724,11 +720,12 @@
 }
 
 .userMessageContentCombined {
+	border: rem(1) solid var(--ai-border);
 	padding: rem(7);
-	color: #fff;
-	background: linear-gradient(135deg, #0a9ed7, var(--ai-primary) 65%, #386ff2);
-	border-radius: rem(18) rem(18) rem(5) rem(18);
-	box-shadow: 0 rem(8) rem(24) rgba(8, 127, 219, 0.16);
+	color: var(--ai-text);
+	background: var(--ai-surface-soft);
+	border-radius: rem(12);
+	box-shadow: none;
 
 	.userMessageBubble {
 		width: 100%;
@@ -748,19 +745,20 @@
 .userMessageBubble {
 	max-width: 100%;
 	justify-self: end;
-	padding: rem(12) rem(15);
-	color: #fff;
-	line-height: 1.55;
+	padding: rem(14) rem(16);
+	color: var(--ai-text);
+	line-height: 1.65;
 	white-space: pre-wrap;
-	background: linear-gradient(135deg, #0a9ed7, var(--ai-primary) 65%, #386ff2);
-	border-radius: rem(18) rem(18) rem(5) rem(18);
-	box-shadow: 0 rem(8) rem(24) rgba(8, 127, 219, 0.16);
+	background: var(--ai-primary-soft);
+	border: rem(1) solid
+		color-mix(in srgb, var(--ai-primary) 24%, var(--ai-border));
+	border-radius: rem(12);
 	font-size: rem(15);
 }
 
 .userMessageText {
 	margin: 0;
-	overflow-wrap: anywhere;
+	overflow-wrap: normal;
 	white-space: pre-wrap;
 }
 
@@ -778,13 +776,13 @@
 	gap: rem(5);
 	margin-top: rem(8);
 	padding: rem(5) rem(9);
-	color: #fff;
+	color: var(--ai-primary);
 	font: inherit;
 	font-size: rem(11);
-	font-weight: 750;
+	font-weight: 600;
 	background: rgba(255, 255, 255, 0.14);
 	border: 0;
-	border-radius: rem(9);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 
 	svg {
@@ -813,7 +811,7 @@
 	time {
 		color: var(--ai-muted);
 		font-size: rem(12);
-		font-weight: 650;
+		font-weight: 600;
 		line-height: 1.35;
 	}
 }
@@ -842,15 +840,10 @@
 		font: inherit;
 		text-align: center;
 		text-decoration: none;
-		background: linear-gradient(
-			135deg,
-			#0a9ed7,
-			var(--ai-primary) 65%,
-			#386ff2
-		);
+		background: var(--ai-surface-soft);
 		border: rem(1) solid rgba(8, 127, 219, 0.18);
-		border-radius: rem(13);
-		box-shadow: 0 rem(8) rem(24) rgba(8, 127, 219, 0.12);
+		border-radius: var(--ui-control-radius);
+		box-shadow: none;
 	}
 
 	button.messageAttachmentPreview {
@@ -876,28 +869,20 @@
 		justify-content: center;
 		object-fit: cover;
 		background: rgba(255, 255, 255, 0.16);
-		border-radius: rem(9);
+		border-radius: var(--ui-control-radius);
 	}
 }
 
 .messageAttachmentMediaIcon {
-	color: #fff;
+	color: var(--ai-primary);
 	font-size: rem(20);
-	background: linear-gradient(
-		135deg,
-		rgba(111, 84, 223, 0.84),
-		rgba(47, 128, 237, 0.88)
-	);
+	background: var(--ai-surface-soft);
 }
 
 .messageAttachmentAudioIcon {
-	color: #fff;
+	color: var(--ai-primary);
 	font-size: rem(20);
-	background: linear-gradient(
-		135deg,
-		rgba(208, 74, 138, 0.88),
-		rgba(111, 84, 223, 0.88)
-	);
+	background: var(--ai-surface-soft);
 }
 
 .messageAttachmentItem {
@@ -931,7 +916,7 @@
 	.messageAttachmentUploadStatus {
 		inset: 0;
 		background: rgba(6, 30, 47, 0.52);
-		border-radius: rem(13);
+		border-radius: var(--ui-control-radius);
 		backdrop-filter: blur(rem(1.5));
 
 		svg {
@@ -954,10 +939,10 @@
 		width: rem(25);
 		height: rem(25);
 		color: #0b6f43;
-		background: #dff8eb;
+		background: var(--ai-surface-soft);
 		border: rem(2) solid rgba(255, 255, 255, 0.9);
 		border-radius: 50%;
-		box-shadow: 0 rem(4) rem(12) rgba(6, 68, 42, 0.22);
+		box-shadow: none;
 		animation: attachment-complete 320ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
 }
@@ -1025,7 +1010,7 @@
 
 	strong {
 		font-size: rem(12);
-		font-weight: 750;
+		font-weight: 600;
 	}
 
 	small {
@@ -1042,14 +1027,15 @@
 }
 
 .assistantIdentity {
+	padding: rem(2) 0 rem(6);
 	display: flex;
 	align-items: center;
 	gap: rem(8);
 
 	strong {
 		color: var(--ai-text);
-		font-size: rem(12);
-		font-weight: 750;
+		font-size: rem(14);
+		font-weight: 500;
 	}
 }
 
@@ -1081,7 +1067,7 @@
 	> time {
 		color: var(--ai-muted);
 		font-size: rem(12);
-		font-weight: 650;
+		font-weight: 600;
 		line-height: 1.35;
 		white-space: nowrap;
 	}
@@ -1093,7 +1079,7 @@
 	gap: rem(4);
 	color: var(--ai-muted);
 	font-size: rem(12);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.35;
 	white-space: nowrap;
 
@@ -1119,7 +1105,7 @@
 	font-size: rem(15);
 	background: var(--ai-surface-soft);
 	border: rem(1) solid var(--ai-border);
-	border-radius: rem(9);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 	transition:
 		color 160ms ease,
@@ -1163,7 +1149,7 @@
 	background: var(--ai-surface);
 	border: rem(1) solid var(--ai-border);
 	border-radius: rem(5) rem(14) rem(14) rem(14);
-	box-shadow: 0 rem(8) rem(24) rgba(19, 40, 56, 0.05);
+	box-shadow: none;
 
 	span {
 		width: rem(7);
@@ -1188,13 +1174,12 @@
 }
 
 .textOutput {
-	padding: rem(13) rem(15);
+	padding: rem(18);
 	font-size: rem(15);
-	line-height: 1.65;
+	line-height: 1.7;
 	background: var(--ai-surface);
 	border: rem(1) solid var(--ai-border);
-	border-radius: rem(5) rem(16) rem(16) rem(16);
-	box-shadow: 0 rem(8) rem(24) rgba(19, 40, 56, 0.05);
+	border-radius: rem(12);
 }
 
 .citationList {
@@ -1279,7 +1264,7 @@
 	justify-content: flex-start;
 	color: var(--ai-muted);
 	font-size: rem(12);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.35;
 }
 
@@ -1302,9 +1287,9 @@
 
 .composer {
 	display: grid;
-	gap: rem(7);
-	padding: rem(11) rem(12);
-	background: var(--ai-surface);
+	gap: rem(12);
+	padding: rem(16);
+	background: var(--ai-surface-muted);
 	border-top: rem(1) solid var(--ai-border);
 }
 
@@ -1346,8 +1331,8 @@
 	align-items: center;
 	gap: rem(5);
 	color: var(--ai-muted);
-	font-size: rem(10);
-	line-height: 1.25;
+	font-size: rem(11);
+	line-height: 1.4;
 	white-space: nowrap;
 
 	> span + span::before {
@@ -1358,7 +1343,7 @@
 	kbd {
 		color: var(--ai-text);
 		font: inherit;
-		font-weight: 750;
+		font-weight: 600;
 	}
 }
 
@@ -1382,7 +1367,7 @@
 	justify-content: center;
 	font-size: rem(19);
 	border: 0;
-	border-radius: rem(13);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 
 	&:focus-visible {
@@ -1396,9 +1381,9 @@
 }
 
 .sendButton {
-	color: #fff;
-	background: linear-gradient(135deg, #0a9ed7, var(--ai-primary) 65%, #386ff2);
-	box-shadow: 0 rem(7) rem(18) rgba(8, 127, 219, 0.2);
+	color: var(--ai-on-primary);
+	background: var(--ai-primary);
+	box-shadow: none;
 
 	&:disabled {
 		cursor: not-allowed;
@@ -1445,13 +1430,9 @@
 	gap: rem(7);
 	padding: rem(7) rem(10) rem(7) rem(7);
 	color: var(--ai-text);
-	background: linear-gradient(
-		135deg,
-		rgba(8, 127, 219, 0.055),
-		rgba(56, 111, 242, 0.08)
-	);
+	background: var(--ai-surface-soft);
 	border: rem(1) solid rgba(8, 127, 219, 0.13);
-	border-radius: rem(11);
+	border-radius: var(--ui-control-radius);
 
 	> i {
 		display: grid;
@@ -1462,8 +1443,8 @@
 		font-size: rem(15);
 		font-style: normal;
 		background: var(--ai-surface);
-		border-radius: rem(9);
-		box-shadow: 0 rem(3) rem(10) rgba(16, 77, 126, 0.08);
+		border-radius: var(--ui-control-radius);
+		box-shadow: none;
 	}
 
 	> span {
@@ -1473,18 +1454,18 @@
 
 	strong {
 		font-size: rem(11);
-		font-weight: 800;
+		font-weight: 600;
 	}
 
 	small {
 		color: var(--ai-muted);
 		font-size: rem(9);
-		font-weight: 650;
+		font-weight: 600;
 	}
 
 	&[data-kind='video'] > i {
-		color: #6f54df;
-		background: rgba(111, 84, 223, 0.1);
+		color: var(--ai-primary);
+		background: var(--ai-primary-soft);
 	}
 
 	&[data-kind='audio'] > i {
@@ -1504,11 +1485,7 @@
 	color: var(--ai-text);
 	font: inherit;
 	text-align: left;
-	background: linear-gradient(
-		135deg,
-		rgba(8, 158, 215, 0.08),
-		rgba(56, 111, 242, 0.1)
-	);
+	background: var(--ai-surface-soft);
 	border: rem(1) dashed rgba(8, 127, 219, 0.52);
 	border-radius: rem(14);
 	cursor: pointer;
@@ -1551,7 +1528,7 @@
 	font-size: rem(20);
 	background: var(--ai-surface);
 	border: rem(1) solid rgba(8, 127, 219, 0.16);
-	border-radius: rem(11);
+	border-radius: var(--ui-control-radius);
 }
 
 .composerAttachment {
@@ -1565,9 +1542,9 @@
 	padding: rem(6) rem(8) rem(6) rem(10);
 	color: var(--ai-primary);
 	font-size: rem(12);
-	font-weight: 700;
+	font-weight: 600;
 	background: var(--ai-primary-soft);
-	border-radius: rem(10);
+	border-radius: var(--ui-control-radius);
 }
 
 .composerAttachmentTile {
@@ -1592,7 +1569,7 @@
 	&:focus-visible {
 		border-color: rgba(8, 127, 219, 0.32);
 		outline: none;
-		box-shadow: 0 rem(8) rem(20) rgba(19, 90, 145, 0.12);
+		box-shadow: none;
 	}
 
 	&:active {
@@ -1637,7 +1614,7 @@
 
 	span {
 		font-size: rem(9);
-		font-weight: 750;
+		font-weight: 600;
 		line-height: 1.15;
 		text-align: center;
 	}
@@ -1668,7 +1645,7 @@
 	font-size: rem(24);
 	background: var(--ai-primary-soft);
 	border: 0;
-	border-radius: rem(11);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 
 	img {
@@ -1704,11 +1681,7 @@
 
 .composerAttachmentAudio {
 	color: #d04a8a;
-	background: linear-gradient(
-		145deg,
-		rgba(208, 74, 138, 0.12),
-		rgba(111, 84, 223, 0.12)
-	);
+	background: var(--ai-surface-soft);
 }
 
 .composerAttachmentSize {
@@ -1721,7 +1694,7 @@
 	overflow: hidden;
 	color: #fff;
 	font-size: rem(9);
-	font-weight: 750;
+	font-weight: 600;
 	line-height: 1.2;
 	text-align: center;
 	text-overflow: ellipsis;
@@ -1759,7 +1732,7 @@
 	background: var(--ai-surface);
 	border: rem(1) solid var(--ai-border);
 	border-radius: 50%;
-	box-shadow: 0 rem(4) rem(10) rgba(19, 40, 56, 0.12);
+	box-shadow: none;
 	cursor: pointer;
 
 	&:hover {
@@ -1786,6 +1759,7 @@
 }
 
 .settingsCard {
+	background: var(--ai-surface-muted);
 	display: grid;
 	height: 100%;
 	max-width: 100%;
@@ -1801,7 +1775,7 @@
 	scrollbar-width: thin;
 	border: 0;
 	border-left: rem(1) solid var(--ai-border);
-	border-radius: 0;
+	border-radius: rem(12);
 	box-shadow: none;
 }
 
@@ -1844,7 +1818,7 @@
 	padding: rem(8) rem(10);
 	background: var(--ai-field-bg);
 	border: rem(1) solid var(--ai-border);
-	border-radius: rem(13);
+	border-radius: var(--ui-control-radius);
 	cursor: pointer;
 
 	> span {
@@ -1886,7 +1860,7 @@
 			height: rem(16);
 			background: #fff;
 			border-radius: 50%;
-			box-shadow: 0 rem(2) rem(6) rgba(19, 40, 56, 0.18);
+			box-shadow: none;
 			content: '';
 			transition: transform 160ms ease;
 		}
@@ -1949,13 +1923,13 @@
 .videoReferenceHint {
 	margin: 0;
 	padding: rem(8) rem(10);
-	color: #0866ad;
+	color: var(--ai-primary);
 	font-size: rem(12);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.4;
 	background: rgba(8, 127, 219, 0.09);
 	border: rem(1) solid rgba(8, 127, 219, 0.14);
-	border-radius: rem(10);
+	border-radius: var(--ui-control-radius);
 }
 
 .durationField {
@@ -1988,13 +1962,13 @@
 
 	span {
 		font-size: rem(14);
-		font-weight: 750;
+		font-weight: 600;
 	}
 
 	output {
 		color: var(--ai-primary);
 		font-size: rem(14);
-		font-weight: 800;
+		font-weight: 600;
 	}
 }
 
@@ -2007,7 +1981,7 @@
 		top: 0;
 		color: var(--ai-muted);
 		font-size: rem(10);
-		font-weight: 650;
+		font-weight: 600;
 		text-align: center;
 		white-space: nowrap;
 		transform: translateX(-50%);
@@ -2037,7 +2011,7 @@
 
 	> span {
 		font-size: rem(14);
-		font-weight: 750;
+		font-weight: 600;
 	}
 }
 
@@ -2086,7 +2060,7 @@
 		justify-content: center;
 		color: var(--ai-text);
 		font-size: rem(16);
-		font-weight: 800;
+		font-weight: 600;
 		border-right: rem(1) solid var(--ai-border);
 		border-left: rem(1) solid var(--ai-border);
 	}
@@ -2098,7 +2072,7 @@
 
 	> span:first-child {
 		font-size: rem(14);
-		font-weight: 750;
+		font-weight: 600;
 	}
 
 	em {
@@ -2123,7 +2097,6 @@
 		&:focus-visible {
 			background: var(--ai-surface);
 			border-color: var(--ai-primary);
-			box-shadow: inset 0 0 0 rem(1) rgba(8, 127, 219, 0.16);
 		}
 	}
 
@@ -2209,7 +2182,7 @@
 		border: 0;
 		border-right: rem(1) solid var(--ai-border);
 		border-radius: 0;
-		box-shadow: 0 rem(28) rem(80) rgba(8, 26, 40, 0.25);
+		box-shadow: none;
 	}
 
 	.historyClose {
@@ -2274,7 +2247,7 @@
 		border: 0;
 		border-left: rem(1) solid var(--ai-border);
 		border-radius: 0;
-		box-shadow: 0 rem(28) rem(80) rgba(8, 26, 40, 0.25);
+		box-shadow: none;
 	}
 
 	.settingsClose {
@@ -2431,7 +2404,7 @@
 	padding: 0 rem(8);
 	color: #087fdb;
 	font-size: rem(12);
-	font-weight: 800;
+	font-weight: 600;
 	line-height: 1;
 	white-space: nowrap;
 	background: rgba(8, 127, 219, 0.1);
@@ -2441,5 +2414,29 @@
 	svg {
 		width: rem(13);
 		height: rem(13);
+	}
+}
+@media (min-width: em(1021)) {
+	.historyCard {
+		background: var(--ai-surface);
+		border-radius: rem(12);
+	}
+	.settingsCard {
+		background: var(--ai-surface);
+		border-radius: rem(12);
+		border: rem(1) solid var(--ai-border);
+	}
+}
+@media (max-width: em(768)) {
+	.layout {
+		padding: 0;
+		gap: 0;
+	}
+	.chat {
+		border-radius: 0;
+		border-inline: 0;
+	}
+	.composer {
+		padding: rem(12);
 	}
 }

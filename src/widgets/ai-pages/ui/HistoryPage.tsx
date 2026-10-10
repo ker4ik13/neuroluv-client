@@ -79,7 +79,7 @@ export function HistoryPage({ runId = "" }: { runId?: string }) {
 
   return (
     <AiPage>
-      <AiPageHeader title={t("История", "History")} />
+      <AiPageHeader title={t("История", "History")} description={t('Запуски, списания и возвраты — в хронологическом порядке.', 'Runs, charges and refunds in chronological order.')} />
 
       <div className={styles.filterStrip}>
         <AiSelect
