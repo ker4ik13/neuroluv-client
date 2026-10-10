@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next';
+import { resolveDirectusUrl } from './src/shared/config/directus-url';
 
 const directusUrl = new URL(
-	process.env.NEXT_PUBLIC_DIRECTUS_URL || 'https://dev.cms.neuroluv.ru',
+	resolveDirectusUrl(process.env.NEXT_PUBLIC_DIRECTUS_URL),
 );
 
 const nextConfig: NextConfig = {
@@ -44,7 +45,7 @@ const nextConfig: NextConfig = {
 				protocol: directusUrl.protocol.replace(':', '') as 'http' | 'https',
 				hostname: directusUrl.hostname,
 				port: directusUrl.port,
-				pathname: '/assets/**',
+				pathname: `${directusUrl.pathname.replace(/\/+$/, '')}/assets/**`,
 			},
 		],
 	},

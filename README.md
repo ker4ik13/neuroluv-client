@@ -23,6 +23,19 @@ Open `http://localhost:3000/ai`. Keep secrets out of variables prefixed with `NE
 `NEXT_PUBLIC_AI_API_URL` must include the API prefix (`/v1`). For production use
 `https://api.neuroluv.ru/v1`.
 
+## Production CMS configuration
+
+Set `NEXT_PUBLIC_DIRECTUS_URL=https://admin.neuroluv.ru` in both the build and runtime
+environment. Next.js embeds `NEXT_PUBLIC_*` values when building; changing only a running
+container's environment does not replace a value already compiled into the application.
+When unset, the application and image configuration use the same production CMS default.
+After changing this value, build a new image rather than restarting an old one.
+
+Directus reads have a 10-second deadline per attempt and at most two retries for network/5xx
+failures. Error logs include the CMS origin, never the authorization header. A reverse-proxy
+`502` or plain `404 page not found` is an upstream/configuration failure, not a TypeScript
+compilation error; investigate the logged origin and Directus health before changing content.
+
 ## Quality checks
 
 ```bash
