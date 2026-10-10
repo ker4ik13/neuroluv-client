@@ -5474,6 +5474,7 @@ function getAspectRatioDescription(
 ): string {
 	const descriptions: Record<string, [string, string]> = {
 		auto: ['Определится автоматически', 'Selected automatically'],
+		adaptive: ['По исходным материалам', 'Based on source inputs'],
 		'1:1': ['Квадрат', 'Square'],
 		'16:9': ['Широкий экран', 'Widescreen'],
 		'9:16': ['Истории и короткие видео', 'Stories and short video'],
@@ -5496,7 +5497,7 @@ function getAspectRatioLabel(
 	value: string | number,
 	t: (russian: string, english: string) => string,
 ): string {
-	return String(value).toLowerCase() === 'auto'
+	return ['auto', 'adaptive'].includes(String(value).toLowerCase())
 		? t('Автоматически', 'Automatic')
 		: String(value);
 }
