@@ -1,8 +1,6 @@
-import { FiEye } from 'react-icons/fi';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FaTelegram } from 'react-icons/fa';
-import { FaVk } from 'react-icons/fa6';
+import { FiEye } from 'react-icons/fi';
 import type { NewsContentBlock, NewsDetail, NewsItem } from '@/entities/news';
 import { SHARE_SITE_URL } from '@/shared/config/site';
 import { AuthorCard } from '@/shared/ui/author-card';
@@ -12,8 +10,10 @@ import {
 	ContentBlocks,
 	ContentToc,
 } from '@/shared/ui/content-blocks';
+import { ContentCta } from '@/shared/ui/content-cta';
 import { Noindex } from '@/shared/ui/noindex';
 import { SmartStickySidebar } from '@/shared/ui/smart-sticky-sidebar';
+import { SocialLink } from '@/shared/ui/social-link';
 import styles from './ContentDetailPage.module.scss';
 
 type ContentDetailPageProps = {
@@ -38,7 +38,16 @@ export function ContentDetailPage({
 
 	return (
 		<div className={styles.page}>
-			<Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: basePath === '/articles' ? 'Статьи' : 'Новости', href: basePath }, { label: item.title }]} />
+			<Breadcrumbs
+				items={[
+					{ label: 'Главная', href: '/' },
+					{
+						label: basePath === '/articles' ? 'Статьи' : 'Новости',
+						href: basePath,
+					},
+					{ label: item.title },
+				]}
+			/>
 			<DetailHero contentLabel={contentLabel} item={item} />
 
 			<div className={styles.layout}>
@@ -103,21 +112,13 @@ function SidebarCta({
 	className?: string;
 }) {
 	return (
-		<div className={`${styles.sideCta} ${className}`}>
-			<p className={styles.sideCtaTitle}>{block.title}</p>
-			<p className={styles.sideCtaText}>{block.description}</p>
-			{block.buttons.map((button, index) => (
-				<a
-					className={styles.sideCtaButton}
-					href={button.href}
-					key={`sidebar-cta-${button.id}-${index}`}
-					rel={button.target === '_blank' ? 'noreferrer' : undefined}
-					target={button.target}
-				>
-					{button.label}
-				</a>
-			))}
-		</div>
+		<ContentCta
+			title={block.title}
+			description={block.description}
+			buttons={block.buttons}
+			compact
+			className={className}
+		/>
 	);
 }
 
@@ -142,24 +143,18 @@ function AuthorSidebarCard({
 			<div className={styles.authorShare}>
 				<span className={styles.authorShareLabel}>Поделиться</span>
 				<div className={styles.shareButtons}>
-					<a
-						aria-label='Поделиться в Telegram'
+					<SocialLink
+						platform='telegram'
+						label='Поделиться в Telegram'
 						className={styles.shareButton}
 						href={shareHref}
-						rel='noreferrer'
-						target='_blank'
-					>
-						<FaTelegram aria-hidden='true' />
-					</a>
-					<a
-						aria-label='Поделиться во ВКонтакте'
+					/>
+					<SocialLink
+						platform='vk'
+						label='Поделиться во ВКонтакте'
 						className={styles.shareButton}
 						href={vkShareHref}
-						rel='noreferrer'
-						target='_blank'
-					>
-						<FaVk aria-hidden='true' />
-					</a>
+					/>
 				</div>
 			</div>
 		</AuthorCard>

@@ -5,9 +5,16 @@ import { FiAlertTriangle } from 'react-icons/fi';
 import type { NewsContentBlock } from '@/entities/news';
 import type { PromptContentBlock } from '@/entities/prompt';
 import { normalizeRichTextSpacing } from '@/shared/lib/content/normalize-rich-text';
-import { ContentActionButton } from '@/shared/ui/content-action-button';
+import { numberInstructionSteps } from '@/shared/lib/content/number-instruction-steps';
+import { buttonClassName } from '@/shared/ui/button';
+import {
+	ContentActionButton,
+	resolveContentActionVariant,
+} from '@/shared/ui/content-action-button';
+import { ContentCta } from '@/shared/ui/content-cta';
 import { CopyContentBox } from '@/shared/ui/copy-content-box';
 import { FaqAccordion } from '@/shared/ui/faq-accordion';
+import { FeatureCard } from '@/shared/ui/feature-card';
 import styles from './ContentBlocks.module.scss';
 
 export type ContentHeading = {
@@ -271,29 +278,12 @@ function ContentBlockView({
 		const headingId = getBlockHeadingId(headings, block.id);
 
 		return (
-			<section className={styles.ctaBlock}>
-				<div>
-					<h2 id={headingId}>{block.title}</h2>
-					<p>{block.description}</p>
-				</div>
-				{block.buttons.length > 0 && (
-					<div className={styles.ctaButtons}>
-						{block.buttons.map((button, index) => (
-							<a
-								className={`${styles.ctaButton} ${
-									button.variant === 'outline' ? styles.ctaButtonOutline : ''
-								}`}
-								href={button.href}
-								key={`cta-button-${button.id}-${index}`}
-								rel={button.target === '_blank' ? 'noreferrer' : undefined}
-								target={button.target}
-							>
-								{button.label}
-							</a>
-						))}
-					</div>
-				)}
-			</section>
+			<ContentCta
+				title={block.title}
+				description={block.description}
+				buttons={block.buttons}
+				titleId={headingId}
+			/>
 		);
 	}
 
@@ -357,46 +347,45 @@ function ContentBlockView({
 			<section className={styles.stepsBlock}>
 				{block.title && <h2 id={headingId}>{block.title}</h2>}
 				<div className={styles.stepsList}>
-					{block.steps.map((step, index) => {
-						const isWarning = 'isWarning' in step && step.isWarning === true;
-						const buttons = 'buttons' in step ? step.buttons : [];
-						const numberedStep = block.steps
-							.slice(0, index + 1)
-							.filter(
-								(candidate) =>
-									!('isWarning' in candidate && candidate.isWarning === true),
-							).length;
+					{numberInstructionSteps(block.steps).map(
+						({ step, number }, index) => {
+							const isWarning = number === null;
+							const buttons = 'buttons' in step ? step.buttons : [];
 
-						return (
-							<div
-								className={`${styles.stepItem} ${isWarning ? styles.stepItemWarning : ''}`}
-								key={`step-${step.id}-${index}`}
-							>
-								<span>
-									{isWarning ? (
-										<FiAlertTriangle aria-label='Внимание' />
-									) : (
-										String(numberedStep).padStart(2, '0')
-									)}
-								</span>
-								<div>
-									<p>{step.title}</p>
-									<small>{step.description}</small>
-									{buttons.length > 0 ? (
-										<div className={styles.stepActions}>
-											{buttons.map((button) => (
-												<ContentActionButton
-													button={button}
-													className={styles.stepActionButton}
-													key={button.id}
-												/>
-											))}
-										</div>
-									) : null}
-								</div>
-							</div>
-						);
-					})}
+							return (
+								<FeatureCard
+									key={`step-${step.id}-${index}`}
+									variant='compact'
+									title={step.title}
+									description={step.description}
+									tone={isWarning ? 'warning' : 'neutral'}
+									marker={
+										isWarning ? (
+											<FiAlertTriangle aria-label='Внимание' />
+										) : (
+											String(number).padStart(2, '0')
+										)
+									}
+									actions={
+										buttons.length > 0 ? (
+											<div className={styles.stepActions}>
+												{buttons.map((button) => (
+													<ContentActionButton
+														button={button}
+														className={buttonClassName(
+															resolveContentActionVariant(button.variant),
+															styles.stepActionButton,
+														)}
+														key={button.id}
+													/>
+												))}
+											</div>
+										) : null
+									}
+								/>
+							);
+						},
+					)}
 				</div>
 			</section>
 		);

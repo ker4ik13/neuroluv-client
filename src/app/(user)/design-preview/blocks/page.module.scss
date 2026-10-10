@@ -1,4 +1,5 @@
 @use '../../../../styles/functions' as *;
+@use '../../../../styles/studio-theme' as studio-theme;
 .controls {
 	max-width: rem(1320);
 	padding: rem(20);
@@ -11,8 +12,16 @@
 	margin-bottom: rem(16);
 }
 .reader {
+	display: grid;
+	gap: rem(32);
 	width: 100%;
 	max-width: rem(820);
 	padding: rem(40) rem(20);
 	margin: 0 auto;
+}
+.reader[data-theme='dark'] {
+	@include studio-theme.dark;
+	color: var(--ui-text);
+	background: var(--ui-surface);
+	color-scheme: dark;
 }

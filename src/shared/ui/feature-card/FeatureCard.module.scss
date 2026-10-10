@@ -7,6 +7,7 @@
 	align-content: start;
 	gap: rem(20);
 	padding: rem(24);
+	min-width: 0;
 }
 .marker {
 	display: inline-flex;
@@ -36,6 +37,7 @@
 	p {
 		@include section-copy;
 		margin-top: rem(10);
+		white-space: pre-line;
 	}
 }
 .card[data-variant='compact'] {
@@ -45,6 +47,21 @@
 }
 .card[data-variant='compact'][data-has-marker='false'] {
 	grid-template-columns: 1fr;
+}
+.card[data-tone='warning'] {
+	background: color-mix(
+		in srgb,
+		var(--ai-warning, #b88415) 8%,
+		var(--ui-surface)
+	);
+	.marker {
+		color: var(--ai-warning, #8c6414);
+		background: color-mix(
+			in srgb,
+			var(--ai-warning, #b88415) 12%,
+			var(--ui-surface)
+		);
+	}
 }
 .card[data-selected='true'] {
 	background: var(--ui-accent-soft);

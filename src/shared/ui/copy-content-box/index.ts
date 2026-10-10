@@ -1,1 +1,1 @@
-export { CopyContentBox } from "./CopyContentBox";
+export { CopyContentBox } from './CopyContentBox';

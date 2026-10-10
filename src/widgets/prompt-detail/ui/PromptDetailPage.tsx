@@ -1,9 +1,6 @@
-import { FiZap } from 'react-icons/fi';
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
-
-import { FaTelegram } from 'react-icons/fa';
-import { FaVk } from 'react-icons/fa6';
+import { FiZap } from 'react-icons/fi';
 import {
 	PromptCard,
 	type PromptContentBlock,
@@ -15,9 +12,11 @@ import { AuthorCard } from '@/shared/ui/author-card';
 import { Breadcrumbs } from '@/shared/ui/breadcrumbs';
 import { ContentActionButton } from '@/shared/ui/content-action-button';
 import { ContentBlocks, type ContentHeading } from '@/shared/ui/content-blocks';
+import { ContentCta } from '@/shared/ui/content-cta';
 import { Noindex } from '@/shared/ui/noindex';
 import { PromptCardMedia } from '@/shared/ui/prompt-card-media';
 import { SmartStickySidebar } from '@/shared/ui/smart-sticky-sidebar';
+import { SocialLink } from '@/shared/ui/social-link';
 import { CopyPromptButton } from './CopyPromptButton';
 import { PromptComposer } from './PromptComposer';
 import styles from './PromptDetailPage.module.scss';
@@ -199,20 +198,13 @@ type PromptCtaBlock = Extract<PromptContentBlock, { type: 'cta' }>;
 
 function SidebarCta({ block }: { block: PromptCtaBlock }) {
 	return (
-		<div className={styles.sideCta}>
-			<h2>{block.title}</h2>
-			<p>{block.description}</p>
-			{block.buttons.map((button, index) => (
-				<a
-					href={button.href}
-					key={`prompt-sidebar-cta-${button.id}-${index}`}
-					rel={button.target === '_blank' ? 'noreferrer' : undefined}
-					target={button.target}
-				>
-					{button.label}
-				</a>
-			))}
-		</div>
+		<ContentCta
+			title={block.title}
+			description={block.description}
+			buttons={block.buttons}
+			compact
+			className={styles.sideCta}
+		/>
 	);
 }
 
@@ -278,22 +270,16 @@ function PromptAuthorCard({
 			<div className={styles.authorShare}>
 				<span className={styles.authorShareLabel}>Поделиться</span>
 				<div className={styles.shareRow}>
-					<a
-						aria-label='Поделиться в Telegram'
+					<SocialLink
+						platform='telegram'
 						href={shareHref}
-						rel='noreferrer'
-						target='_blank'
-					>
-						<FaTelegram aria-hidden='true' />
-					</a>
-					<a
-						aria-label='Поделиться во ВКонтакте'
+						label='Поделиться в Telegram'
+					/>
+					<SocialLink
+						platform='vk'
 						href={vkShareHref}
-						rel='noreferrer'
-						target='_blank'
-					>
-						<FaVk aria-hidden='true' />
-					</a>
+						label='Поделиться во ВКонтакте'
+					/>
 				</div>
 			</div>
 		</AuthorCard>
@@ -406,6 +392,7 @@ function extractHtmlHeadings(html: string): string[] {
 
 function getContentBlockTitle(block: PromptContentBlock): string | null {
 	if (
+		block.type === 'faq' ||
 		block.type === 'text' ||
 		block.type === 'video' ||
 		block.type === 'list' ||

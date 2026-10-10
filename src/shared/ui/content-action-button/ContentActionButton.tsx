@@ -1,12 +1,13 @@
 import type { NavigationIcon } from '@/entities/navigation';
 import { AppIcon } from '@/shared/ui/app-icon';
+import type { ContentActionVariant } from './variant';
 
 export type ContentActionButtonData = {
 	id: number;
 	label: string;
 	href: string;
 	target: '_self' | '_blank';
-	variant: 'primary' | 'secondary' | 'outline';
+	variant: ContentActionVariant;
 	icon: NavigationIcon | null;
 };
 
