@@ -41,6 +41,7 @@ compilation error; investigate the logged origin and Directus health before chan
 The public Matomo tracker uses `https://metrika.neuroluv.ru/` and site ID `1`.
 Neither value is a secret; no `.env` credentials are needed. Never put a Matomo dashboard
 password or Reporting API `token_auth` into frontend code.
+Local and IP-based previews are ignored so test visits do not enter the production reports.
 
 The tracker records the first page and Next.js client-side navigations, referrers and
 campaign parameters. Searches in `/prompts`, `/news`, `/articles` and `/ai/prompts` use

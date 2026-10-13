@@ -29,6 +29,7 @@ export function buildMatomoBootstrap(
 	// One shared bridge handles both the initial HTML and React navigations.
 	// Keep this a stable string: /ai authorizes this exact script with a CSP hash.
 	return `(function(){
+if(window.location.hostname!=="neuroluv.ru"&&window.location.hostname!=="www.neuroluv.ru"){return;}
 if(window.__neuroluvTrackMatomoPage){return;}
 var settings=${settings};
 var queue=window._paq=window._paq||[];

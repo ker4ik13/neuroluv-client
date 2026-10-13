@@ -70,6 +70,13 @@ test('public tracker config matches the supplied snippet and initializes exactly
 	assert.equal(page.commands('trackPageView').length, 1);
 });
 
+test('preview hosts do not submit visitor activity to the production site ID', () => {
+	const page = browser('https://144.31.221.28:3100/prompts?q=тест');
+	assert.equal(page.window._paq, undefined);
+	assert.equal(page.scripts.length, 0);
+	assert.equal(page.window.__neuroluvTrackMatomoPage, undefined);
+});
+
 test('landing records the search-engine referrer and campaign without credentials or fragment', () => {
 	const page = browser(
 		'https://neuroluv.ru/?utm_source=google&mtm_campaign=seo&token=PRIVATE#secret',
