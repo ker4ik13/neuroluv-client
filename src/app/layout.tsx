@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { YANDEX_METRIKA_ID } from "@/shared/config/analytics";
+import { MATOMO_BOOTSTRAP, YANDEX_METRIKA_ID } from "@/shared/config/analytics";
+import { Matomo, MatomoHead } from "@/shared/ui/matomo";
 import { AnalyticsQueryPersistence } from "@/shared/ui/analytics-query-persistence";
 import {
   YandexMetrika,
@@ -27,9 +28,11 @@ export default function RootLayout({
     <html lang="ru" data-scroll-behavior="smooth">
       <head>
         <YandexMetrikaHead counterId={YANDEX_METRIKA_ID} />
+        <MatomoHead bootstrap={MATOMO_BOOTSTRAP} />
       </head>
       <body>
         <YandexMetrika counterId={YANDEX_METRIKA_ID} />
+        <Matomo />
         <AnalyticsQueryPersistence />
         {children}
       </body>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { YANDEX_METRIKA_ID } from "@/shared/config/analytics";
+import { MATOMO_BOOTSTRAP, MATOMO_ORIGIN, YANDEX_METRIKA_ID } from "@/shared/config/analytics";
 import { shouldPreserveAnalyticsQueryParameter } from "@/shared/lib/analytics/tracking-query";
 import { buildYandexMetrikaBootstrap } from "@/shared/lib/analytics/yandex-metrika";
 
@@ -121,6 +121,7 @@ async function buildAiContentSecurityPolicy(nonce: string): Promise<string> {
   const directusOrigin = new URL(DIRECTUS_URL).origin;
   const apiOrigin = new URL(AI_API_URL).origin;
   const metrikaBootstrapHash = await getYandexMetrikaBootstrapHash();
+  const matomoBootstrapHash = await getMatomoBootstrapHash();
   const metrikaHttpsOrigins = YANDEX_METRIKA_HTTPS_ORIGINS.join(" ");
   const metrikaConnectOrigins = [
     ...YANDEX_METRIKA_HTTPS_ORIGINS,
@@ -130,9 +131,9 @@ async function buildAiContentSecurityPolicy(nonce: string): Promise<string> {
     process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' '${metrikaBootstrapHash}' 'strict-dynamic' https://telegram.org https://mc.yandex.ru https://yastatic.net${developmentScriptPolicy}`,
+    `script-src 'self' 'nonce-${nonce}' '${metrikaBootstrapHash}' '${matomoBootstrapHash}' 'strict-dynamic' https://telegram.org https://mc.yandex.ru https://yastatic.net ${MATOMO_ORIGIN}${developmentScriptPolicy}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${apiOrigin} ${directusOrigin} ${metrikaConnectOrigins}`,
+    `connect-src 'self' ${apiOrigin} ${directusOrigin} ${metrikaConnectOrigins} ${MATOMO_ORIGIN}`,
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https:",
     "font-src 'self' data:",
@@ -170,6 +171,21 @@ function getYandexMetrikaBootstrapHash(): Promise<string> {
     });
 
   return yandexMetrikaBootstrapHash;
+}
+
+let matomoBootstrapHash: Promise<string> | null = null;
+
+function getMatomoBootstrapHash(): Promise<string> {
+  matomoBootstrapHash ??= crypto.subtle
+    .digest("SHA-256", new TextEncoder().encode(MATOMO_BOOTSTRAP))
+    .then((digest) => {
+      let binary = "";
+      for (const byte of new Uint8Array(digest)) {
+        binary += String.fromCharCode(byte);
+      }
+      return `sha256-${btoa(binary)}`;
+    });
+  return matomoBootstrapHash;
 }
 
 export const config = {

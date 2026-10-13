@@ -36,6 +36,22 @@ failures. Error logs include the CMS origin, never the authorization header. A r
 `502` or plain `404 page not found` is an upstream/configuration failure, not a TypeScript
 compilation error; investigate the logged origin and Directus health before changing content.
 
+## Matomo analytics
+
+The public Matomo tracker uses `https://metrika.neuroluv.ru/` and site ID `1`.
+Neither value is a secret; no `.env` credentials are needed. Never put a Matomo dashboard
+password or Reporting API `token_auth` into frontend code.
+
+The tracker records the first page and Next.js client-side navigations, referrers and
+campaign parameters. Searches in `/prompts`, `/news`, `/articles` and `/ai/prompts` use
+`trackSiteSearch`; pagination of the same search does not count as a new search.
+Authentication tokens, private generation queries and signed download URLs are excluded.
+Yandex Metrika remains enabled independently.
+
+Search engines are detected from the available referrer. Hidden organic keywords cannot
+be recovered in JavaScript; configure Search Engine Keywords imports in the Matomo admin
+panel with Search Console/Webmaster access if those reports are required.
+
 ## Quality checks
 
 ```bash
