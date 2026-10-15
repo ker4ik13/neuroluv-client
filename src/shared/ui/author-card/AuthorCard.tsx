@@ -23,7 +23,7 @@ export function AuthorCard({
   return (
     <section className={`${styles.card} ${className || ""}`}>
       <div className={styles.main}>
-        <span className={styles.avatar}>
+        <span aria-hidden="true" className={styles.avatar}>
           {avatarUrl ? (
             <Image alt="" fill sizes="64px" src={avatarUrl} />
           ) : (

@@ -4,6 +4,7 @@ import { type CSSProperties, useMemo, useState } from "react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 import { useAiLocale } from "@/features/ai-locale";
+import { getImageAlt } from "@/shared/lib/media/image-alt";
 
 import { formatMediaCharacteristics } from "../model/mediaCharacteristics";
 import {
@@ -55,7 +56,7 @@ export function ChatImageCarousel({
     () =>
       items.map((item, index) => ({
         id: `${galleryScope}:${item.id}`,
-        alt: item.alt || `${t("Изображение", "Image")} ${index + 1}`,
+        alt: getImageAlt(item.alt, `${t("Результат генерации", "Generated result")} ${index + 1}`),
         chargedCredits,
         characteristics: formatMediaCharacteristics(
           item.width && item.height
@@ -95,7 +96,7 @@ export function ChatImageCarousel({
       <ImageGalleryRegistration items={galleryItems} />
       <div className={styles.main}>
         <ChatImageOutput
-          alt={activeItem.alt}
+          alt={galleryItems[resolvedIndex].alt}
           aspectRatio={activeItem.aspectRatio}
           chargedCredits={chargedCredits}
           copyUrl={activeItem.copyUrl}

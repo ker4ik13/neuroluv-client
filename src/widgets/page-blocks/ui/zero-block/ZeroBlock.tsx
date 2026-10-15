@@ -24,7 +24,7 @@ export function ZeroBlock({ block }: ZeroBlockProps) {
 				)}
 
 				<div className={styles.content}>
-					<ContentBlocks blocks={block.contentBlocks} headings={headings} />
+					<ContentBlocks blocks={block.contentBlocks} contextTitle={block.title || undefined} headings={headings} />
 				</div>
 			</div>
 		</section>

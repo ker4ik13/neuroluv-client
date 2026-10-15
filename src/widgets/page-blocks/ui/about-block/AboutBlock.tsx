@@ -24,7 +24,8 @@ export function AboutBlock({ block }: AboutBlockProps) {
 							{block.advantageImage && (
 								// eslint-disable-next-line @next/next/no-img-element
 								<img
-									alt={block.advantageImage.title}
+									alt=''
+									aria-hidden='true'
 									className={styles.promptImage}
 									src={block.advantageImage.url}
 								/>

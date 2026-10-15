@@ -365,7 +365,7 @@ export function WorksPage({
                     />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element -- signed/CDN URL
-                    <img alt="" loading="lazy" src={work.previewUrl} />
+                    <img alt={work.title || t("Результат генерации", "Generated result")} loading="lazy" src={work.previewUrl} />
                   )
                 ) : (
                   <span className={styles.mediaPlaceholder}>

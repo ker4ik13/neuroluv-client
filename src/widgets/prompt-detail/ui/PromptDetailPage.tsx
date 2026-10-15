@@ -8,6 +8,7 @@ import {
 	type PromptItem,
 } from '@/entities/prompt';
 import { SHARE_SITE_URL } from '@/shared/config/site';
+import { getImageAlt } from '@/shared/lib/media/image-alt';
 import { AuthorCard } from '@/shared/ui/author-card';
 import { Breadcrumbs } from '@/shared/ui/breadcrumbs';
 import { ContentActionButton } from '@/shared/ui/content-action-button';
@@ -144,6 +145,7 @@ export function PromptDetailPage({ item, related }: PromptDetailPageProps) {
 						<div className={styles.contentBlocks}>
 							<ContentBlocks
 								blocks={contentBlocks}
+								contextTitle={item.title}
 								headings={contentHeadings}
 							/>
 						</div>
@@ -305,11 +307,6 @@ function buildVkShareHref(item: PromptDetail): string {
 
 	return `https://vk.com/share.php?${params.toString()}`;
 }
-
-function getImageAlt(imageTitle: string, fallback: string): string {
-	return imageTitle.trim() || fallback;
-}
-
 function buildPromptHeadings(
 	promptText: string,
 	blocks: PromptContentBlock[],

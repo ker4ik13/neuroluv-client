@@ -222,7 +222,7 @@ export function SharePage({
 											triggerClassName={styles.publicPromptReferenceButton}
 										>
 											{/* eslint-disable-next-line @next/next/no-img-element -- signed private asset URL */}
-											<img alt='' src={reference.previewUrl} />
+											<img alt={t(`Референс ${index + 1}`, `Reference ${index + 1}`)} src={reference.previewUrl} />
 										</ImageLightbox>
 									))}
 								</div>

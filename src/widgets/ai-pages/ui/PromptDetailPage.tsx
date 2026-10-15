@@ -230,7 +230,7 @@ export function PromptDetailPage({
 									<div className={styles.detailMedia}>
 										{prompt.data.imageUrl || prompt.data.media?.length ? (
 											<PromptCardMedia
-												alt={t('Пример результата', 'Result example')}
+												alt={prompt.data.title}
 												className={styles.detailMediaCarousel}
 												enableFullscreen
 												image={
@@ -318,7 +318,7 @@ export function PromptDetailPage({
 														}
 													>
 														{/* eslint-disable-next-line @next/next/no-img-element -- Directus media URL. */}
-														<img alt='' src={item.url} />
+														<img alt={`${t('Референс', 'Reference')} ${index + 1}`} src={item.url} />
 													</ImageLightbox>
 												))}
 											</div>

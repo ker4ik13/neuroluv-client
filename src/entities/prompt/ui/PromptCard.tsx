@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { FiZap } from 'react-icons/fi';
+import { getImageAlt } from '@/shared/lib/media/image-alt';
 import { PromptCardMedia } from '@/shared/ui/prompt-card-media';
 import type { PromptItem, PromptTaxonomy } from '../model';
 import { getPromptPreviewRatio } from '../model/gallery';
@@ -55,7 +56,7 @@ export function PromptCard({
 			<PromptCardMedia
 				alt={
 					prompt.image
-						? getPromptImageAlt(prompt.image.title, prompt.title)
+						? getImageAlt(prompt.image.title, prompt.title)
 						: prompt.title
 				}
 				autoPlay={prompt.autoplay}
@@ -109,8 +110,4 @@ function PromptNetworkLogo({
 			)}
 		</span>
 	);
-}
-
-function getPromptImageAlt(imageTitle: string, fallback: string): string {
-	return imageTitle.trim() || fallback;
 }

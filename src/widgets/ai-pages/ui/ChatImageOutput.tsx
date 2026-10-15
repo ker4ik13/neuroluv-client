@@ -30,6 +30,7 @@ import {
 import { AI_API_URL } from "@/shared/config/ai";
 import { useAiLocale } from "@/features/ai-locale";
 import { formatCredits } from "@/shared/lib/formatCredits";
+import { getImageAlt } from "@/shared/lib/media/image-alt";
 
 import {
   formatMediaCharacteristics,
@@ -555,6 +556,9 @@ export function ImageLightbox({
   triggerClassName,
 }: ImageLightboxProps) {
   const { locale, t } = useAiLocale();
+  const resolvedAlt = kind === "image"
+    ? getImageAlt(alt, t("Изображение из чата", "Chat image"))
+    : alt;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const galleryItem = useMemo<ImageGalleryItem | null>(
@@ -562,7 +566,7 @@ export function ImageLightbox({
       kind === "image" && galleryId
         ? {
             id: galleryId,
-            alt,
+            alt: resolvedAlt,
             chargedCredits,
             characteristics,
             downloadUrl,
@@ -573,7 +577,7 @@ export function ImageLightbox({
           }
         : null,
     [
-      alt,
+      resolvedAlt,
       chargedCredits,
       characteristics,
       downloadUrl,
@@ -610,7 +614,7 @@ export function ImageLightbox({
       <button
         aria-label={
           kind === "image"
-            ? t("Открыть изображение на весь экран", "Open image fullscreen")
+            ? `${t("Открыть изображение на весь экран", "Open image fullscreen")}: ${resolvedAlt}`
             : t("Открыть файл на весь экран", "Open file fullscreen")
         }
         className={triggerClassName}
@@ -654,7 +658,7 @@ export function ImageLightbox({
                 {kind === "image" ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    alt={alt}
+                    alt={resolvedAlt}
                     className={styles.fullscreenImage}
                     onMouseDown={(event) => event.stopPropagation()}
                     src={fullUrl}
@@ -713,7 +717,7 @@ export function ChatImageOutput({
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const imageSource = previewUrl || url;
-  const resolvedAlt = alt || t("Результат генерации", "Generated result");
+  const resolvedAlt = getImageAlt(alt, t("Результат генерации", "Generated result"));
   const downloadSource = downloadUrl || url;
   const copySource = copyUrl ? resolveApiUrl(copyUrl) : url;
   const metadataSize = useMemo<MediaSize | null>(() => {

@@ -473,7 +473,7 @@ export function ProfilePage() {
 				{profile.data ? (
 					<div className={styles.profileGrid}>
 						<AiCard className={styles.profileSummary}>
-							<div className={styles.avatarLarge}>
+							<div aria-hidden='true' className={styles.avatarLarge}>
 								{profile.data.avatarUrl ? (
 									// eslint-disable-next-line @next/next/no-img-element -- user CDN URL
 									<img alt='' src={profile.data.avatarUrl} />

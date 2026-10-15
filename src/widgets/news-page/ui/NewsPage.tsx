@@ -450,7 +450,7 @@ function AuthorAvatar({ item }: { item: NewsItem }) {
 
 	if (avatar) {
 		return (
-			<span className={styles.avatar}>
+			<span aria-hidden='true' className={styles.avatar}>
 				<Image alt='' fill sizes='28px' src={avatar.url} />
 			</span>
 		);

@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 import { FiPlus } from 'react-icons/fi';
+import { normalizeImageAlts } from '@/shared/lib/media/image-alt';
 import styles from './FaqAccordion.module.scss';
 
 export type FaqAccordionItem = {
@@ -65,7 +66,7 @@ export function FaqAccordion({
 								) : (
 									<div
 										className={styles.answer}
-										dangerouslySetInnerHTML={{ __html: item.answer }}
+										dangerouslySetInnerHTML={{ __html: normalizeImageAlts(item.answer, item.title) }}
 									/>
 								)}
 							</div>

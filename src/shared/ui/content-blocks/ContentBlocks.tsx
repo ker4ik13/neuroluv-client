@@ -6,6 +6,7 @@ import type { NewsContentBlock } from '@/entities/news';
 import type { PromptContentBlock } from '@/entities/prompt';
 import { normalizeRichTextSpacing } from '@/shared/lib/content/normalize-rich-text';
 import { numberInstructionSteps } from '@/shared/lib/content/number-instruction-steps';
+import { getImageAlt, normalizeImageAlts } from '@/shared/lib/media/image-alt';
 import { buttonClassName } from '@/shared/ui/button';
 import {
 	ContentActionButton,
@@ -28,6 +29,7 @@ export type ContentHeading = {
 
 type ContentBlocksProps = {
 	blocks: ContentBlock[];
+	contextTitle?: string;
 	headings?: ContentHeading[];
 };
 
@@ -37,7 +39,11 @@ type ContentTocProps = {
 	title?: string;
 };
 
-export function ContentBlocks({ blocks, headings }: ContentBlocksProps) {
+export function ContentBlocks({
+	blocks,
+	contextTitle,
+	headings,
+}: ContentBlocksProps) {
 	const resolvedHeadings = headings || buildContentHeadings(blocks);
 
 	return (
@@ -45,6 +51,7 @@ export function ContentBlocks({ blocks, headings }: ContentBlocksProps) {
 			{blocks.map((block, index) => (
 				<ContentBlockView
 					block={block}
+					contextTitle={contextTitle}
 					headings={resolvedHeadings}
 					key={`content-block-${block.type}-${block.id}-${index}`}
 				/>
@@ -127,9 +134,11 @@ export function buildContentHeadings(blocks: ContentBlock[]): ContentHeading[] {
 
 function ContentBlockView({
 	block,
+	contextTitle,
 	headings,
 }: {
 	block: ContentBlock;
+	contextTitle?: string;
 	headings: ContentHeading[];
 }) {
 	if (block.type === 'faq') {
@@ -154,6 +163,7 @@ function ContentBlockView({
 					__html: prepareRichHtml(
 						block.content,
 						getHtmlHeadings(headings, block.id),
+						block.title || contextTitle,
 					),
 				}}
 			/>
@@ -184,6 +194,7 @@ function ContentBlockView({
 						__html: prepareRichHtml(
 							block.content,
 							getHtmlHeadings(headings, block.id),
+							block.title || contextTitle,
 						),
 					}}
 				/>
@@ -262,7 +273,9 @@ function ContentBlockView({
 					<Image
 						alt={getImageAlt(
 							block.image.title,
-							block.title || block.caption || 'Изображение',
+							block.caption,
+							block.title,
+							contextTitle,
 						)}
 						fill
 						sizes='(max-width: 1024px) 100vw, 840px'
@@ -300,7 +313,11 @@ function ContentBlockView({
 								{card.image && (
 									<span className={styles.contentCardImage}>
 										<Image
-											alt={card.image.title}
+											alt={getImageAlt(
+												card.image.title,
+												card.title,
+												contextTitle,
+											)}
 											fill
 											sizes='(max-width: 768px) 100vw, 260px'
 											src={card.image.url}
@@ -429,10 +446,16 @@ function addHeadingIdsToHtml(html: string, headings: ContentHeading[]): string {
 	);
 }
 
-function prepareRichHtml(html: string, headings: ContentHeading[]): string {
+function prepareRichHtml(
+	html: string,
+	headings: ContentHeading[],
+	contextTitle?: string,
+): string {
 	return wrapTables(
 		addHeadingIdsToHtml(
-			normalizeCodeBlocks(normalizeRichTextSpacing(html)),
+			normalizeCodeBlocks(
+				normalizeImageAlts(normalizeRichTextSpacing(html), contextTitle),
+			),
 			headings,
 		),
 	);
@@ -531,10 +554,6 @@ function getContentImageStyle(image: {
 	return {
 		'--content-image-ratio': `${image.width} / ${image.height}`,
 	} as CSSProperties;
-}
-
-function getImageAlt(imageTitle: string, fallback: string): string {
-	return imageTitle.trim() || fallback;
 }
 
 type ContentBlock = NewsContentBlock | PromptContentBlock;

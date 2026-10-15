@@ -55,7 +55,7 @@ export function ContentDetailPage({
 					{headings.length > 0 && <ContentToc headings={headings} />}
 
 					{item.contentBlocks.length > 0 ? (
-						<ContentBlocks blocks={item.contentBlocks} headings={headings} />
+						<ContentBlocks blocks={item.contentBlocks} contextTitle={item.title} headings={headings} />
 					) : (
 						<div className={styles.htmlBlock}>
 							<h2>Коротко</h2>
@@ -286,7 +286,7 @@ function AuthorAvatar({ item }: { item: NewsItem }) {
 
 	if (avatar) {
 		return (
-			<span className={styles.heroAuthorAvatar}>
+			<span aria-hidden='true' className={styles.heroAuthorAvatar}>
 				<Image alt='' fill sizes='34px' src={avatar.url} />
 			</span>
 		);

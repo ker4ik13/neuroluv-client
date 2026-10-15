@@ -12,6 +12,7 @@ import {
 	FiMaximize,
 	FiPlay,
 } from 'react-icons/fi';
+import { getImageAlt } from '@/shared/lib/media/image-alt';
 import styles from './PromptCardMedia.module.scss';
 
 export type PromptCardMediaItem = {
@@ -255,7 +256,7 @@ export function PromptCardMedia({
 							) : (
 								// eslint-disable-next-line @next/next/no-img-element -- Directus/CDN URL is already transformed where needed.
 								<img
-									alt={index === currentIndex ? item.title || alt : ''}
+									alt={getImageAlt(item.title, alt)}
 									className={styles.media}
 									data-media-url={item.url}
 									decoding='async'
@@ -392,7 +393,7 @@ export function PromptCardMedia({
 							) : (
 								// eslint-disable-next-line @next/next/no-img-element -- original Directus asset in fullscreen.
 								<img
-									alt={normalizedItems[currentIndex].title || alt}
+									alt={getImageAlt(normalizedItems[currentIndex].title, alt)}
 									onClick={(event) => event.stopPropagation()}
 									src={normalizedItems[currentIndex].url}
 								/>

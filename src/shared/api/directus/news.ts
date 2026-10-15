@@ -30,6 +30,7 @@ import {
 	normalizeDirectusSeo,
 } from '@/shared/api/directus/seo';
 import { buildDirectusAssetUrl } from '@/shared/config/directus';
+import { getImageAlt } from '@/shared/lib/media/image-alt';
 import {
 	canReadDirectusItemStatus,
 	getDirectusPreviewContext,
@@ -648,7 +649,7 @@ function normalizeNewsItem(
 		href: `/news/${item.slug}`,
 		description: item.description || '',
 		miniDescription: item.mini_description || item.description || '',
-		image: normalizeImage(item.image, 'Новость'),
+		image: normalizeImage(item.image, item.title || 'Иллюстрация к новости'),
 		publishedAt: item.published_at,
 		publishedAtLabel: formatDate(item.published_at),
 		updatedAt: item.updated_at,
@@ -843,7 +844,7 @@ function normalizeImageBlock(
 	const imageBlock = item as DirectusContentImage;
 	const image = normalizeImage(
 		imageBlock.image,
-		imageBlock.title || 'Изображение',
+		imageBlock.title || imageBlock.caption || 'Иллюстрация к новости',
 	);
 
 	if (!image) {
@@ -1114,7 +1115,7 @@ function normalizeImage(
 
 	return {
 		id: file.id,
-		title: file.title || fallbackTitle,
+		title: getImageAlt(file.title, fallbackTitle),
 		url: buildDirectusAssetUrl(file.id, { type: file.type }),
 		type: file.type,
 		width: file.width,

@@ -43,6 +43,7 @@ import {
 	normalizeDirectusContentBlocks,
 } from '@/shared/api/directus/content-blocks';
 import { buildDirectusAssetUrl } from '@/shared/config/directus';
+import { getImageAlt } from '@/shared/lib/media/image-alt';
 import {
 	getPromptSelectionSort,
 	PROMPT_GALLERY_SORT_MODES,
@@ -1153,7 +1154,7 @@ function normalizeHeroBlock(
 		title: item.title,
 		description: item.description || '',
 		link: item.link,
-		image: normalizeImage(item.image, 'Hero'),
+		image: normalizeImage(item.image, item.title),
 		buttons: normalizeHeroButtons(item.buttons || []),
 		layout: normalizeBlockChoice(item.layout, ['split', 'centered'], 'split'),
 		galleryId: getDirectusReferenceId(item.prompt_gallery || null),
@@ -1206,7 +1207,10 @@ function normalizeAboutBlock(
 		description: item.description || '',
 		advantageTitle: item.advantage_title || null,
 		advantageDescription: item.advantage_description || null,
-		advantageImage: normalizeImage(item.advantage_image, 'Преимущество'),
+		advantageImage: normalizeImage(
+			item.advantage_image,
+			item.advantage_description || item.title,
+		),
 		cards: normalizeAboutCards(item.cards || []),
 		layout: normalizeBlockChoice(item.layout, ['split', 'cards'], 'split'),
 	};
@@ -1363,7 +1367,7 @@ function normalizeUseCasesBlock(
 		description: item.description || '',
 		cardTitle: item.card_title || item.title,
 		cardDescription: item.card_description || item.description || '',
-		cardImage: normalizeImage(item.card_image, 'Для чего ИИ'),
+		cardImage: normalizeImage(item.card_image, item.card_title || item.title),
 		adviceIcon: normalizeIcon(item.advice_icon),
 		adviceTitle: item.advice_title,
 		adviceDescription: item.advice_description,
@@ -1931,7 +1935,10 @@ function normalizePromptItems(prompts: DirectusPrompt[]): PagePromptCard[] {
 }
 
 function normalizePromptCard(prompt: DirectusPrompt): PagePromptCard {
-	const images = normalizePromptImages(prompt.images || []);
+	const images = normalizePromptImages(
+		prompt.images || [],
+		prompt.title || 'Пример генерации по промпту',
+	);
 
 	return {
 		id: prompt.id,
@@ -1965,11 +1972,12 @@ function isPublishedDirectusPrompt(
 
 function normalizePromptImages(
 	images: DirectusPromptImageJunction[],
+	fallbackTitle: string,
 ): PageImage[] {
 	return [...images]
 		.sort((first, second) => (first.sort || 0) - (second.sort || 0))
 		.map((item) => item.directus_files_id)
-		.map((image) => normalizeImage(image || null, 'Промпт'))
+		.map((image) => normalizeImage(image || null, fallbackTitle))
 		.filter((image): image is PageImage => image !== null);
 }
 
@@ -2156,7 +2164,7 @@ function normalizeBigCtaBlock(
 		type: 'bigCta',
 		title: item.title,
 		description: item.description || '',
-		image: normalizeImage(item.image, 'CTA'),
+		image: normalizeImage(item.image, item.title),
 		buttons: normalizeHeroButtons(item.buttons || []),
 		advantages: normalizeCtaItems(item.advantages || []),
 		steps: normalizeCtaSteps(item.steps || []),
@@ -2215,7 +2223,7 @@ function normalizeMiniCtaBlock(
 		type: 'miniCta',
 		title: item.title,
 		description: item.description || '',
-		image: normalizeImage(item.image, 'CTA'),
+		image: normalizeImage(item.image, item.title),
 		buttons: normalizeHeroButtons(item.buttons || []),
 		layout: normalizeBlockChoice(
 			item.layout,
@@ -2267,7 +2275,7 @@ function normalizeImage(
 
 	return {
 		id: file.id,
-		title: file.title || fallbackTitle,
+		title: getImageAlt(file.title, fallbackTitle),
 		url: buildDirectusAssetUrl(file.id, { type: file.type }),
 		type: file.type,
 		width: file.width,
