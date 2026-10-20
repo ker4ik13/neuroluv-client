@@ -1,3 +1,4 @@
+import { noticeButtonHref } from '@/shared/lib/site-notices/policy';
 import type {
 	NewsContentBlock,
 	NewsContentButton,
@@ -56,6 +57,7 @@ type DirectusContentButton = {
 	id: number;
 	label: string | null;
 	url: string | null;
+	modal?: string | null;
 	target: '_self' | '_blank' | null;
 	variant: 'primary' | 'secondary' | 'outline' | null;
 	icon?: DirectusContentButtonIcon | null;
@@ -203,6 +205,7 @@ export function buildDirectusContentBlockFields(prefix: string): string[] {
 		`${prefix}.item:content_cta.buttons.hero_buttons_id.id`,
 		`${prefix}.item:content_cta.buttons.hero_buttons_id.label`,
 		`${prefix}.item:content_cta.buttons.hero_buttons_id.url`,
+		`${prefix}.item:content_cta.buttons.hero_buttons_id.modal`,
 		`${prefix}.item:content_cta.buttons.hero_buttons_id.target`,
 		`${prefix}.item:content_cta.buttons.hero_buttons_id.variant`,
 		`${prefix}.item:content_cta.buttons.hero_buttons_id.icon.title`,
@@ -236,6 +239,7 @@ export function buildDirectusContentBlockFields(prefix: string): string[] {
 		`${prefix}.item:content_steps.steps.buttons.hero_buttons_id.id`,
 		`${prefix}.item:content_steps.steps.buttons.hero_buttons_id.label`,
 		`${prefix}.item:content_steps.steps.buttons.hero_buttons_id.url`,
+		`${prefix}.item:content_steps.steps.buttons.hero_buttons_id.modal`,
 		`${prefix}.item:content_steps.steps.buttons.hero_buttons_id.target`,
 		`${prefix}.item:content_steps.steps.buttons.hero_buttons_id.variant`,
 		`${prefix}.item:content_steps.steps.buttons.hero_buttons_id.icon.title`,
@@ -579,13 +583,13 @@ function normalizeContentButtons(
 		)
 		.filter(
 			(button) =>
-				button.is_active !== false && Boolean(button.label && button.url),
+				button.is_active !== false && Boolean(button.label && noticeButtonHref(button)),
 		)
 		.map((button) => ({
 			id: button.id,
 			label: button.label || '',
-			href: button.url || '#',
-			target: button.target || '_self',
+			href: noticeButtonHref(button),
+			target: button.modal ? '_self' : button.target || '_self',
 			variant: button.variant || 'primary',
 			icon: normalizeDirectusContentButtonIcon(button.icon),
 		}));

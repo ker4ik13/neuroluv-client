@@ -60,17 +60,18 @@ export function FooterView({ footer, utilities }: FooterViewProps) {
 					</nav>
 				</div>
 
-				{footer.legalLinks.length > 0 && (
-					<nav aria-label='Юридические документы' className={styles.legalLinks}>
-						{footer.legalLinks.map((link) => (
-							<FooterLinkItem
-								className={styles.legalLink}
-								key={link.id}
-								link={link}
-							/>
-						))}
-					</nav>
-				)}
+				<nav aria-label='Юридические документы' className={styles.legalLinks}>
+					{footer.legalLinks.map((link) => (
+						<FooterLinkItem
+							className={styles.legalLink}
+							key={link.id}
+							link={link}
+						/>
+					))}
+					<a className={styles.legalLink} href='#cookie-settings'>
+						О cookies
+					</a>
+				</nav>
 
 				<div className={styles.divider} />
 

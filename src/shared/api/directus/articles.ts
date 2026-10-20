@@ -1,3 +1,4 @@
+import { noticeButtonHref } from '@/shared/lib/site-notices/policy';
 import type {
 	NewsAuthor,
 	NewsContentBlock,
@@ -107,6 +108,7 @@ type DirectusContentButton = {
 	id: number;
 	label: string | null;
 	url: string | null;
+	modal?: string | null;
 	target: '_self' | '_blank' | null;
 	variant: 'primary' | 'secondary' | 'outline' | null;
 	icon?: DirectusContentButtonIcon | null;
@@ -316,6 +318,7 @@ const ARTICLE_DETAIL_FIELDS = [
 	'mini_cta.buttons.hero_buttons_id.id',
 	'mini_cta.buttons.hero_buttons_id.label',
 	'mini_cta.buttons.hero_buttons_id.url',
+	'mini_cta.buttons.hero_buttons_id.modal',
 	'mini_cta.buttons.hero_buttons_id.target',
 	'mini_cta.buttons.hero_buttons_id.variant',
 	'mini_cta.buttons.hero_buttons_id.icon.title',
@@ -373,6 +376,7 @@ const ARTICLE_DETAIL_FIELDS = [
 	'content_blocks.item:content_cta.buttons.hero_buttons_id.id',
 	'content_blocks.item:content_cta.buttons.hero_buttons_id.label',
 	'content_blocks.item:content_cta.buttons.hero_buttons_id.url',
+	'content_blocks.item:content_cta.buttons.hero_buttons_id.modal',
 	'content_blocks.item:content_cta.buttons.hero_buttons_id.target',
 	'content_blocks.item:content_cta.buttons.hero_buttons_id.variant',
 	'content_blocks.item:content_cta.buttons.hero_buttons_id.icon.title',
@@ -406,6 +410,7 @@ const ARTICLE_DETAIL_FIELDS = [
 	'content_blocks.item:content_steps.steps.buttons.hero_buttons_id.id',
 	'content_blocks.item:content_steps.steps.buttons.hero_buttons_id.label',
 	'content_blocks.item:content_steps.steps.buttons.hero_buttons_id.url',
+	'content_blocks.item:content_steps.steps.buttons.hero_buttons_id.modal',
 	'content_blocks.item:content_steps.steps.buttons.hero_buttons_id.target',
 	'content_blocks.item:content_steps.steps.buttons.hero_buttons_id.variant',
 	'content_blocks.item:content_steps.steps.buttons.hero_buttons_id.icon.title',
@@ -1025,13 +1030,13 @@ function normalizeContentButtons(
 		)
 		.filter(
 			(button) =>
-				button.is_active !== false && Boolean(button.label && button.url),
+				button.is_active !== false && Boolean(button.label && noticeButtonHref(button)),
 		)
 		.map((button) => ({
 			id: button.id,
 			label: button.label || '',
-			href: button.url || '#',
-			target: button.target || '_self',
+			href: noticeButtonHref(button),
+			target: button.modal ? '_self' : button.target || '_self',
 			variant: button.variant || 'primary',
 			icon: normalizeDirectusContentButtonIcon(button.icon),
 		}));

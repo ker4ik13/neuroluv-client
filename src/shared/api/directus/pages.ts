@@ -1,3 +1,4 @@
+import { noticeButtonHref } from '@/shared/lib/site-notices/policy';
 import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 import type { NavigationIcon } from '@/entities/navigation';
@@ -72,6 +73,7 @@ type DirectusHeroButton = {
 	id: number;
 	label: string | null;
 	url: string | null;
+	modal?: string | null;
 	target: '_self' | '_blank' | null;
 	variant: 'primary' | 'secondary' | 'outline' | null;
 	icon: DirectusIcon | null;
@@ -501,6 +503,7 @@ export const PAGE_FIELDS = [
 	'blocks.item:block_hero.buttons.hero_buttons_id.id',
 	'blocks.item:block_hero.buttons.hero_buttons_id.label',
 	'blocks.item:block_hero.buttons.hero_buttons_id.url',
+	'blocks.item:block_hero.buttons.hero_buttons_id.modal',
 	'blocks.item:block_hero.buttons.hero_buttons_id.target',
 	'blocks.item:block_hero.buttons.hero_buttons_id.variant',
 	'blocks.item:block_hero.buttons.hero_buttons_id.is_active',
@@ -603,6 +606,7 @@ export const PAGE_FIELDS = [
 	'blocks.item:block_use_cases.buttons.hero_buttons_id.id',
 	'blocks.item:block_use_cases.buttons.hero_buttons_id.label',
 	'blocks.item:block_use_cases.buttons.hero_buttons_id.url',
+	'blocks.item:block_use_cases.buttons.hero_buttons_id.modal',
 	'blocks.item:block_use_cases.buttons.hero_buttons_id.target',
 	'blocks.item:block_use_cases.buttons.hero_buttons_id.variant',
 	'blocks.item:block_use_cases.buttons.hero_buttons_id.is_active',
@@ -748,6 +752,7 @@ export const PAGE_FIELDS = [
 	'blocks.item:block_big_cta.buttons.hero_buttons_id.id',
 	'blocks.item:block_big_cta.buttons.hero_buttons_id.label',
 	'blocks.item:block_big_cta.buttons.hero_buttons_id.url',
+	'blocks.item:block_big_cta.buttons.hero_buttons_id.modal',
 	'blocks.item:block_big_cta.buttons.hero_buttons_id.target',
 	'blocks.item:block_big_cta.buttons.hero_buttons_id.variant',
 	'blocks.item:block_big_cta.buttons.hero_buttons_id.is_active',
@@ -784,6 +789,7 @@ export const PAGE_FIELDS = [
 	'blocks.item:block_mini_cta.buttons.hero_buttons_id.id',
 	'blocks.item:block_mini_cta.buttons.hero_buttons_id.label',
 	'blocks.item:block_mini_cta.buttons.hero_buttons_id.url',
+	'blocks.item:block_mini_cta.buttons.hero_buttons_id.modal',
 	'blocks.item:block_mini_cta.buttons.hero_buttons_id.target',
 	'blocks.item:block_mini_cta.buttons.hero_buttons_id.variant',
 	'blocks.item:block_mini_cta.buttons.hero_buttons_id.is_active',
@@ -1169,12 +1175,12 @@ function normalizeHeroButtons(
 		.sort((first, second) => (first.sort || 0) - (second.sort || 0))
 		.map((button) => button.hero_buttons_id)
 		.filter(isDirectusHeroButton)
-		.filter((button) => Boolean(button.label && button.url))
+		.filter((button) => Boolean(button.label && noticeButtonHref(button)))
 		.map((button) => ({
 			id: button.id,
 			label: button.label || '',
-			href: button.url || '/',
-			target: button.target || '_self',
+			href: noticeButtonHref(button),
+			target: button.modal ? '_self' : button.target || '_self',
 			variant: button.variant || 'primary',
 			icon: normalizeIcon(button.icon),
 		}));
